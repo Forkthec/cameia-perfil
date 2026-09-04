@@ -97,8 +97,13 @@ tocar la imagen:
 SERVER_PORT=9090 docker compose up
 ```
 
-Cuando llegue el puerto real hay que tocar: `application.yml`, `docker-compose.yml`, este
-documento y el `README.md`. Están todos marcados con la palabra `PROVISIONAL`.
+Cuando llegue el puerto real, buscar la palabra `PROVISIONAL` en el repositorio. Aparece en los
+seis archivos que mencionan el puerto: `.env.example`, `application.yml`, `docker-compose.yml`,
+`Dockerfile`, `README.md` y este documento.
+
+```bash
+grep -rn "PROVISIONAL" .
+```
 
 ---
 
