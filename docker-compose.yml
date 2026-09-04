@@ -1,0 +1,111 @@
+# Entorno de desarrollo local de cameia-perfil.
+#
+# Objetivo: que quien clone el repositorio solo necesite Docker. Ni Java, ni Maven,
+# ni PostgreSQL instalados.
+#
+#   docker compose up --build          -> base de datos + servicio corriendo
+#   docker compose run --rm verify     -> compila y ejecuta toda la suite de pruebas
+#   docker compose down -v             -> borra todo, incluidos los datos
+#
+# Las credenciales de abajo son de DESARROLLO LOCAL y de un contenedor que solo
+# escucha en localhost. No son secretos y no aplican a ningun otro ambiente: los
+# valores reales viven en el mecanismo de secretos aprobado, nunca en Git.
+#
+# Convenciones, puertos y decisiones abiertas: docs/DOCKER.md
+
+name: cameia-perfil
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Base de datos propia del contexto. Un contexto, una base, un rol.
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: cameia-perfil-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cameia_perfil}
+      POSTGRES_USER: ${POSTGRES_USER:-cameia_perfil}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cameia_local}
+    ports:
+      # Se publica para poder inspeccionar la base con un cliente desde la maquina.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # 'app' y 'verify' esperan a que esto pase: sin healthcheck arrancarian antes
+      # de que PostgreSQL acepte conexiones y fallarian de forma intermitente.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cameia_perfil} -d ${POSTGRES_DB:-cameia_perfil}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks: [cameia-perfil-net]
+
+  # ---------------------------------------------------------------------------
+  # El microservicio.
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cameia-perfil:local
+    container_name: cameia-perfil-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: cameia-perfil
+      SPRING_PROFILES_ACTIVE: local
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-cameia_perfil}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-cameia_perfil}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-cameia_local}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
+      LOG_LEVEL: INFO
+    ports:
+      # Izquierda = puerto en tu maquina. PROVISIONAL hasta que DEV-IN-05 asigne
+      # el puerto real y el Gateway lo registre en su matriz ruta -> servicio.
+      - "${SERVER_PORT:-8082}:8082"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks: [cameia-perfil-net]
+
+  # ---------------------------------------------------------------------------
+  # Compilacion y pruebas. No se levanta con 'up': se invoca a demanda.
+  #
+  #   docker compose run --rm verify
+  #
+  # Corre 'mvn clean verify' dentro de un contenedor con JDK 21 y Maven, contra la
+  # base real de al lado. Asi la suite no depende de lo que cada quien tenga
+  # instalado, y las pruebas de persistencia corren contra PostgreSQL y no contra H2.
+  # ---------------------------------------------------------------------------
+  verify:
+    image: maven:3.9-eclipse-temurin-21
+    container_name: cameia-perfil-verify
+    depends_on:
+      db:
+        condition: service_healthy
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - m2cache:/root/.m2
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-cameia_perfil}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-cameia_perfil}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-cameia_local}
+    command: ["mvn", "-B", "-ntp", "clean", "verify"]
+    networks: [cameia-perfil-net]
+
+volumes:
+  pgdata:
+  m2cache:
+
+networks:
+  cameia-perfil-net:
+    driver: bridge
