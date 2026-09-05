@@ -47,8 +47,8 @@ prácticas de Spring Boot (§6.1) y los 12 antipatrones que bloquean un PR.
 ### 0.5 La bitácora de IA se llena el mismo día
 
 `Entregables\05092026_01_BitacoraIA_Codigo_E2.xlsx`, hoja `Bitacora_Codigo_E2_Sofia`.
-Filas 4 a 12 llenas (`S-IA-C-1` a `S-IA-C-9`). **La siguiente entrada va en la fila 13**, que ya
-trae precargado el ID `S-IA-C-10`: el ID no se escribe. La columna K, "Cambios humanos", es
+Filas 4 a 14 llenas (`S-IA-C-1` a `S-IA-C-11`). **La siguiente entrada va en la fila 15**, que ya
+trae precargado el ID `S-IA-C-12`: el ID no se escribe. La columna K, "Cambios humanos", es
 obligatoria cuando la IA generó código. La hoja `Tabla11_Codigo_E2_Sofia` no se toca.
 
 ---
@@ -87,7 +87,7 @@ Upstream: origin/CM-102-base-tecnica
 Árbol:    limpio
 ```
 
-**18 commits** por encima de `origin/develop`, rebasados sobre el `develop` actual (`22aa21d`).
+**20 commits** por encima de `origin/develop`, rebasados sobre el `develop` actual (`22aa21d`).
 En `origin` hay `main`, `develop` y esta rama. `CA-99-configuracion-base` ya se eliminó tras
 integrarse, que es lo que manda la estrategia de branching.
 
@@ -459,3 +459,59 @@ texto visible: `c4Name`, `c4Type`, `c4Technology`, `c4Description` de cada `<obj
 4. Antes de CM-16 hay que **derivar el modelo de dominio de Perfil**, que el C4 no tiene, y que
    arquitectura lo revise. El idioma ya está decidido (§5.2).
 5. Sigue abierto el puerto (§6.2), marcado `PROVISIONAL` en los seis archivos que lo citan.
+
+---
+
+## 10. Resumen en una tabla — leer esto si no vas a leer lo demás
+
+### Qué está hecho y funciona
+
+| Cosa | Estado |
+|---|---|
+| Estructura de paquetes DDD | Hecha, verificada contra el diagrama carpeta por carpeta |
+| `pom.xml` | 9 dependencias, cada una justificada dentro del propio archivo |
+| Configuración, OpenAPI, manejo de errores | Hechos. Swagger carga, RFC 9457 activo |
+| Entorno Docker | Hecho. Solo hace falta Docker: ni Java, ni Maven, ni PostgreSQL |
+| Pruebas | **9 en verde.** 8 son reglas de ArchUnit que rompen el build si se viola una capa |
+| Secretos | Ninguno, ni en el árbol ni en el historial |
+| **Historias de Usuario** | **Ninguna implementada. Eso es lo correcto: esto es base técnica** |
+
+### Qué está decidido y no se discute
+
+| Decisión | Cuál es |
+|---|---|
+| Nombre de rama | `CM-<numero>-<descripcion-kebab-case>`, sin prefijo (§6.1) |
+| Idioma del código | Código en **inglés**, explicación en **español** (§5.2) |
+| Persistencia | Tres piezas: puerto + `JpaRepository` + adaptador (§5.3) |
+| Mapeo dominio ↔ entidad | Métodos privados en el adaptador. **No** se crea `persistence/mapper` (§3) |
+| Pruebas de integración | PostgreSQL real, **nunca H2**. Puerto aleatorio (§5.4, §5.7) |
+
+### Qué hay que resolver ANTES de escribir la primera clase
+
+| # | Qué falta | Por qué bloquea |
+|---|---|---|
+| 1 | **Derivar el modelo de dominio de Perfil** y que arquitectura lo revise | El C4 solo tiene clases JPA, y copiarlas como dominio es el antipatrón 2. Sin esto, CM-16 se escribe a ciegas |
+| 2 | El campo `estado` | No está en el C4 pero todas las HU dependen de él |
+| 3 | Cómo llega la identidad del usuario | Define si entra una dependencia de seguridad al `pom.xml` |
+| 4 | La primera migración de Flyway | Con `ddl-auto=validate`, sin `V1__*.sql` el servicio no arranca |
+
+### Las reglas que más se incumplen sin querer
+
+| Regla | Dónde |
+|---|---|
+| El caso de uso inyecta **el puerto**, nunca el `JpaRepository` | §5.3 — hay una regla de ArchUnit que lo hace fallar |
+| Las reglas de negocio viven en **el agregado**, no en el `AppService` | §7, CM-20 |
+| Un `TBD` **nunca** se cierra escribiendo código | §0.2 |
+| **Nunca** se registra en los logs el contenido de un CV, un resumen o datos del perfil | §5.4 |
+| `@Transactional` solo en `application.service`, y `readOnly = true` en lecturas | §5.4 |
+| Ninguna llamada a un LLM dentro de una transacción abierta | §5.4 |
+
+### Orden de trabajo
+
+```text
+CM-16 (POST /profiles)  ──>  CM-17 (PATCH /profiles/{id})  ──>  CM-18 (experience, education)
+                                        │
+                        CM-20 (roles) ──┴──>  CM-19 (skills, finalize)
+```
+
+CM-20 no depende de las demás y CM-19 sí depende de él, porque finalizar exige ≥ 1 rol objetivo.
