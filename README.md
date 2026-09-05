@@ -171,10 +171,10 @@ void finalizar_deberiaLanzarPerfilIncompletoException_cuandoFaltanDatosObligator
 ## Contribución
 
 - `main` es estable y solo recibe promociones `develop → main` mediante Merge commit.
-- `develop` integra ramas `CA-<numero>-<descripcion-kebab-case>` mediante Squash.
-- Todo cambio ordinario entra mediante PR y revisión distinta del autor; la rama `CA-*` se elimina después.
+- `develop` integra ramas `CM-<numero>-<descripcion-kebab-case>` mediante Squash.
+- Todo cambio ordinario entra mediante PR y revisión distinta del autor; la rama `CM-*` se elimina después.
 
-> **Pendiente de confirmar por el equipo:** este README y la estrategia de branching dicen `CA-<numero>-<descripcion>`; el `CONTRIBUTING.md` de este repositorio y la plantilla de PR dicen `<tipo>/CM-NNN-<descripcion>`. Hay que unificarlo.
+> **Resuelto el 5 de septiembre de 2026.** La convención de nombre de rama estaba en disputa: la estrategia de branching y las reglas de código decían `CA-<numero>-<descripcion>`, mientras el `CONTRIBUTING.md` y la plantilla de PR decían `CM-NNN`. El equipo lo unificó en **`CM`** ([PR #2](https://github.com/Forkthec/cameia-perfil/pull/2), *Update branch naming conventions in README*). Queda pendiente que arquitectura actualice la estrategia de branching y las reglas de código, que todavía dicen `CA`.
 
 ## Cuándo actualizar este README
 

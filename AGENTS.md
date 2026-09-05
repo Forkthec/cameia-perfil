@@ -40,9 +40,22 @@ revisión humana de todo lo que sugiere la IA.
 
 ---
 
-## 2. Idioma — `PROPUESTO`, pendiente de aprobación del equipo
+## 2. Idioma — DECIDIDO el 5 de septiembre de 2026
 
 **Todo el código en inglés. Todo lo que explica el código, en español.**
+
+Lo decidió Ana Sofía, responsable de este microservicio, y **aplica desde la primera clase**.
+Coincide con la §2 del documento de reglas del equipo.
+
+> **Lo que hay que saber al defenderlo, porque en el Code Walkthrough van a preguntarlo:**
+> el C3, el C4 y el diagrama de paquetes nombran los conceptos **en español**
+> (`PerfilProfesional`, `RepositorioPerfilProfesional`, `GuardiaDeCuota`), y la §5.4 de las reglas
+> del equipo los marca `CONFIRMADO` contra el C4. Es decir, esta decisión se aparta del dibujo, y
+> la propia §2.1 de las reglas lo advierte y pide que el equipo lo ratifique.
+>
+> **Por eso la regla de mitigación de más abajo no es opcional**: es lo único que mantiene la
+> trazabilidad entre el diagrama y el código. Sin el Javadoc y sin la tabla de equivalencias, la
+> decisión es indefendible; con ellos, se sostiene.
 
 | En inglés | En español |
 |---|---|
@@ -597,9 +610,9 @@ validación en la descripción.
 
 | Tema | Estado |
 |---|---|
-| Nombre de rama y título del PR | 5 fuentes dicen `CA-NNN`, 2 dicen `tipo/CM-NNN` |
+| ~~Nombre de rama y título del PR~~ | **RESUELTO el 5-sep-2026: `CM-<numero>-<descripcion>`** (PR #2 del equipo). La estrategia de branching y las reglas de código siguen diciendo `CA`: están desactualizadas |
 | Puerto del servicio | `DEV-IN-05`. 8082 es **PROVISIONAL** |
-| Idioma del código | §2 es `PROPUESTO`: contradice los nombres en español del C3 y el C4 |
+| ~~Idioma del código~~ | **DECIDIDO el 5-sep-2026 por Ana Sofía: código en inglés, explicación en español** (§2). Sigue apartándose de los nombres en español del C3 y el C4, así que el Javadoc de origen y la tabla de equivalencias son **obligatorios**. Pendiente de ratificación del equipo |
 | `persistence/mapper` | No está en el diagrama. Sin decidir |
 | **Perfil no tiene modelo de dominio en el C4** | Solo hay clases JPA. Hay que derivarlo y que arquitectura lo revise **antes de CM-16** |
 | Falta el campo `estado` en el C4 | El backlog lo exige: `IN_PROGRESS → IN_REVIEW/COMPLETED` |
@@ -629,19 +642,28 @@ CA-NNN-descripcion ── PR + Squash ──> develop ── PR + Merge commit �
 - **Ni `main` ni `develop` reciben push directo.** Tampoco para arreglar la integración.
 - Todo cambio entra por Pull Request con **revisión de una persona distinta del autor**.
 
-### 10.2 Nombre de rama — `TBD`, esto bloquea el primer PR
+### 10.2 Nombre de rama — RESUELTO el 5 de septiembre de 2026
 
-| Formato | Quién lo dice |
-|---|---|
-| `CA-<numero>-<descripcion-kebab-case>`, **sin prefijo** | Estrategia de branching (aprobada por Paula), `README.md`, `github.txt`, reglas de código §5.8 y §14 |
-| `<tipo>/CM-NNN-<descripcion-kebab-case>` | `CONTRIBUTING.md` de este repositorio y la plantilla de PR |
+```text
+CM-<numero>-<descripcion-kebab-case>
+```
 
-Marcador **5 a 2** a favor de `CA-NNN`. Y la estrategia de branching §4 aclara que el cuerpo del
-PR enlaza la tarea Jira *"aunque su clave sea diferente del identificador `CA-NNN` utilizado por
-la rama"*: **`CA` numera ramas, `CM` numera Jira**, y no tienen por qué ser el mismo número.
+Sin prefijo de tipo. Ejemplo real de este repositorio: `CM-102-base-tecnica`.
 
-**Hasta que el equipo responda, la rama se queda como `wip/CM-102-base-tecnica` y no se publica.**
-Cuando respondan: `git branch -m <nombre-confirmado>`.
+Estuvo en disputa: la estrategia de branching, `github.txt` y las reglas de código §5.8 y §14
+decían `CA-<numero>`, mientras el `CONTRIBUTING.md` y la plantilla de PR decían `CM-NNN`.
+**El equipo lo unificó en `CM`**: Paula actualizó el `README.md` en el
+[PR #2](https://github.com/Forkthec/cameia-perfil/pull/2) — *"Update branch naming conventions in
+README"*, commit `22aa21d` — y ese README es el de `develop`, que es la rama de integración.
+
+> **Aviso para quien lea las fuentes antiguas:** la estrategia de branching y las reglas de
+> código **todavía dicen `CA`** y no se han actualizado. No son la decisión vigente. Si alguien
+> las cita para pedir un cambio de nombre, la respuesta es el PR #2.
+
+**Lección, y por eso está escrita aquí:** esta convención se verificó en su día contra una copia
+local del remoto que tenía doce horas de antigüedad, y por eso se llegó a la conclusión contraria.
+Antes de nombrar una rama o abrir un PR, **`git fetch` primero**: las convenciones del equipo
+cambian en `develop`, no en los documentos de arquitectura.
 
 ### 10.3 Commits
 
@@ -660,15 +682,18 @@ ci: configurar el pipeline de integracion
 
 Tipos admitidos: `feat`, `fix`, `test`, `docs`, `refactor`, `perf`, `build`, `ci`, `chore`.
 
-### 10.4 Título del Pull Request — `TBD`, misma disputa
+### 10.4 Título del Pull Request
 
-| Formato | Quién lo dice |
-|---|---|
-| `CA-NNN \| tipo(scope): resultado` | Estrategia de branching y reglas de código |
-| `CM-NNN \| tipo(scope): resultado` | Plantilla de PR del repositorio |
+```text
+CM-NNN | tipo(scope): resultado
+```
 
-**Si hubo código asistido por IA, el título lleva `[IA-ASISTIDO]` al final.** Eso no está en
-disputa y no es opcional.
+Y si hubo código asistido por IA, **el título lleva `[IA-ASISTIDO]`**. Eso no está en disputa y
+no es opcional.
+
+La plantilla de PR de este repositorio ya usaba `CM-NNN`, y la decisión del equipo del 5 de
+septiembre (§10.2) confirma esa línea. Las reglas de código todavía dicen `CA-NNN | …`: están
+desactualizadas.
 
 ### 10.5 La plantilla de PR es obligatoria
 

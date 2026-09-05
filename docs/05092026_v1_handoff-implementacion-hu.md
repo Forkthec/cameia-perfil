@@ -4,10 +4,11 @@
 > Sustituye a `04092026_v1_handoff-cm-102.md`, que describía la construcción de la base técnica
 > y ya está terminada. Este describe **lo que sigue: escribir las HU**.
 
-- **Versión:** 1.0
+- **Versión:** 1.1
 - **Fecha:** 5 de septiembre de 2026
 - **Responsable humana:** Ana Sofía
-- **Estado:** base técnica construida, verificada y **NO publicada**. Ninguna HU implementada.
+- **Estado:** base técnica construida, verificada y **publicada en la rama `CM-102-base-tecnica`**,
+  pendiente de Pull Request hacia `develop`. Ninguna HU implementada.
 
 ---
 
@@ -18,6 +19,9 @@
 Prohibido, salvo que Ana Sofía lo pida en ese momento y con esas palabras:
 `git push`, abrir un Pull Request, hacer merge, cualquier comando `gh` que escriba en GitHub,
 y tocar `main` o `develop`. **Commits locales sí.**
+
+La autorización para publicar `CM-102-base-tecnica` ya se dio y se usó. **No se extiende a las
+ramas de las HU:** cada una se vuelve a pedir.
 
 ### 0.2 No asumir. Preguntar.
 
@@ -78,13 +82,14 @@ C:\Users\Ana_Sofia\OneDrive\Documentos\UNI\Proyecto 2 E2\
 ## 2. Estado real del repositorio — verificado el 5-sep-2026
 
 ```text
-Rama:     wip/CM-102-base-tecnica    <- PROVISIONAL, ver §6.1
-Upstream: NINGUNO                    <- correcto, nunca se ha publicado
+Rama:     CM-102-base-tecnica       <- convención confirmada por el equipo, ver §6.1
+Upstream: origin/CM-102-base-tecnica
 Árbol:    limpio
 ```
 
-**17 commits locales** por encima de `origin/develop`. En `origin` solo hay `main`, `develop` y
-`CA-99-configuracion-base`: **nada de este trabajo está publicado.**
+**18 commits** por encima de `origin/develop`, rebasados sobre el `develop` actual (`22aa21d`).
+En `origin` hay `main`, `develop` y esta rama. `CA-99-configuracion-base` ya se eliminó tras
+integrarse, que es lo que manda la estrategia de branching.
 
 ### Lo que ya existe y funciona
 
@@ -207,15 +212,21 @@ escribe en el mismo commit que la entidad, nunca después.
 Si un concepto no está en `03092026_v3_glosario.md`, no se le pone nombre en el código todavía:
 se abre la discusión, no el `.java`.
 
-### 5.2 Idioma — OJO, esto está en disputa
+### 5.2 Idioma — DECIDIDO el 5 de septiembre de 2026
 
-`AGENTS.md §2` dice **todo el código en inglés**, y está marcado `PROPUESTO`.
-Las reglas del equipo §5.4 nombran las clases **en español** (`PerfilProfesional`,
-`RepositorioPerfilProfesional`, `GuardiaDeCuota`) y están marcadas **`CONFIRMADO` contra el C4**.
+**Todo el código en inglés. Todo lo que explica el código, en español.** Lo decidió Ana Sofía y
+aplica desde la primera clase. Está desarrollado en `AGENTS.md §2`, con la tabla completa.
 
-**No está decidido. Se pregunta a Ana Sofía antes de nombrar la primera clase de dominio.**
-Hoy no existe ninguna, así que cambiar de opinión cuesta cero; después de cinco HU, cuesta
-renombrar cuarenta clases y sus pruebas.
+En inglés: paquetes, clases, interfaces, métodos, variables, constantes, nombres de las clases de
+prueba, rutas HTTP y variables de entorno.
+En español: comentarios y Javadoc, `@DisplayName`, mensajes de log, mensajes de excepción, README,
+descripciones de OpenAPI y mensajes de commit y de PR.
+
+> **La regla de mitigación es OBLIGATORIA, no un adorno.** Esta decisión se aparta de los nombres
+> en español del C3 y el C4, que las reglas del equipo §5.4 marcan `CONFIRMADO`. Cada clase de
+> dominio lleva un Javadoc que dice de qué término del glosario y del C4 sale, y la tabla de
+> equivalencias de `AGENTS.md §2` se actualiza **antes** de usar un concepto nuevo. Sin eso se
+> pierde la trazabilidad con el diagrama, que es lo que preguntan en el Code Walkthrough.
 
 Lo que **no se traduce en ningún caso**: los códigos de enum y estados (`PENDING`,
 `IN_PROGRESS`, `IN_REVIEW`, `COMPLETED`, `MANUAL`, `AI_SUGGESTED`, `AI_EDITED`), porque son el
@@ -292,18 +303,25 @@ docker compose down -v             # apaga y borra datos
 
 ## 6. Lo que está abierto — no cerrar por cuenta propia
 
-### 6.1 BLOQUEANTE para publicar — nombre de rama y título de PR
+### 6.1 Nombre de rama y título de PR — RESUELTO el 5 de septiembre de 2026
 
-Cinco fuentes dicen `CA-<numero>-<descripcion>` **sin prefijo**: la estrategia de branching
-(aprobada por Paula), el `README.md`, `github.txt` y las reglas de código §5.8 y §14.
-Dos dicen `<tipo>/CM-NNN-<descripcion>`: el `CONTRIBUTING.md` del repo y la plantilla de PR.
+```text
+rama:    CM-<numero>-<descripcion-kebab-case>      sin prefijo de tipo
+título:  CM-NNN | tipo(scope): resultado           + [IA-ASISTIDO] si hubo IA
+```
 
-Además, branching §4 dice que el cuerpo del PR enlaza la tarea Jira *"aunque su clave sea
-diferente del identificador `CA-NNN` utilizado por la rama"*: **`CA` numera ramas, `CM` numera
-Jira**, y no tienen por qué ser el mismo número. La rama que existe en `origin` lo confirma: se
-llama `CA-99-configuracion-base` y su commit dice `CM-99`.
+Estuvo en disputa. **El equipo lo unificó en `CM`**: Paula actualizó el `README.md` en el
+[PR #2](https://github.com/Forkthec/cameia-perfil/pull/2) — *"Update branch naming conventions in
+README"*, commit `22aa21d` sobre `develop`.
 
-**Hasta que el equipo responda, la rama se queda como `wip/CM-102-base-tecnica` y no se publica.**
+> **La estrategia de branching, `github.txt` y las reglas de código §5.8 y §14 todavía dicen
+> `CA-<numero>` y NO se han actualizado.** No son la decisión vigente. Si alguien las cita, la
+> respuesta es el PR #2.
+
+**Leccion operativa:** esta convención se comprobó una vez contra una copia local del remoto con
+doce horas de antigüedad, y por eso se llegó a la conclusión contraria. **`git fetch` antes de
+nombrar una rama o abrir un PR:** las convenciones del equipo cambian en `develop`, no en los
+documentos de arquitectura.
 
 ### 6.2 BLOQUEANTE para publicar — el puerto
 
@@ -320,7 +338,6 @@ En `.env.example`, `SERVER_PORT` se entrega **vacío**.
 
 | Tema | Estado |
 |---|---|
-| **Idioma del código** | §2 de `AGENTS.md` es `PROPUESTO` y contradice al §5.4 de las reglas, que está `CONFIRMADO`. **Decidir antes de la primera clase de dominio** |
 | **Modelo de dominio de Perfil** | No existe en el C4. Hay que derivarlo y que arquitectura lo revise |
 | Campo `estado` | El C4 no lo tiene, el backlog lo exige |
 | Identidad del usuario | Define si entra una dependencia de seguridad |
@@ -437,8 +454,8 @@ texto visible: `c4Name`, `c4Type`, `c4Technology`, `c4Description` de cada `<obj
 
 1. La base técnica está **construida y verificada**: 9 pruebas en verde, servicio arriba,
    Swagger cargando, sin secretos.
-2. **Nada publicado.** 17 commits locales en `wip/CM-102-base-tecnica`, sin upstream.
+2. **Publicado** en la rama `CM-102-base-tecnica`, pendiente de Pull Request hacia `develop`.
 3. **Ninguna HU implementada**, y eso es lo correcto: la base técnica no implementa HU.
 4. Antes de CM-16 hay que **derivar el modelo de dominio de Perfil**, que el C4 no tiene, y que
-   arquitectura lo revise. Y hay que **decidir el idioma del código**.
-5. Bloquean publicar: el nombre de la rama (§6.1) y el puerto (§6.2).
+   arquitectura lo revise. El idioma ya está decidido (§5.2).
+5. Sigue abierto el puerto (§6.2), marcado `PROVISIONAL` en los seis archivos que lo citan.
