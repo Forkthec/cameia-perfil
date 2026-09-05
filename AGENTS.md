@@ -157,6 +157,122 @@ presentation ──> application ──> domain
 
 ---
 
+## 3.1 Los 17 componentes del C3, uno por uno
+
+Hoja **"C3 - Microservicio de Perfil Profesional"** de `29082026_1_Componentes(C3).txt`.
+**No se crea ninguna clase que no salga de esta tabla.** Si hace falta una que no está, se
+pregunta antes de escribirla.
+
+### Presentación — Controllers
+
+| Componente del C3 | Tecnología | Clase | Sprint |
+|---|---|---|---|
+| Controller Perfil Profesional | Spring Controller | `ProfileController` | **1** |
+| Controller Hoja de Vida | Spring Controller | `ResumeController` | 2 |
+
+*Controller Perfil Profesional:* "Gestiona los Perfiles Profesionales y la revisión humana de
+todo lo sugerido por IA."
+*Controller Hoja de Vida:* "Recibe la carga del CV y expone las versiones ya procesadas."
+
+### Aplicación — Casos de uso
+
+| Componente del C3 | Tecnología | Clase | Sprint |
+|---|---|---|---|
+| Aplicacion Perfil Profesional | Spring Service - Aplicación | `ProfessionalProfileAppService` | **1** |
+| Aplicacion Roles Objetivo | Spring Service - Aplicación | `TargetRoleAppService` | **1** |
+| Aplicacion Hoja de Vida | Spring Service - Aplicación | `ResumeAppService` | 2 |
+
+*Aplicacion Perfil Profesional:* "Coordina crear, editar, versionar y revisar el Perfil
+Profesional, y pedir sugerencias de redacción sobre sus textos libres."
+*Aplicacion Roles Objetivo:* "Coordina proponer roles objetivo, aceptar o editar los sugeridos y
+registrar los que el usuario agrega a mano." → **En Sprint 1 solo la parte manual: CM-20 dice
+"sin invocación a IA en esta HU".**
+
+### Dominio — Agregados, servicios y políticas de negocio
+
+| Componente del C3 | Tipo | Clase | Sprint |
+|---|---|---|---|
+| Perfil Profesional (Agregado) | Modelo de Dominio | `ProfessionalProfile` | **1** |
+| Politica de Procedencia y Revision | Política de Dominio | `ProvenanceAndReviewPolicy` | **1** parcial |
+| Hoja de Vida (Agregado) | Modelo de Dominio | `Resume` | 2 |
+| Guardia de Cuota | Política de Dominio | `QuotaGuard` | 2 |
+
+Las invariantes que el C3 le atribuye a cada uno — **esto es lo que hay que implementar, no lo
+que se le ocurra a nadie**:
+
+- **Perfil Profesional (Agregado):** "Invariantes del Perfil Profesional y de los roles objetivo
+  que contiene: completitud, versión vigente y cuántos perfiles admite el plan del usuario."
+  → Los roles objetivo **viven dentro del agregado**, no son un agregado aparte. Por eso la regla
+  de 1 a 5 roles y la de no eliminar el último se validan aquí, no en el `AppService`.
+- **Politica de Procedencia y Revision:** "Decide la procedencia de cada dato y su estado de
+  revisión: nada propuesto por IA se da por válido hasta que el usuario lo confirma o lo edita."
+  → En Sprint 1 no hay IA, así que toda procedencia es `MANUAL`. **Los campos `procedencia` y
+  `estadoRevision` sí se persisten desde el primer día**, porque el antipatrón 11 lo exige y
+  porque HU-2.3 ya define la transición `AI_SUGGESTED → AI_EDITED`.
+- **Guardia de Cuota:** "Verifica el límite operativo de tokens del plan antes de cada llamada a
+  IA y decide si la operación procede." → **Sprint 2.** En Sprint 1 no hay ninguna llamada a IA
+  que guardar. Devuelve una **decisión** (enum), nunca un `boolean` ni una excepción.
+- **Hoja de Vida (Agregado):** "Invariantes de la Hoja de Vida: formato y tamaño admitidos,
+  numeración de versiones y la regla de conservar solo el texto extraído, nunca el archivo
+  original."
+
+### Infraestructura
+
+| Componente del C3 | Tecnología | Clase | Sprint |
+|---|---|---|---|
+| Repository Perfil Profesional | Spring Repository | ver §5.3 — son varias clases | **1** |
+| Publicador de Eventos | Spring AMQP RabbitTemplate | `ProfileEventPublisher` | POSTERIOR |
+| Consumidor de Eventos | Spring AMQP RabbitListener | un `<Event>Listener` por evento | POSTERIOR |
+| Extractor de Texto de CV | Apache Tika / PDFBox | `TextExtractorTikaAdapter` | 2 |
+| Extractor Estructurado IA | Spring AI | `StructuredExtractorAiAdapter` | 2 |
+| Sugeridor de Roles Objetivo | Spring AI | `TargetRoleSuggesterAiAdapter` | 2 |
+| Asistente de Redaccion | Spring AI | `WritingAssistantAiAdapter` | 2 |
+| Router LLM | Spring Service - Strategy | `LlmRouter` | 2 |
+
+**Dos citas del C3 que cambian cómo se escribe el código:**
+
+1. *Repository Perfil Profesional:* **"Implementa los repositorios del dominio sobre
+   JPA/Hibernate: perfiles, versiones de CV y la réplica local de plan y cuota."**
+   El verbo es **"implementa"** y el sustantivo va en **plural**. Es el respaldo literal del
+   patrón de tres piezas de §5.3: los puertos son del dominio y la infraestructura los
+   implementa. Y son varios puertos, no uno: perfiles, versiones de CV y la réplica de cuota.
+2. *Sugeridor de Roles Objetivo:* **"Es el camino del MVP: cuando exista Empleo, la sugerencia
+   llegará por la Cola 4 y este adaptador se retira."**
+   Nace con fecha de caducidad. Cuando se implemente (Sprint 2), detrás de un puerto, para que
+   retirarlo sea borrar una clase y no refactorizar el caso de uso.
+
+*Consumidor de Eventos:* "Recibe el plan vigente, los roles objetivo sugeridos por Empleo y el
+aviso de cuenta eliminada. **Idempotente por identificador de mensaje.**" → La idempotencia no es
+opcional; es antipatrón 9 no tenerla.
+
+### Lo que el C3 conecta hacia afuera
+
+| Destino | Tipo | Relación |
+|---|---|---|
+| API Gateway | Java 21 / Spring Boot | **Entra** a los dos controllers. Verifica el ID token de Firebase y propaga los custom claims |
+| DB Perfil | PostgreSQL | "Perfiles Profesionales, versiones de CV en texto y réplica local de plan y cuota" |
+| Cola 1 — Perfil Profesional Actualizado | RabbitMQ | **Publica** |
+| Cola 2 — Consumo Registrado | RabbitMQ | **Publica** |
+| Cola 3 — Suscripcion Actualizada | RabbitMQ | **Consume** |
+| Cola 4 — Rol Objetivo Sugerido | RabbitMQ | **Consume** |
+| Cola 7 — Cuenta Eliminada | RabbitMQ | **Consume** |
+| Google Gemini API / Kimi API | Sistemas externos | Solo a través del Router LLM. Sprint 2 |
+| Langfuse | Autohospedado | Trazabilidad de prompts y tokens. **Nunca es la fuente del consumo** |
+
+**Perfil NO se conecta con las Colas 5 ni 6.** Y **no habla directamente con Gemini ni con Kimi**:
+siempre a través del Router LLM, que es lo que permite el respaldo entre proveedores.
+
+### Lo que este microservicio NO tiene, y se nota comparando con el C3
+
+- **No hay `infrastructure/client`.** El C3 de Perfil no dibuja ningún cliente HTTP hacia
+  Firebase, Wompi ni Voz. Los únicos externos son los proveedores de LLM, y esos van en `ia`.
+- **No hay servicio de dominio.** El C3 de Perfil dibuja agregados y políticas, pero ningún
+  componente de tipo "Servicio de Dominio" como el `PlanificadorDeTurnos` de Entrevista. La
+  carpeta `domain/service` existe porque el diagrama de paquetes la muestra, pero **hoy no hay
+  ningún componente que la ocupe**: si aparece la necesidad, se pregunta antes.
+
+---
+
 ## 4. Dónde va cada cosa
 
 | Lo que estás escribiendo | Va en |
