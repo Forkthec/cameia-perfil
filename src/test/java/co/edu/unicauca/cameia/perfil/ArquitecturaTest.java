@@ -67,6 +67,16 @@ class ArquitecturaTest {
                     + "(reglas de código 3.4, regla 5)");
 
     @ArchTest
+    static final ArchRule aplicacionNoInyectaRepositoriosDeSpringData = noClasses()
+            .that().resideInAPackage(APPLICATION)
+            .should().dependOnClassesThat()
+            .resideInAPackage("..infrastructure.persistence.repository..")
+            .as("La capa de aplicación no depende de los repositorios de Spring Data")
+            .because("el caso de uso inyecta el PUERTO de domain.port, no el JpaRepository ni su "
+                    + "adaptador; inyectarlo es el antipatrón 12 y acopla la aplicación a "
+                    + "Spring Data (reglas de código 5.5.1)");
+
+    @ArchTest
     static final ArchRule sinCiclosEntrePaquetes = slices()
             .matching("co.edu.unicauca.cameia.perfil.(*)..")
             .should().beFreeOfCycles()
