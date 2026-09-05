@@ -413,6 +413,124 @@ class ProfessionalProfileRepositoryJpaAdapter implements ProfessionalProfileRepo
 11. **Persistir un dato generado por IA sin `procedencia` y `estadoRevision`.**
 12. Inyectar un `JpaRepository` desde `application`.
 
+## 6.1 Prácticas de Spring Boot — cómo se aplican **aquí**
+
+> Fuente: guía oficial de buenas prácticas de Spring Boot (`guidelines.md`, 14 puntos).
+> **No se copian tal cual.** Cada punto está contrastado contra las reglas del equipo, y tres de
+> ellos chocan con decisiones que el equipo ya tomó: esos **no se adoptan** hasta que el equipo
+> responda, y están en el §9.
+
+| # | Práctica | Estado en este repositorio |
+|---|---|---|
+| 1 | Inyección por constructor | **Ya es regla** (§6). Se refuerza: campos `final` |
+| 2 | `package-private` en componentes Spring | **Se adopta** y se amplía a controllers y `@Configuration` |
+| 3 | `@ConfigurationProperties` tipadas y validadas | **Se adopta.** Nada de `@Value` disperso |
+| 4 | Fronteras de transacción explícitas | **Se adopta.** Novedad: `readOnly = true` en lecturas |
+| 5 | `open-in-view=false` | **Ya cumplido** en `application.yml` |
+| 6 | Separar capa web de persistencia | **Ya es regla** (antipatrones 5 y 2) |
+| 7 | Principios REST | **Parcial.** El versionado nativo **no se adopta**: ver §9 |
+| 8 | Objetos `Command` | **Ya es regla** (`application.command`, §3) |
+| 9 | Manejo centralizado de excepciones | **Ya cumplido.** `ApiExceptionHandler` existe |
+| 10 | Actuator mínimo | **Ya cumplido.** Solo `health` e `info` |
+| 11 | i18n con `ResourceBundles` | **No se adopta.** Choca con la regla de idioma: ver §9 |
+| 12 | Testcontainers | **No se adopta todavía.** Ver §9 |
+| 13 | Puerto aleatorio en pruebas de integración | **Se adopta.** Obligatorio, y aquí importa más de lo normal |
+| 14 | Logging con SLF4J y guardas | **Se adopta** |
+
+### Lo que cambia respecto a lo que ya estaba escrito
+
+**1 · Dependencias `final`.** La regla ya decía "inyección por constructor". Se completa: las
+dependencias obligatorias se declaran `private final` y entran por el único constructor. Con un
+solo constructor **no se escribe `@Autowired`**, Spring lo detecta.
+
+```java
+@Service
+class ProfessionalProfileAppService {
+
+    private final ProfessionalProfileRepository profiles;   // el PUERTO, no el JpaRepository
+
+    ProfessionalProfileAppService(ProfessionalProfileRepository profiles) {
+        this.profiles = profiles;
+    }
+}
+```
+
+**2 · `package-private` por defecto.** No todo tiene que ser `public`. Se declaran sin modificador
+los controllers y sus métodos, las clases `@Configuration`, los métodos `@Bean`, los `@Service`
+y —esto ya estaba en §5.3— el `JpaRepository` y su adaptador. Motivo concreto: el compilador
+impide que alguien llame a un controlador desde otra capa, y así ArchUnit tiene menos trabajo.
+
+Lo que **sí** es `public`: el modelo de dominio, los puertos, los DTO y los `Command`, porque
+cruzan la frontera de paquete a propósito.
+
+**3 · Configuración tipada.** Cuando aparezca la primera propiedad propia del servicio —el rango
+de roles objetivo, un timeout de LLM— **no** se lee con `@Value`. Se agrupa bajo un prefijo y se
+enlaza con `@ConfigurationProperties` y validación, para que el servicio **no arranque** si la
+configuración está mal, en vez de fallar en la primera petición:
+
+```java
+@ConfigurationProperties(prefix = "cameia.perfil")
+@Validated
+record PerfilProperties(@Min(1) @Max(5) int maxTargetRoles) { }
+```
+
+Ojo con esto: si el valor sale de un `TBD` del equipo, **no se codifica el número** ni siquiera
+como valor por defecto de la propiedad. Es el antipatrón 9. La propiedad se declara sin default y
+el servicio falla al arrancar hasta que alguien decida. Eso es correcto: es un aviso, no un bug.
+
+**4 · Transacciones.** La regla decía "`@Transactional` solo en `application.service`". Se
+completa con la distinción que faltaba:
+
+- Métodos que **solo leen** → `@Transactional(readOnly = true)`. No es cosmético: le dice a
+  Hibernate que no haga *dirty checking*, y permite enrutar a una réplica de lectura si algún día
+  existe.
+- Métodos que **modifican** → `@Transactional`.
+- La transacción cubre lo mínimo indispensable. **Ninguna llamada a un LLM ni a RabbitMQ dentro
+  de una transacción abierta:** una llamada a Gemini que tarde 30 s mantiene retenida la conexión
+  de base todo ese tiempo. Cuando llegue el Sprint 2, esto es lo primero que se rompe.
+
+**7 · REST — lo que sí se adopta.** `ResponseEntity<T>` con el código explícito (`201 Created` en
+`POST /profiles`, no `200`); paginación obligatoria en `GET /api/v1/profiles?status=COMPLETED`,
+que hoy no la tiene definida y es una colección sin cota; un objeto JSON en la raíz de toda
+respuesta, nunca un array suelto; y nombres de propiedad JSON **consistentes** — el contrato del
+equipo usa `snake_case` (`nombre_perfil`, `profile_id`), así que `snake_case`.
+
+**13 · Puerto aleatorio en pruebas.** Toda prueba de integración que levante el servidor va con
+`@SpringBootTest(webEnvironment = RANDOM_PORT)`. Aquí no es una precaución teórica: el puerto de
+este servicio es **`PROVISIONAL`** (§9), y una prueba clavada al 8082 se rompe el día que el
+equipo asigne el puerto real, o cuando dos personas corran la suite a la vez.
+
+**14 · Logging.** SLF4J siempre; `System.out.println` **nunca**. Mensajes en español (§2). Y la
+regla que más importa en este microservicio concreto:
+
+> **Nunca se registra el contenido de un CV, un resumen profesional, una experiencia laboral ni
+> ningún dato del perfil.** Son datos personales de una persona real. Se registra el
+> identificador y el resultado, no el contenido.
+
+```java
+// MAL: vuelca datos personales al log
+log.debug("Perfil actualizado: {}", profile);
+
+// BIEN: identificador y hecho
+log.debug("Perfil {} actualizado, {} roles objetivo", profileId, roleCount);
+```
+
+Las llamadas costosas en `DEBUG`/`TRACE` van con guarda o con `Supplier`:
+
+```java
+if (log.isDebugEnabled()) {
+    log.debug("Estado detallado: {}", calcularDetalleCostoso());
+}
+```
+
+### Detalle heredado que conviene corregir
+
+La guía §9 recomienda **RFC 9457**, que es la norma que **dejó obsoleta a la RFC 7807** (mismo
+media type `application/problem+json`, mismo comportamiento). El `README.md`, el
+`application.yml` y el Javadoc de `ApiExceptionHandler` todavía citan la 7807. No cambia una línea
+de código —solo la referencia— pero citar una RFC obsoleta en el Code Walkthrough es una pregunta
+fácil de evitar.
+
 ---
 
 ## 7. Pruebas
@@ -430,6 +548,16 @@ class ProfessionalProfileRepositoryJpaAdapter implements ProfessionalProfileRepo
 - `@DisplayName` **en español**.
 - **Cada HU llega con prueba positiva y negativa de cada regla de negocio que toca.**
 - Datos sintéticos o anonimizados, **nunca reales**.
+- Toda prueba que levante el servidor va con **puerto aleatorio**, nunca clavada al 8082:
+
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+```
+
+- La prueba de integración de persistencia corre contra el **PostgreSQL de `docker-compose`**,
+  que es real. Testcontainers levantaría ese mismo PostgreSQL desde la propia prueba y es lo que
+  recomienda la guía de Spring Boot; **no se ha adoptado** y la razón está en el §9. Lo que no
+  cambia en ninguno de los dos casos: **H2 está prohibido.**
 
 ```java
 @Test
@@ -478,6 +606,9 @@ validación en la descripción.
 | Cómo llega la identidad del usuario | Define si entra `spring-boot-starter-oauth2-resource-server` |
 | Nombres de las colas | El C2 se contradice entre hojas |
 | `API-TBD-05, 06, 07, 09, 18` | Decisiones de producto que afectan a CM-16..CM-20 |
+| **Versionado nativo de API** (Spring 7) | La guía de Spring Boot recomienda el atributo `version` de `@RequestMapping` sobre el `/v1/` en la URL. **Verificado: existe en el `spring-web` 7.0.9 de este proyecto.** Pero el contrato del equipo fija `/api/v1/profiles`, y lo consumen Gateway, Web y Entrevista. **Cambiarlo es decisión de arquitectura, no de este repositorio** |
+| **Testcontainers** | La guía lo pide; el `pom.xml` no lo tiene, a propósito. Hoy las pruebas de integración usarían el PostgreSQL de `docker-compose`. Adoptarlo agrega una dependencia de prueba y hace que la suite corra sin `compose` levantado. **Preguntar si el equipo lo quiere en los 6 repositorios o en ninguno**: media suite con Testcontainers y media sin él es lo peor de los dos mundos |
+| **i18n con `ResourceBundles`** | La guía pide externalizar los textos de cara al usuario. Choca con §2, que manda los mensajes de excepción **en español** dentro del código. Hoy el producto es monolingüe en español y no hay HU de idioma en el backlog: adoptarlo sería trabajo sin requisito. **Se reevalúa si aparece una HU de internacionalización** |
 
 ---
 
