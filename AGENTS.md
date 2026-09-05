@@ -481,7 +481,101 @@ validación en la descripción.
 
 ---
 
-## 10. Las Historias de Usuario de este repositorio
+## 10. Ramas, commits y Pull Requests
+
+> **Recordatorio del §0: nada de esto se ejecuta sin autorización expresa de Ana Sofía.**
+> Lo de abajo es la convención cuando llegue el momento, no un permiso para publicar.
+
+### 10.1 Flujo
+
+```text
+CA-NNN-descripcion ── PR + Squash ──> develop ── PR + Merge commit ──> main
+```
+
+- Las ramas de trabajo **nacen siempre desde `develop`** actualizado, son de corta duración y se
+  eliminan después de integrarse.
+- `develop` recibe **Squash and merge**. `main` recibe **Merge commit**.
+- **Ni `main` ni `develop` reciben push directo.** Tampoco para arreglar la integración.
+- Todo cambio entra por Pull Request con **revisión de una persona distinta del autor**.
+
+### 10.2 Nombre de rama — `TBD`, esto bloquea el primer PR
+
+| Formato | Quién lo dice |
+|---|---|
+| `CA-<numero>-<descripcion-kebab-case>`, **sin prefijo** | Estrategia de branching (aprobada por Paula), `README.md`, `github.txt`, reglas de código §5.8 y §14 |
+| `<tipo>/CM-NNN-<descripcion-kebab-case>` | `CONTRIBUTING.md` de este repositorio y la plantilla de PR |
+
+Marcador **5 a 2** a favor de `CA-NNN`. Y la estrategia de branching §4 aclara que el cuerpo del
+PR enlaza la tarea Jira *"aunque su clave sea diferente del identificador `CA-NNN` utilizado por
+la rama"*: **`CA` numera ramas, `CM` numera Jira**, y no tienen por qué ser el mismo número.
+
+**Hasta que el equipo responda, la rama se queda como `wip/CM-102-base-tecnica` y no se publica.**
+Cuando respondan: `git branch -m <nombre-confirmado>`.
+
+### 10.3 Commits
+
+Conventional Commits, **en español**, y **no requieren llevar la clave de Jira**.
+
+```text
+feat: agregar validacion de roles objetivo
+fix: corregir la fecha fin de una experiencia finalizada
+test: agregar pruebas de la transicion a COMPLETED
+docs: completar el README con los comandos reales
+chore: actualizar configuracion de Docker
+refactor: extraer la politica de procedencia del caso de uso
+build: agregar Flyway al pom
+ci: configurar el pipeline de integracion
+```
+
+Tipos admitidos: `feat`, `fix`, `test`, `docs`, `refactor`, `perf`, `build`, `ci`, `chore`.
+
+### 10.4 Título del Pull Request — `TBD`, misma disputa
+
+| Formato | Quién lo dice |
+|---|---|
+| `CA-NNN \| tipo(scope): resultado` | Estrategia de branching y reglas de código |
+| `CM-NNN \| tipo(scope): resultado` | Plantilla de PR del repositorio |
+
+**Si hubo código asistido por IA, el título lleva `[IA-ASISTIDO]` al final.** Eso no está en
+disputa y no es opcional.
+
+### 10.5 La plantilla de PR es obligatoria
+
+Está en `.github/pull_request_template.md` y se llena entera. Sus secciones obligatorias:
+resumen y trazabilidad, criterios y evidencia, validaciones ejecutadas, impacto y riesgo,
+seguridad y privacidad, y **uso de IA y revisión humana**.
+
+De esa última sección, el campo que decide la nota es **"qué se corrigió o rechazó y por qué"**:
+es donde se ve si hubo revisión real o si se aceptó lo primero que salió. Se redacta desde la
+bitácora del §8, no de memoria.
+
+Formato exigido en la descripción cuando hay código asistido por IA:
+
+```text
+[IA-ASISTIDO] Descripción de la función
+Herramienta: <herramienta utilizada>
+Validación: <pruebas realizadas> + revisión manual + revisión de seguridad
+```
+
+### 10.6 Antes de abrir el PR
+
+- [ ] `docker compose run --rm verify` en verde, **con la salida real pegada en el PR**
+- [ ] Ningún término nuevo que no esté en el glosario
+- [ ] Ningún `TBD` resuelto escribiendo código
+- [ ] `domain` no importa Spring, JPA ni RabbitMQ; `ArquitecturaTest` lo confirma
+- [ ] Ningún controlador devuelve entidad JPA ni agregado
+- [ ] Ningún `JpaRepository` inyectado desde `application`
+- [ ] Prueba positiva y negativa por cada regla de negocio tocada
+- [ ] Ningún log con PII, CV, transcripciones, tokens ni secretos
+- [ ] Ningún valor real de variable secreta en el diff
+- [ ] `README.md` y `.env.example` actualizados si cambiaron variables o comandos
+- [ ] La bitácora del §8 tiene la fila correspondiente, con la columna K llena
+- [ ] El título lleva `[IA-ASISTIDO]` si hubo IA
+- [ ] Revisión pedida a **alguien distinto de la autora**
+
+---
+
+## 11. Las Historias de Usuario de este repositorio
 
 Sprint 1, 21 puntos. **Ninguna está implementada todavía.**
 
