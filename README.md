@@ -165,7 +165,7 @@ void finalizar_deberiaLanzarPerfilIncompletoException_cuandoFaltanDatosObligator
 - Probar completitud, edición, versionamiento y autorización por propietario.
 - Verificar procedencia/revisión cuando se incorpore IA.
 - Activar CI únicamente con comandos comprobados por el responsable.
-- El formato común de error es RFC 7807 (`application/problem+json`), activado con `spring.mvc.problemdetails.enabled`. Responde a `API-TBD-14`, que sigue abierto.
+- El formato común de error es RFC 9457 (`application/problem+json`), la norma que dejó obsoleta a la RFC 7807, activado con `spring.mvc.problemdetails.enabled`. Responde a `API-TBD-14`, que sigue abierto.
 
 ## Contribución
 

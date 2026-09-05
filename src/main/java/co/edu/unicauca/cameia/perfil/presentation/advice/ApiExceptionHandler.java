@@ -8,7 +8,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  *
  * <p>Está deliberadamente vacío. La sección 8.2 del plan de CM-102 pide dejar el sitio preparado
  * "sin manejar excepciones que todavía no existen": cuando llegue el primer controlador, sus
- * errores ya tienen dónde colgarse en formato RFC 7807 en vez de inventar uno propio a las
+ * errores ya tienen dónde colgarse en formato RFC 9457 en vez de inventar uno propio a las
  * carreras.
  *
  * <p>Al heredar de {@link ResponseEntityExceptionHandler} y con

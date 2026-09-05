@@ -30,7 +30,8 @@ spring:
     locations: classpath:db/migration
 
   mvc:
-    # Formato comun de error RFC 7807 (reglas de codigo, seccion 7.1, propuesta para API-TBD-14).
+    # Formato comun de error RFC 9457, que dejo obsoleta a la RFC 7807: mismo media type
+    # application/problem+json (reglas de codigo, seccion 7.1, propuesta para API-TBD-14).
     problemdetails:
       enabled: true
 
