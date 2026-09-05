@@ -23,13 +23,16 @@
 | Archivo | Qué es |
 |---|---|
 | [`DOCKER.md`](DOCKER.md) | Convenciones de contenedores de este repositorio, puertos y decisiones abiertas |
-| [`04092026_v1_convenciones-docker-cameia.md`](04092026_v1_convenciones-docker-cameia.md) | Propuesta de convenciones de contenedores para **los ocho repositorios**, con la matriz de puertos. Estado `PROPUESTO`: hay que llevarla a la reunión |
 
-## Respuestas al equipo
+## Respuestas al equipo — están en otra rama
 
-| Archivo | Qué es |
-|---|---|
-| [`04092026_v1_respuesta-insumos-cameia-perfil.md`](04092026_v1_respuesta-insumos-cameia-perfil.md) | Respuesta a `DEV-IN-01..10` desde este microservicio |
+Los entregables que este microservicio devuelve al equipo **no viven en esta rama**, para que
+cada Pull Request tenga un solo propósito. Están en `CM-102-entregables-insumos`, bajo
+`docs/insumos/`:
+
+- respuesta a `DEV-IN-01..10` (`04092026_v1_respuesta-insumos-cameia-perfil.md`);
+- propuesta de convenciones de contenedores para los ocho repositorios
+  (`04092026_v1_convenciones-docker-cameia.md`).
 
 ## Lo que NO está aquí, a propósito
 
