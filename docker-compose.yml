@@ -88,6 +88,11 @@ services:
   verify:
     image: maven:3.9-eclipse-temurin-21
     container_name: cameia-perfil-verify
+    # Sin este perfil, 'docker compose up' arrancaria tambien 'verify', que lanza un
+    # 'mvn clean verify' en paralelo: borra target/ mientras la app arranca y compite por
+    # el cache .m2. Con el perfil, 'up' lo ignora y 'compose run verify' lo sigue
+    # levantando sin necesidad de activarlo.
+    profiles: ["tools"]
     depends_on:
       db:
         condition: service_healthy
