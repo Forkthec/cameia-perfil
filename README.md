@@ -47,6 +47,7 @@ flowchart LR
 | Documentación de API | springdoc-openapi 3.1.0 |
 | Pruebas | JUnit 5, AssertJ, Mockito y ArchUnit |
 | Contenedores | Docker y Docker Compose — ver [`docs/DOCKER.md`](docs/DOCKER.md) |
+| Documentación | Índice completo en [`docs/README.md`](docs/README.md); la norma de código de este repositorio es [`AGENTS.md`](AGENTS.md) |
 | Mensajería | RabbitMQ cuando existan contratos aprobados |
 | Ejecución objetivo | Servicio HTTP y consumidor dentro del mismo repositorio/imagen |
 
