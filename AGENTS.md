@@ -447,7 +447,7 @@ docker compose run --rm verify
 
 ## 8. Bitácora de IA — OBLIGATORIA
 
-`..\..\Entregables\04092026_01_BitacoraIA_Codigo_E2.xlsx`, hoja **`Bitacora_Codigo_E2_Sofia`**.
+`..\..\Entregables\05092026_01_BitacoraIA_Codigo_E2.xlsx`, hoja **`Bitacora_Codigo_E2_Sofia`**.
 
 **Se llena el mismo día.** Reconstruirla la noche antes de la entrega se nota y se penaliza.
 
