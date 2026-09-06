@@ -1,14 +1,18 @@
 package co.edu.unicauca.cameia.perfil.presentation.controller;
 
 import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
+import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddEducationRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.AddSkillRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddWorkExperienceRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.ProfileResponse;
 import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateProfileInfoRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateSalaryExpectationRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -22,38 +26,31 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-/**
- * Endpoints del perfil profesional (CM-16, CM-17, CM-18).
- * TODO CM-DEV-IN: confirmar que el Gateway propaga X-User-Id.
- */
+/** Endpoints del perfil profesional (CM-16 a CM-19). */
 @RestController
 @RequestMapping("/api/v1/profiles")
 class ProfileController {
 
     private final ProfileAppService profileAppService;
-
-    ProfileController(ProfileAppService profileAppService) {
-        this.profileAppService = profileAppService;
-    }
+    ProfileController(ProfileAppService profileAppService) { this.profileAppService = profileAppService; }
 
     @PostMapping
-    ResponseEntity<ProfileResponse> createProfile(@RequestHeader("X-User-Id") String firebaseUid) {
+    ResponseEntity<ProfileResponse> createProfile(@RequestHeader("X-User-Id") String uid) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ProfileResponse.from(profileAppService.createProfile(new CreateProfileCommand(firebaseUid))));
+                .body(ProfileResponse.from(profileAppService.createProfile(new CreateProfileCommand(uid))));
     }
 
     @PatchMapping("/{id}")
-    ResponseEntity<ProfileResponse> updateProfileInfo(@PathVariable UUID id, @RequestBody UpdateProfileInfoRequest req) {
+    ResponseEntity<ProfileResponse> updateProfileInfo(@PathVariable UUID id, @RequestBody UpdateProfileInfoRequest r) {
         return ResponseEntity.ok(ProfileResponse.from(profileAppService.updateProfileInfo(
-                new UpdateProfileInfoCommand(id, req.name(), req.headline(), req.summary(), req.preferredModality(), req.provenance()))));
+                new UpdateProfileInfoCommand(id, r.name(), r.headline(), r.summary(), r.preferredModality(), r.provenance()))));
     }
 
     @PostMapping("/{id}/work-experiences")
-    ResponseEntity<ProfileResponse> addWorkExperience(@PathVariable UUID id, @RequestBody AddWorkExperienceRequest req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(
-                profileAppService.addWorkExperience(new AddWorkExperienceCommand(
-                        id, req.company(), req.position(), req.description(),
-                        req.startDate(), req.endDate(), req.employmentStatus(), req.seniority(), req.provenance()))));
+    ResponseEntity<ProfileResponse> addWorkExperience(@PathVariable UUID id, @RequestBody AddWorkExperienceRequest r) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addWorkExperience(
+                new AddWorkExperienceCommand(id, r.company(), r.position(), r.description(),
+                        r.startDate(), r.endDate(), r.employmentStatus(), r.seniority(), r.provenance()))));
     }
 
     @DeleteMapping("/{id}/work-experiences/{expId}")
@@ -62,15 +59,37 @@ class ProfileController {
     }
 
     @PostMapping("/{id}/educations")
-    ResponseEntity<ProfileResponse> addEducation(@PathVariable UUID id, @RequestBody AddEducationRequest req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(
-                profileAppService.addEducation(new AddEducationCommand(
-                        id, req.institution(), req.degree(), req.fieldOfStudy(),
-                        req.level(), req.startDate(), req.endDate(), req.inProgress(), req.provenance()))));
+    ResponseEntity<ProfileResponse> addEducation(@PathVariable UUID id, @RequestBody AddEducationRequest r) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addEducation(
+                new AddEducationCommand(id, r.institution(), r.degree(), r.fieldOfStudy(),
+                        r.level(), r.startDate(), r.endDate(), r.inProgress(), r.provenance()))));
     }
 
     @DeleteMapping("/{id}/educations/{eduId}")
     ResponseEntity<ProfileResponse> removeEducation(@PathVariable UUID id, @PathVariable UUID eduId) {
         return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeEducation(id, eduId)));
+    }
+
+    @PatchMapping("/{id}/salary-expectation")
+    ResponseEntity<ProfileResponse> updateSalaryExpectation(@PathVariable UUID id, @RequestBody UpdateSalaryExpectationRequest r) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.updateSalaryExpectation(
+                new UpdateSalaryExpectationCommand(id, r.amount()))));
+    }
+
+    @PostMapping("/{id}/skills")
+    ResponseEntity<ProfileResponse> addSkill(@PathVariable UUID id, @RequestBody AddSkillRequest r) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addSkill(
+                new AddSkillCommand(id, r.skillName(), r.level(), r.provenance()))));
+    }
+
+    @DeleteMapping("/{id}/skills/{skillId}")
+    ResponseEntity<ProfileResponse> removeSkill(@PathVariable UUID id, @PathVariable UUID skillId) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeSkill(id, skillId)));
+    }
+
+    @PostMapping("/{id}/review-requests")
+    ResponseEntity<ProfileResponse> requestReview(@PathVariable UUID id) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ProfileResponse.from(profileAppService.requestReview(id)));
     }
 }
