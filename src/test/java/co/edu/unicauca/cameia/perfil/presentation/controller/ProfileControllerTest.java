@@ -9,14 +9,16 @@ import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededExce
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
-import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
+import co.edu.unicauca.cameia.perfil.presentation.advice.ApiExceptionHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.UUID;
 
@@ -28,14 +30,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(ProfileController.class)
+@ExtendWith(MockitoExtension.class)
 class ProfileControllerTest {
 
-    @Autowired
+    @Mock ProfileAppService profileAppService;
     MockMvc mockMvc;
 
-    @MockitoBean
-    ProfileAppService profileAppService;
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders
+                .standaloneSetup(new ProfileController(profileAppService))
+                .setControllerAdvice(new ApiExceptionHandler())
+                .build();
+    }
 
     // ── CM-16 ─────────────────────────────────────────────────────────────
 
@@ -157,7 +164,7 @@ class ProfileControllerTest {
 
     @Test
     void postTargetRoles_returns409WhenDuplicate() throws Exception {
-        when(profileAppService.addTargetRole(any())).thenThrow(new DuplicateTargetRoleException("Duplicado"));
+        when(profileAppService.addTargetRole(any())).thenThrow(new DuplicateTargetRoleException("Backend Developer"));
 
         mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
