@@ -1,14 +1,18 @@
 package co.edu.unicauca.cameia.perfil.application.service;
 
+import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
+import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
+import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +21,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -123,6 +128,57 @@ class ProfileAppServiceTest {
         verify(repository).save(profile);
     }
 
+    // ── CM-19 ────────────────────────────────────────────────────────────
+
+    @Test
+    void updateSalaryExpectation_setsAmountAndSaves() {
+        var profile = freshProfile();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        service.updateSalaryExpectation(new UpdateSalaryExpectationCommand(UUID.randomUUID(), new BigDecimal("3500000")));
+        assertThat(profile.getSalaryExpectation().amount()).isEqualByComparingTo("3500000");
+        verify(repository).save(profile);
+    }
+
+    @Test
+    void addSkill_addsSkillAndSaves() {
+        var profile = freshProfile();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        service.addSkill(new AddSkillCommand(UUID.randomUUID(), "Java", "EXPERT", "MANUAL"));
+        assertThat(profile.getSkills()).hasSize(1);
+        assertThat(profile.getSkills().get(0).getSkillName()).isEqualTo("Java");
+        verify(repository).save(profile);
+    }
+
+    @Test
+    void removeSkill_removesSkillAndSaves() {
+        var profile = freshProfile();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        service.addSkill(new AddSkillCommand(UUID.randomUUID(), "Java", "EXPERT", "MANUAL"));
+        var skillId = profile.getSkills().get(0).getId();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        service.removeSkill(UUID.randomUUID(), skillId);
+        assertThat(profile.getSkills()).isEmpty();
+        verify(repository).save(profile);
+    }
+
+    @Test
+    void requestReview_throwsIncompleteWhenProfileLacksRequiredFields() {
+        var profile = freshProfile();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        assertThatThrownBy(() -> service.requestReview(UUID.randomUUID()))
+                .isInstanceOf(IncompleteProfileException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void requestReview_changesStatusToInReview() {
+        var profile = completeProfile();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        service.requestReview(UUID.randomUUID());
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_REVIEW);
+        verify(repository).save(profile);
+    }
+
     // ── loadProfile ───────────────────────────────────────────────────────
 
     @Test
@@ -136,5 +192,15 @@ class ProfileAppServiceTest {
 
     private static ProfessionalProfile freshProfile() {
         return ProfessionalProfile.create(new FirebaseUid("firebase-svc-test"));
+    }
+
+    private static ProfessionalProfile completeProfile() {
+        var p = ProfessionalProfile.create(new FirebaseUid("firebase-complete"));
+        p.updateName(new ProfileName("Ana Sofía"));
+        p.updateSummary(new ProfessionalSummary("Desarrolladora backend con experiencia en Java y DDD."));
+        p.addTargetRole(new co.edu.unicauca.cameia.perfil.domain.model.TargetRole(
+                UUID.randomUUID(), "Backend Developer", co.edu.unicauca.cameia.perfil.domain.model.Seniority.JUNIOR,
+                co.edu.unicauca.cameia.perfil.domain.model.DataProvenance.MANUAL));
+        return p;
     }
 }
