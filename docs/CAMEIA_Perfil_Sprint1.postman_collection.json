@@ -229,7 +229,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"company\": \"Pragma\",\n  \"position\": \"Desarrolladora Backend Semi-Senior\",\n  \"description\": \"Arquitectura de microservicios con Spring Cloud y Kafka.\",\n  \"startDate\": \"2025-01\",\n  \"employmentStatus\": \"CURRENT\",\n  \"seniority\": \"MID\",\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"company\": \"Pragma\",\n  \"position\": \"Desarrolladora Backend Semi-Senior\",\n  \"description\": \"Arquitectura de microservicios con Spring Cloud y Kafka.\",\n  \"startDate\": \"2025-01\",\n  \"employmentStatus\": \"CURRENT\",\n  \"seniority\": \"SEMI_SENIOR\",\n  \"provenance\": \"MANUAL\"\n}"
             },
             "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/work-experiences", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","work-experiences"] }
           }
@@ -477,7 +477,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Backend Developer\",\n  \"seniority\": \"MID\",\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"title\": \"Backend Developer\",\n  \"seniority\": \"SEMI_SENIOR\",\n  \"provenance\": \"MANUAL\"\n}"
             },
             "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles"] }
           }
@@ -523,7 +523,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Backend Developer\",\n  \"seniority\": \"MID\",\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"title\": \"Backend Developer\",\n  \"seniority\": \"SEMI_SENIOR\",\n  \"provenance\": \"MANUAL\"\n}"
             },
             "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles"] }
           }

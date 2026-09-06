@@ -45,7 +45,7 @@ public final class WorkExperience {
 
     private static void validateEndDate(EmploymentStatus status, YearMonth start, YearMonth end) {
         if (status == EmploymentStatus.ENDED) {
-            Objects.requireNonNull(end, "endDate es obligatoria cuando el estado es ENDED");
+            if (end == null) throw new IllegalArgumentException("endDate es obligatoria cuando el estado es ENDED");
             if (end.isBefore(start)) {
                 throw new IllegalArgumentException("endDate no puede ser anterior a startDate");
             }
