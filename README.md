@@ -135,10 +135,15 @@ Los valores sensibles están vacíos y el `.env` real no se versiona.
 
 ## Pruebas
 
-| Prueba | Qué verifica |
-|---|---|
-| `PerfilApplicationTest` | Que el contexto de Spring levanta con la configuración del repositorio |
-| `ArquitecturaTest` | Las siete reglas de dependencia entre capas de la sección 3.4 de las reglas de código, con ArchUnit |
+| Prueba | Tipo | Qué verifica |
+|---|---|---|
+| `PerfilApplicationTest` | Integración | Que el contexto de Spring levanta con la configuración del repositorio |
+| `ArquitecturaTest` | Arquitectura | Las siete reglas de dependencia entre capas (ArchUnit) |
+| `ProfessionalProfileTest` | Unitaria | Invariantes del agregado: create(), isComplete(), addTargetRole, removeTargetRole, requestReview |
+| `WorkExperienceTest` | Unitaria | Reglas de negocio de EmploymentStatus y fechas |
+| `ProfileAppServiceTest` | Unitaria | Casos de uso CM-16 a CM-20 con mocks de repositorio |
+| `ProfileControllerTest` | Web (slice) | HTTP status y body de todos los endpoints CM-16 a CM-20 |
+| `ProfessionalProfileRepositoryAdapterIT` | Integración | Round-trip save/find contra PostgreSQL real |
 
 `ArquitecturaTest` verifica que el dominio no dependa de otras capas, que no importe Spring, JPA ni RabbitMQ, que presentación no dependa de infraestructura, que no haya dependencias circulares, y que los sufijos `Controller`, `AppService` y `Entity` se respeten.
 
