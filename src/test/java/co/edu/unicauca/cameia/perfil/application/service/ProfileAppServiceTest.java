@@ -146,8 +146,8 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
         service.addSkill(new AddSkillCommand(UUID.randomUUID(), "Java", "EXPERT", "MANUAL"));
-        assertThat(profile.getSkills()).hasSize(1);
-        assertThat(profile.getSkills().get(0).getSkillName()).isEqualTo("Java");
+        assertThat(profile.getProfileSkills()).hasSize(1);
+        assertThat(profile.getProfileSkills().get(0).getSkillName()).isEqualTo("Java");
         verify(repository).save(profile);
     }
 
@@ -156,10 +156,10 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
         service.addSkill(new AddSkillCommand(UUID.randomUUID(), "Java", "EXPERT", "MANUAL"));
-        var skillId = profile.getSkills().get(0).getId();
+        var skillId = profile.getProfileSkills().get(0).getId();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
         service.removeSkill(UUID.randomUUID(), skillId);
-        assertThat(profile.getSkills()).isEmpty();
+        assertThat(profile.getProfileSkills()).isEmpty();
         verify(repository).save(profile);
     }
 

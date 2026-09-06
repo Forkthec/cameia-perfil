@@ -100,6 +100,14 @@
       <scope>test</scope>
     </dependency>
 
+    <!-- Slices de test (@WebMvcTest, @DataJpaTest). En Spring Boot 4 el autoconfigure
+         de test no siempre llega transitivamente desde starter-test. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-test-autoconfigure</artifactId>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Verifica las reglas de dependencia entre capas de la seccion 3.4 de las reglas de
          codigo. "No con revision visual": es la unica forma de que sobrevivan al sprint 3. -->
     <dependency>
