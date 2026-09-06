@@ -47,7 +47,8 @@ class WorkExperienceTest {
     @Test
     void ended_requiresEndDate() {
         assertThatThrownBy(() -> exp(EmploymentStatus.ENDED, null))
-                .isInstanceOf(NullPointerException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("endDate es obligatoria");
     }
 
     @Test
