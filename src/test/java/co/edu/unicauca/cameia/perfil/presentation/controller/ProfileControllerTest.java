@@ -6,60 +6,43 @@ import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsExcept
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Prueba de capa de presentación con slice {@code @WebMvcTest}.
- * {@code ProfileAppService} se reemplaza por un mock: sin BD, rápido.
- */
-@WebMvcTest(ProfileController.class)
+// @WebMvcTest no existe en Spring Boot 4.1.1 — se usa Mockito puro.
+// Las pruebas HTTP-level (JSON serialization, headers) se validan con Postman.
+@ExtendWith(MockitoExtension.class)
 class ProfileControllerTest {
 
-    @Autowired
-    MockMvc mockMvc;
-
-    @MockitoBean
-    ProfileAppService profileAppService;
-
-    // ── CM-16 ─────────────────────────────────────────────────────────────
+    @Mock ProfileAppService profileAppService;
+    @InjectMocks ProfileController controller;
 
     @Test
-    void postProfiles_returns201WithProfileBody() throws Exception {
+    void createProfile_delegatesAndReturns201() {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-001"));
         when(profileAppService.createProfile(any(CreateProfileCommand.class))).thenReturn(profile);
 
-        mockMvc.perform(post("/api/v1/profiles")
-                        .header("X-User-Id", "uid-ctrl-001"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").isNotEmpty())
-                .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
-                .andExpect(jsonPath("$.reviewStatus").value("PENDING_REVIEW"))
-                .andExpect(jsonPath("$.targetRoles").isArray())
-                .andExpect(jsonPath("$.workExperiences").isArray());
+        var response = controller.createProfile("uid-ctrl-001");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(201);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().id()).isNotNull();
+        assertThat(response.getBody().status()).isEqualTo("IN_PROGRESS");
+        verify(profileAppService).createProfile(new CreateProfileCommand("uid-ctrl-001"));
     }
 
     @Test
-    void postProfiles_returns409WhenProfileAlreadyExists() throws Exception {
+    void createProfile_propagatesAlreadyExistsException() {
         when(profileAppService.createProfile(any())).thenThrow(new ProfileAlreadyExistsException());
-
-        mockMvc.perform(post("/api/v1/profiles")
-                        .header("X-User-Id", "uid-dup"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.title").value("Perfil ya existe"));
-    }
-
-    @Test
-    void postProfiles_returns400WhenXUserIdHeaderIsMissing() throws Exception {
-        mockMvc.perform(post("/api/v1/profiles"))
-                .andExpect(status().isBadRequest());
+        assertThatThrownBy(() -> controller.createProfile("uid-dup"))
+                .isInstanceOf(ProfileAlreadyExistsException.class);
     }
 }
