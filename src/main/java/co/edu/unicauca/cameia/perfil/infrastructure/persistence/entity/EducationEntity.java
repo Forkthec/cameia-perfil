@@ -1,4 +1,4 @@
-package co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity;
+﻿package co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity;
 
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
@@ -77,3 +77,4 @@ public class EducationEntity {
     public void setInProgress(boolean inProgress) { this.inProgress = inProgress; }
     public void setProvenance(DataProvenance provenance) { this.provenance = provenance; }
 }
+
