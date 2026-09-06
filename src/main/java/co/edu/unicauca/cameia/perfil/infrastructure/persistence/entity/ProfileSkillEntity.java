@@ -1,4 +1,4 @@
-﻿package co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity;
+package co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity;
 
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
