@@ -86,6 +86,13 @@
       <version>${springdoc.version}</version>
     </dependency>
 
+    <!-- Mensajería asíncrona entre microservicios vía RabbitMQ (C2, CONFIRMADO).
+         Los stubs iniciales están en infrastructure.messaging — implementación POSTERIOR. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-amqp</artifactId>
+    </dependency>
+
     <!-- JUnit 5, AssertJ y Mockito (reglas de codigo, seccion 12). -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
