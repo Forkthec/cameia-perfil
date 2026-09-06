@@ -3,7 +3,9 @@ package co.edu.unicauca.cameia.perfil.presentation.controller;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
+import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
@@ -134,5 +136,56 @@ class ProfileControllerTest {
         when(profileAppService.requestReview(id)).thenThrow(new IncompleteProfileException());
         assertThatThrownBy(() -> controller.requestReview(id))
                 .isInstanceOf(IncompleteProfileException.class);
+    }
+
+    // ── CM-20 ─────────────────────────────────────────────────────────────
+
+    @Test
+    void postTargetRoles_returns201() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-role"));
+        when(profileAppService.addTargetRole(any())).thenReturn(profile);
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "Backend Developer", "seniority": "JUNIOR", "provenance": "MANUAL"}
+                                """))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void postTargetRoles_returns409WhenDuplicate() throws Exception {
+        when(profileAppService.addTargetRole(any())).thenThrow(new DuplicateTargetRoleException("Duplicado"));
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "Backend Developer", "seniority": "JUNIOR", "provenance": "MANUAL"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Rol objetivo duplicado"));
+    }
+
+    @Test
+    void postTargetRoles_returns422WhenMaxExceeded() throws Exception {
+        when(profileAppService.addTargetRole(any())).thenThrow(new MaxTargetRolesExceededException("Máximo alcanzado"));
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "Extra Role", "seniority": "JUNIOR", "provenance": "MANUAL"}
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.title").value("Máximo de roles objetivo alcanzado"));
+    }
+
+    @Test
+    void deleteTargetRole_returns200() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-delrole"));
+        when(profileAppService.removeTargetRole(any(), any())).thenReturn(profile);
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/target-roles/{roleId}",
+                        UUID.randomUUID(), UUID.randomUUID()))
+                .andExpect(status().isOk());
     }
 }

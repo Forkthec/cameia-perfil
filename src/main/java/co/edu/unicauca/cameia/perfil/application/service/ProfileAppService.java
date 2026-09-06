@@ -2,6 +2,7 @@ package co.edu.unicauca.cameia.perfil.application.service;
 
 import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
@@ -120,6 +121,21 @@ public class ProfileAppService {
     @Transactional
     public ProfessionalProfile requestReview(UUID profileId) {
         var p = load(profileId); p.requestReview(); repository.save(p); return p;
+    }
+
+    // ── CM-20 ────────────────────────────────────────────────────────────
+
+    @Transactional
+    public ProfessionalProfile addTargetRole(AddTargetRoleCommand cmd) {
+        var p = load(cmd.profileId());
+        p.addTargetRole(new co.edu.unicauca.cameia.perfil.domain.model.TargetRole(
+                UUID.randomUUID(), cmd.title(), Seniority.valueOf(cmd.seniority()), DataProvenance.valueOf(cmd.provenance())));
+        repository.save(p); return p;
+    }
+
+    @Transactional
+    public ProfessionalProfile removeTargetRole(UUID profileId, UUID roleId) {
+        var p = load(profileId); p.removeTargetRole(roleId); repository.save(p); return p;
     }
 
     // ── Shared ────────────────────────────────────────────────────────────

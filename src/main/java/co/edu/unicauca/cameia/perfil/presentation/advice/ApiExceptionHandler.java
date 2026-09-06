@@ -1,6 +1,9 @@
 package co.edu.unicauca.cameia.perfil.presentation.advice;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
+import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
+import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -38,5 +41,23 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
         var p = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
         p.setTitle("Valor no válido"); return p;
+    }
+
+    @ExceptionHandler(MaxTargetRolesExceededException.class)
+    ProblemDetail handleMaxTargetRoles(MaxTargetRolesExceededException ex) {
+        var p = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        p.setTitle("Máximo de roles objetivo alcanzado"); return p;
+    }
+
+    @ExceptionHandler(DuplicateTargetRoleException.class)
+    ProblemDetail handleDuplicateTargetRole(DuplicateTargetRoleException ex) {
+        var p = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        p.setTitle("Rol objetivo duplicado"); return p;
+    }
+
+    @ExceptionHandler(LastTargetRoleException.class)
+    ProblemDetail handleLastTargetRole(LastTargetRoleException ex) {
+        var p = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        p.setTitle("No se puede eliminar el último rol objetivo"); return p;
     }
 }

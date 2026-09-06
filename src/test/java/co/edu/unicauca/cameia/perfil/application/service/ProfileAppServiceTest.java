@@ -1,11 +1,13 @@
 package co.edu.unicauca.cameia.perfil.application.service;
 
 import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
+import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
@@ -177,6 +179,32 @@ class ProfileAppServiceTest {
         service.requestReview(UUID.randomUUID());
         assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_REVIEW);
         verify(repository).save(profile);
+    }
+
+    // ── CM-20 ────────────────────────────────────────────────────────────
+
+    @Test
+    void addTargetRole_addsRoleAndSaves() {
+        var profile = freshProfile();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), "Backend Developer", "JUNIOR", "MANUAL"));
+        assertThat(profile.getTargetRoles()).hasSize(1);
+        assertThat(profile.getTargetRoles().get(0).getTitle()).isEqualTo("Backend Developer");
+        verify(repository).save(profile);
+    }
+
+    @Test
+    void removeTargetRole_throwsLastTargetRoleWhenOnlyOne() {
+        var profile = freshProfile();
+        profile.addTargetRole(new co.edu.unicauca.cameia.perfil.domain.model.TargetRole(
+                UUID.randomUUID(), "Backend Developer",
+                co.edu.unicauca.cameia.perfil.domain.model.Seniority.JUNIOR,
+                co.edu.unicauca.cameia.perfil.domain.model.DataProvenance.MANUAL));
+        var roleId = profile.getTargetRoles().get(0).getId();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        assertThatThrownBy(() -> service.removeTargetRole(UUID.randomUUID(), roleId))
+                .isInstanceOf(LastTargetRoleException.class);
+        verify(repository, never()).save(any());
     }
 
     // ── loadProfile ───────────────────────────────────────────────────────

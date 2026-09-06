@@ -2,6 +2,7 @@ package co.edu.unicauca.cameia.perfil.presentation.controller;
 
 import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
@@ -9,6 +10,7 @@ import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectation
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddEducationRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddSkillRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.AddTargetRoleRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddWorkExperienceRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.ProfileResponse;
 import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateProfileInfoRequest;
@@ -91,5 +93,16 @@ class ProfileController {
     ResponseEntity<ProfileResponse> requestReview(@PathVariable UUID id) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ProfileResponse.from(profileAppService.requestReview(id)));
+    }
+
+    @PostMapping("/{id}/target-roles")
+    ResponseEntity<ProfileResponse> addTargetRole(@PathVariable UUID id, @RequestBody AddTargetRoleRequest r) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addTargetRole(
+                new AddTargetRoleCommand(id, r.title(), r.seniority(), r.provenance()))));
+    }
+
+    @DeleteMapping("/{id}/target-roles/{roleId}")
+    ResponseEntity<ProfileResponse> removeTargetRole(@PathVariable UUID id, @PathVariable UUID roleId) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeTargetRole(id, roleId)));
     }
 }
