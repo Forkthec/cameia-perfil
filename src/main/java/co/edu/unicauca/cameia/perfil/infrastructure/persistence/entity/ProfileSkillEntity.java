@@ -41,7 +41,7 @@ public class ProfileSkillEntity {
     @Column(name = "procedencia", nullable = false, length = 20)
     private DataProvenance provenance;
 
-    protected ProfileSkillEntity() {}
+    public ProfileSkillEntity() {}
 
     public UUID getId() { return id; }
     public ProfessionalProfileEntity getProfile() { return profile; }

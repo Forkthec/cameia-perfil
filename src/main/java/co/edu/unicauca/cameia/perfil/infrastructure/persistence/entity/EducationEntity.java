@@ -53,7 +53,7 @@ public class EducationEntity {
     @Column(name = "procedencia", nullable = false, length = 20)
     private DataProvenance provenance;
 
-    protected EducationEntity() {}
+    public EducationEntity() {}
 
     public UUID getId() { return id; }
     public ProfessionalProfileEntity getProfile() { return profile; }

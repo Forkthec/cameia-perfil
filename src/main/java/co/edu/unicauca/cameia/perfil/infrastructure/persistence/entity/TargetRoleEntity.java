@@ -49,7 +49,7 @@ public class TargetRoleEntity {
     @Column(name = "creado_en", nullable = false, updatable = false)
     private Instant createdAt;
 
-    protected TargetRoleEntity() {}
+    public TargetRoleEntity() {}
 
     public UUID getId() { return id; }
     public ProfessionalProfileEntity getProfile() { return profile; }

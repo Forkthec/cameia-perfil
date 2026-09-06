@@ -76,7 +76,7 @@ public class ProfessionalProfileEntity {
     @OneToMany(mappedBy = "profile", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProfileSkillEntity> profileSkills = new ArrayList<>();
 
-    protected ProfessionalProfileEntity() {}
+    public ProfessionalProfileEntity() {}
 
     public UUID getId() { return id; }
     public String getFirebaseUid() { return firebaseUid; }
