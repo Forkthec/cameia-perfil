@@ -120,9 +120,14 @@ class ProfileAppServiceTest {
     @Test
     void removeWorkExperience_removesFromProfileAndSaves() {
         var profile = freshProfile();
-        var cmd = new AddWorkExperienceCommand(UUID.randomUUID(), "ACME", "Dev", null, "2022-01", null, "CURRENT", "JUNIOR", "MANUAL");
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.addWorkExperience(cmd);
+        // Precarga una experiencia directamente en el dominio (sin pasar por el servicio)
+        // para aislar el test de removeWorkExperience del de addWorkExperience.
+        profile.addWorkExperience(new co.edu.unicauca.cameia.perfil.domain.model.WorkExperience(
+                java.util.UUID.randomUUID(), "ACME", "Dev", null,
+                java.time.YearMonth.of(2022, 1), null,
+                co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus.CURRENT,
+                co.edu.unicauca.cameia.perfil.domain.model.Seniority.JUNIOR,
+                co.edu.unicauca.cameia.perfil.domain.model.DataProvenance.MANUAL));
         var expId = profile.getWorkExperiences().get(0).getId();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
         service.removeWorkExperience(UUID.randomUUID(), expId);
@@ -145,7 +150,7 @@ class ProfileAppServiceTest {
     void addSkill_addsSkillAndSaves() {
         var profile = freshProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.addSkill(new AddSkillCommand(UUID.randomUUID(), "Java", "EXPERT", "MANUAL"));
+        service.addSkill(new AddSkillCommand(UUID.randomUUID(), "Java", "ADVANCED", "MANUAL"));
         assertThat(profile.getProfileSkills()).hasSize(1);
         assertThat(profile.getProfileSkills().get(0).getSkillName()).isEqualTo("Java");
         verify(repository).save(profile);
@@ -154,8 +159,11 @@ class ProfileAppServiceTest {
     @Test
     void removeSkill_removesSkillAndSaves() {
         var profile = freshProfile();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.addSkill(new AddSkillCommand(UUID.randomUUID(), "Java", "EXPERT", "MANUAL"));
+        // Precarga la habilidad directamente en el dominio para aislar el test.
+        profile.addSkill(new co.edu.unicauca.cameia.perfil.domain.model.ProfileSkill(
+                UUID.randomUUID(), "Java",
+                co.edu.unicauca.cameia.perfil.domain.model.SkillLevel.ADVANCED,
+                co.edu.unicauca.cameia.perfil.domain.model.DataProvenance.MANUAL));
         var skillId = profile.getProfileSkills().get(0).getId();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
         service.removeSkill(UUID.randomUUID(), skillId);
