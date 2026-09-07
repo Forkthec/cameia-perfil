@@ -2,13 +2,17 @@ package co.edu.unicauca.cameia.perfil.presentation.controller;
 
 import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
+import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddEducationRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddSkillRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.AddTargetRoleRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateTargetRoleRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddWorkExperienceRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.ProfileResponse;
 import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateProfileInfoRequest;
@@ -16,6 +20,7 @@ import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateSalaryExpectationReq
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,10 +45,15 @@ class ProfileController {
                 .body(ProfileResponse.from(profileAppService.createProfile(new CreateProfileCommand(uid))));
     }
 
+    @GetMapping("/{id}")
+    ResponseEntity<ProfileResponse> getProfile(@PathVariable UUID id) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.getProfile(id)));
+    }
+
     @PatchMapping("/{id}")
     ResponseEntity<ProfileResponse> updateProfileInfo(@PathVariable UUID id, @RequestBody UpdateProfileInfoRequest r) {
         return ResponseEntity.ok(ProfileResponse.from(profileAppService.updateProfileInfo(
-                new UpdateProfileInfoCommand(id, r.name(), r.headline(), r.summary(), r.preferredModality(), r.provenance()))));
+                new UpdateProfileInfoCommand(id, r.name(), r.summary(), r.preferredModality(), r.provenance()))));
     }
 
     @PostMapping("/{id}/work-experiences")
@@ -91,5 +101,23 @@ class ProfileController {
     ResponseEntity<ProfileResponse> requestReview(@PathVariable UUID id) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ProfileResponse.from(profileAppService.requestReview(id)));
+    }
+
+    @PostMapping("/{id}/target-roles")
+    ResponseEntity<ProfileResponse> addTargetRole(@PathVariable UUID id, @RequestBody AddTargetRoleRequest r) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addTargetRole(
+                new AddTargetRoleCommand(id, r.title(), r.seniority(), r.provenance()))));
+    }
+
+    @PatchMapping("/{id}/target-roles/{roleId}")
+    ResponseEntity<ProfileResponse> updateTargetRole(@PathVariable UUID id, @PathVariable UUID roleId,
+                                                     @RequestBody UpdateTargetRoleRequest r) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.updateTargetRole(
+                new UpdateTargetRoleCommand(id, roleId, r.title(), r.seniority()))));
+    }
+
+    @DeleteMapping("/{id}/target-roles/{roleId}")
+    ResponseEntity<ProfileResponse> removeTargetRole(@PathVariable UUID id, @PathVariable UUID roleId) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeTargetRole(id, roleId)));
     }
 }

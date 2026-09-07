@@ -26,7 +26,6 @@ public final class ProfessionalProfile {
     private final ProfileId id;
     private final FirebaseUid firebaseUid;
     private ProfileName name;
-    private String headline;
     private ProfessionalSummary summary;
     private SalaryExpectation salaryExpectation;
     private WorkModality preferredModality;
@@ -61,7 +60,7 @@ public final class ProfessionalProfile {
 
     /** Reconstituye el agregado desde persistencia (uso exclusivo del adaptador). */
     public static ProfessionalProfile reconstitute(
-            ProfileId id, FirebaseUid firebaseUid, ProfileName name, String headline,
+            ProfileId id, FirebaseUid firebaseUid, ProfileName name,
             ProfessionalSummary summary, SalaryExpectation salaryExpectation,
             WorkModality preferredModality, DataProvenance provenance,
             ProfileStatus status, ReviewStatus reviewStatus,
@@ -70,7 +69,6 @@ public final class ProfessionalProfile {
             List<Education> educations, List<ProfileSkill> profileSkills) {
         ProfessionalProfile p = new ProfessionalProfile(id, firebaseUid);
         p.name = name;
-        p.headline = headline;
         p.summary = summary;
         p.salaryExpectation = salaryExpectation;
         p.preferredModality = preferredModality;
@@ -87,7 +85,6 @@ public final class ProfessionalProfile {
 
     // ── Información general (CM-17) ──────────────────────────────────────
     public void updateName(ProfileName name) { this.name = name; touch(); }
-    public void updateHeadline(String headline) { this.headline = headline; touch(); }
     public void updateSummary(ProfessionalSummary summary) { this.summary = summary; touch(); }
     public void updatePreferredModality(WorkModality modality) { this.preferredModality = modality; touch(); }
     public void updateProvenance(DataProvenance provenance) { this.provenance = Objects.requireNonNull(provenance); touch(); }
@@ -107,6 +104,19 @@ public final class ProfessionalProfile {
     public void removeTargetRole(UUID roleId) {
         if (targetRoles.size() == 1) throw new LastTargetRoleException();
         targetRoles.removeIf(r -> r.getId().equals(Objects.requireNonNull(roleId)));
+        touch();
+    }
+
+    public void updateTargetRole(UUID roleId, String title, Seniority seniority) {
+        Objects.requireNonNull(roleId);
+        TargetRole existing = targetRoles.stream().filter(r -> r.getId().equals(roleId))
+                .findFirst().orElseThrow(() -> new IllegalArgumentException("Rol objetivo no encontrado: " + roleId));
+        DataProvenance prov = existing.getProvenance();
+        targetRoles.removeIf(r -> r.getId().equals(roleId));
+        targetRoles.add(new TargetRole(roleId,
+                title != null ? title : existing.getTitle(),
+                seniority != null ? seniority : existing.getSeniority(),
+                prov));
         touch();
     }
 
@@ -138,7 +148,6 @@ public final class ProfessionalProfile {
     public ProfileId getId() { return id; }
     public FirebaseUid getFirebaseUid() { return firebaseUid; }
     public ProfileName getName() { return name; }
-    public String getHeadline() { return headline; }
     public ProfessionalSummary getSummary() { return summary; }
     public SalaryExpectation getSalaryExpectation() { return salaryExpectation; }
     public WorkModality getPreferredModality() { return preferredModality; }

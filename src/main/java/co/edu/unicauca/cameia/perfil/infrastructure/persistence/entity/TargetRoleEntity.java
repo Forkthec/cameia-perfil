@@ -69,3 +69,4 @@ public class TargetRoleEntity {
     public void setReviewStatus(ReviewStatus reviewStatus) { this.reviewStatus = reviewStatus; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }
+

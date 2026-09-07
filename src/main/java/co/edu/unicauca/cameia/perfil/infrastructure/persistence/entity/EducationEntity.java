@@ -77,3 +77,4 @@ public class EducationEntity {
     public void setInProgress(boolean inProgress) { this.inProgress = inProgress; }
     public void setProvenance(DataProvenance provenance) { this.provenance = provenance; }
 }
+

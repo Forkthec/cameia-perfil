@@ -15,8 +15,8 @@ import jakarta.persistence.Table;
 import java.util.UUID;
 
 /**
- * Desviación del C4: almacena nombre_habilidad como texto en lugar de FK a tabla habilidad
- * (catálogo no implementado en Sprint 1).
+ * DesviaciÃ³n del C4: almacena nombre_habilidad como texto en lugar de FK a tabla habilidad
+ * (catÃ¡logo no implementado en Sprint 1).
  */
 @Entity
 @Table(name = "habilidad_perfil")
@@ -55,3 +55,4 @@ public class ProfileSkillEntity {
     public void setLevel(SkillLevel level) { this.level = level; }
     public void setProvenance(DataProvenance provenance) { this.provenance = provenance; }
 }
+

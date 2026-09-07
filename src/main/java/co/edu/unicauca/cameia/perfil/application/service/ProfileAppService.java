@@ -2,10 +2,12 @@ package co.edu.unicauca.cameia.perfil.application.service;
 
 import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
+import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
@@ -59,7 +61,6 @@ public class ProfileAppService {
     public ProfessionalProfile updateProfileInfo(UpdateProfileInfoCommand cmd) {
         var p = load(cmd.profileId());
         if (cmd.name() != null) p.updateName(new ProfileName(cmd.name()));
-        if (cmd.headline() != null) p.updateHeadline(cmd.headline());
         if (cmd.summary() != null) p.updateSummary(new ProfessionalSummary(cmd.summary()));
         if (cmd.preferredModality() != null) p.updatePreferredModality(WorkModality.valueOf(cmd.preferredModality()));
         if (cmd.provenance() != null) p.updateProvenance(DataProvenance.valueOf(cmd.provenance()));
@@ -86,9 +87,15 @@ public class ProfileAppService {
     public ProfessionalProfile addEducation(AddEducationCommand cmd) {
         var p = load(cmd.profileId());
         p.addEducation(new Education(UUID.randomUUID(), cmd.institution(), cmd.degree(), cmd.fieldOfStudy(),
-                EducationLevel.valueOf(cmd.level()), YearMonth.parse(cmd.startDate()),
-                cmd.endDate() != null ? YearMonth.parse(cmd.endDate()) : null, cmd.inProgress(), DataProvenance.valueOf(cmd.provenance())));
+                EducationLevel.valueOf(cmd.level()), YearMonth.parse(normalizeYearMonth(cmd.startDate())),
+                cmd.endDate() != null ? YearMonth.parse(normalizeYearMonth(cmd.endDate())) : null,
+                cmd.inProgress(), DataProvenance.valueOf(cmd.provenance())));
         repository.save(p); return p;
+    }
+
+    /** Acepta "YYYY" (solo año) o "YYYY-MM" y siempre devuelve "YYYY-MM". */
+    private static String normalizeYearMonth(String value) {
+        return value != null && value.matches("\\d{4}") ? value + "-01" : value;
     }
 
     @Transactional
@@ -120,6 +127,32 @@ public class ProfileAppService {
     @Transactional
     public ProfessionalProfile requestReview(UUID profileId) {
         var p = load(profileId); p.requestReview(); repository.save(p); return p;
+    }
+
+    // ── CM-20 ────────────────────────────────────────────────────────────
+
+    public ProfessionalProfile getProfile(UUID id) { return load(id); }
+
+    @Transactional
+    public ProfessionalProfile updateTargetRole(UpdateTargetRoleCommand cmd) {
+        var p = load(cmd.profileId());
+        p.updateTargetRole(cmd.roleId(),
+                cmd.title(),
+                cmd.seniority() != null ? Seniority.valueOf(cmd.seniority()) : null);
+        repository.save(p); return p;
+    }
+
+    @Transactional
+    public ProfessionalProfile addTargetRole(AddTargetRoleCommand cmd) {
+        var p = load(cmd.profileId());
+        p.addTargetRole(new co.edu.unicauca.cameia.perfil.domain.model.TargetRole(
+                UUID.randomUUID(), cmd.title(), Seniority.valueOf(cmd.seniority()), DataProvenance.valueOf(cmd.provenance())));
+        repository.save(p); return p;
+    }
+
+    @Transactional
+    public ProfessionalProfile removeTargetRole(UUID profileId, UUID roleId) {
+        var p = load(profileId); p.removeTargetRole(roleId); repository.save(p); return p;
     }
 
     // ── Shared ────────────────────────────────────────────────────────────

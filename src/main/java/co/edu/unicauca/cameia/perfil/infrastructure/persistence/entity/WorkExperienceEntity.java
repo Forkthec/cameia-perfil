@@ -17,7 +17,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * Columnas: ver migración V1. Desviación del C4: usa {@code estado_empleo VARCHAR} en lugar de
+ * Columnas: ver migraciÃ³n V1. DesviaciÃ³n del C4: usa {@code estado_empleo VARCHAR} en lugar de
  * {@code actual BOOLEAN}, y {@code DATE} en lugar de month-precision en el dominio (el adaptador convierte).
  */
 @Entity
@@ -83,3 +83,4 @@ public class WorkExperienceEntity {
     public void setSeniority(Seniority seniority) { this.seniority = seniority; }
     public void setProvenance(DataProvenance provenance) { this.provenance = provenance; }
 }
+

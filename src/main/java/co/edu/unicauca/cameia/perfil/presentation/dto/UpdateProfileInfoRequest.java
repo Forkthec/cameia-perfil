@@ -6,7 +6,6 @@ package co.edu.unicauca.cameia.perfil.presentation.dto;
  */
 public record UpdateProfileInfoRequest(
         String name,
-        String headline,
         String summary,
         String preferredModality,
         String provenance) {

@@ -10,7 +10,6 @@ import java.util.UUID;
 public record UpdateProfileInfoCommand(
         UUID profileId,
         String name,
-        String headline,
         String summary,
         String preferredModality,
         String provenance) {
