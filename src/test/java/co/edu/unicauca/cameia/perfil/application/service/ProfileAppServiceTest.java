@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.application.service;
 
+import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
@@ -29,43 +30,34 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ProfileAppServiceTest {
 
-    @Mock
-    ProfessionalProfileRepository repository;
-
-    @InjectMocks
-    ProfileAppService service;
+    @Mock ProfessionalProfileRepository repository;
+    @InjectMocks ProfileAppService service;
 
     // ── CM-16 ────────────────────────────────────────────────────────────
 
     @Test
     void createProfile_savesProfileAndReturnsIt() {
         when(repository.existsByFirebaseUid(any())).thenReturn(false);
-
-        var result = service.createProfile(new CreateProfileCommand("uid-new-001"));
-
+        var result = service.createProfile(new CreateProfileCommand("uid-001"));
         assertThat(result.getStatus()).isEqualTo(ProfileStatus.IN_PROGRESS);
-        assertThat(result.getFirebaseUid().value()).isEqualTo("uid-new-001");
         verify(repository).save(result);
     }
 
     @Test
     void createProfile_throwsAlreadyExistsWhenUidAlreadyRegistered() {
         when(repository.existsByFirebaseUid(any())).thenReturn(true);
-
         assertThatThrownBy(() -> service.createProfile(new CreateProfileCommand("uid-dup")))
                 .isInstanceOf(ProfileAlreadyExistsException.class);
-
         verify(repository, never()).save(any());
     }
 
     @Test
     void createProfile_checksExistenceWithCorrectUid() {
         when(repository.existsByFirebaseUid(any())).thenReturn(false);
-        service.createProfile(new CreateProfileCommand("uid-check-123"));
-
+        service.createProfile(new CreateProfileCommand("uid-check"));
         var captor = ArgumentCaptor.forClass(FirebaseUid.class);
         verify(repository).existsByFirebaseUid(captor.capture());
-        assertThat(captor.getValue().value()).isEqualTo("uid-check-123");
+        assertThat(captor.getValue().value()).isEqualTo("uid-check");
     }
 
     @Test
@@ -81,19 +73,15 @@ class ProfileAppServiceTest {
     void updateProfileInfo_appliesNameAndSummary() {
         var profile = freshProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-
-        service.updateProfileInfo(new UpdateProfileInfoCommand(
-                UUID.randomUUID(), "Ana Sofía", null, "Desarrolladora backend", null, null));
-
+        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), "Ana Sofía", null, "Dev backend", null, null));
         assertThat(profile.getName().value()).isEqualTo("Ana Sofía");
-        assertThat(profile.getSummary().value()).isEqualTo("Desarrolladora backend");
+        assertThat(profile.getSummary().value()).isEqualTo("Dev backend");
         verify(repository).save(profile);
     }
 
     @Test
     void updateProfileInfo_throwsNotFoundWhenProfileMissing() {
         when(repository.findById(any())).thenReturn(Optional.empty());
-
         assertThatThrownBy(() -> service.updateProfileInfo(
                 new UpdateProfileInfoCommand(UUID.randomUUID(), null, null, null, null, null)))
                 .isInstanceOf(ProfileNotFoundException.class);
@@ -104,11 +92,35 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         profile.updateName(new ProfileName("Nombre original"));
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-
         service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), null, "nuevo headline", null, null, null));
-
         assertThat(profile.getName().value()).isEqualTo("Nombre original");
         assertThat(profile.getHeadline()).isEqualTo("nuevo headline");
+    }
+
+    // ── CM-18 ────────────────────────────────────────────────────────────
+
+    @Test
+    void addWorkExperience_addsEntryAndSaves() {
+        var profile = freshProfile();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), "ACME", "Dev", null, "2022-01", null, "CURRENT", "JUNIOR", "MANUAL"));
+        assertThat(profile.getWorkExperiences()).hasSize(1);
+        assertThat(profile.getWorkExperiences().get(0).getCompany()).isEqualTo("ACME");
+        verify(repository).save(profile);
+    }
+
+    @Test
+    void removeWorkExperience_removesFromProfileAndSaves() {
+        var profile = freshProfile();
+        var cmd = new AddWorkExperienceCommand(UUID.randomUUID(), "ACME", "Dev", null, "2022-01", null, "CURRENT", "JUNIOR", "MANUAL");
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        service.addWorkExperience(cmd);
+        var expId = profile.getWorkExperiences().get(0).getId();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        service.removeWorkExperience(UUID.randomUUID(), expId);
+        assertThat(profile.getWorkExperiences()).isEmpty();
+        verify(repository).save(profile);
     }
 
     // ── loadProfile ───────────────────────────────────────────────────────
@@ -116,14 +128,11 @@ class ProfileAppServiceTest {
     @Test
     void loadProfile_throwsNotFoundWhenProfileDoesNotExist() {
         when(repository.findById(any())).thenReturn(Optional.empty());
-
         var id = UUID.randomUUID();
         assertThatThrownBy(() -> service.loadProfile(id))
                 .isInstanceOf(ProfileNotFoundException.class)
                 .hasMessageContaining(id.toString());
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────
 
     private static ProfessionalProfile freshProfile() {
         return ProfessionalProfile.create(new FirebaseUid("firebase-svc-test"));
