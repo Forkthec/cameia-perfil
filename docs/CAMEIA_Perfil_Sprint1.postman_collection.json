@@ -6,19 +6,20 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:8082", "type": "string" },
-    { "key": "profile_id", "value": "", "type": "string" },
-    { "key": "exp_id",     "value": "", "type": "string" },
-    { "key": "edu_id",     "value": "", "type": "string" },
-    { "key": "skill_id",   "value": "", "type": "string" },
-    { "key": "role_id",    "value": "", "type": "string" }
+    { "key": "base_url",  "value": "http://localhost:8082", "type": "string" },
+    { "key": "profile_id","value": "", "type": "string" },
+    { "key": "exp_id",    "value": "", "type": "string" },
+    { "key": "edu_id",    "value": "", "type": "string" },
+    { "key": "skill_id",  "value": "", "type": "string" },
+    { "key": "role_id",   "value": "", "type": "string" },
+    { "key": "role_id_2", "value": "", "type": "string" }
   ],
   "item": [
     {
       "name": "CM-16 — Crear perfil profesional",
       "item": [
         {
-          "name": "✅ POST /profiles — crea perfil nuevo (guarda profileId)",
+          "name": "OK POST /profiles — crea perfil nuevo (guarda profileId)",
           "event": [
             {
               "listen": "test",
@@ -28,7 +29,7 @@
                   "pm.test('Tiene id', () => pm.expect(pm.response.json().id).to.be.a('string'));",
                   "pm.test('Status IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));",
                   "pm.test('reviewStatus PENDING_REVIEW', () => pm.expect(pm.response.json().reviewStatus).to.eql('PENDING_REVIEW'));",
-                  "pm.test('targetRoles es array vacío', () => pm.expect(pm.response.json().targetRoles).to.eql([]));",
+                  "pm.test('targetRoles es array vacio', () => pm.expect(pm.response.json().targetRoles).to.eql([]));",
                   "pm.collectionVariables.set('profile_id', pm.response.json().id);",
                   "console.log('profileId guardado:', pm.response.json().id);"
                 ]
@@ -44,7 +45,7 @@
           }
         },
         {
-          "name": "❌ POST /profiles — 409 UID ya registrado",
+          "name": "ERR POST /profiles — 409 UID ya registrado",
           "event": [
             {
               "listen": "test",
@@ -65,7 +66,7 @@
           }
         },
         {
-          "name": "❌ POST /profiles — 400 sin header X-User-Id",
+          "name": "ERR POST /profiles — 400 sin header X-User-Id",
           "event": [
             {
               "listen": "test",
@@ -85,18 +86,18 @@
       ]
     },
     {
-      "name": "CM-17 — Actualizar info básica del perfil",
+      "name": "CM-17 — Actualizar info basica del perfil",
       "item": [
         {
-          "name": "✅ PATCH /profiles/{id} — actualiza nombre y resumen",
+          "name": "OK PATCH /profiles/{id} — actualiza nombre y resumen",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('name actualizado', () => pm.expect(pm.response.json().name).to.eql('Ana Sofía Arango'));",
-                  "pm.test('headline actualizado', () => pm.expect(pm.response.json().headline).to.eql('Desarrolladora Backend | Java & Spring Boot'));"
+                  "pm.test('name actualizado', () => pm.expect(pm.response.json().name).to.eql('Ana Sofia Arango'));",
+                  "pm.test('summary actualizado', () => pm.expect(pm.response.json().summary).to.include('Ingenieria de Sistemas'));"
                 ]
               }
             }
@@ -106,21 +107,21 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Ana Sofía Arango\",\n  \"headline\": \"Desarrolladora Backend | Java & Spring Boot\",\n  \"summary\": \"Estudiante de Ingeniería de Sistemas en la Universidad del Cauca, especializada en arquitectura DDD y microservicios con Java 21 y Spring Boot.\",\n  \"preferredModality\": \"HYBRID\",\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"name\": \"Ana Sofia Arango\",\n  \"summary\": \"Estudiante de Ingenieria de Sistemas en la Universidad del Cauca, especializada en arquitectura DDD y microservicios con Java 21 y Spring Boot.\",\n  \"preferredModality\": \"HYBRID\",\n  \"provenance\": \"MANUAL\"\n}"
             },
             "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}"] }
           }
         },
         {
-          "name": "✅ PATCH /profiles/{id} — actualiza solo headline (nombre no cambia)",
+          "name": "OK PATCH /profiles/{id} — actualiza solo summary (nombre no cambia)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('name no cambió', () => pm.expect(pm.response.json().name).to.eql('Ana Sofía Arango'));",
-                  "pm.test('headline actualizado', () => pm.expect(pm.response.json().headline).to.eql('Backend Developer | DDD & Clean Architecture'));"
+                  "pm.test('name no cambio', () => pm.expect(pm.response.json().name).to.eql('Ana Sofia Arango'));",
+                  "pm.test('summary actualizado', () => pm.expect(pm.response.json().summary).to.include('DDD & Clean Architecture'));"
                 ]
               }
             }
@@ -130,13 +131,13 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"headline\": \"Backend Developer | DDD & Clean Architecture\"\n}"
+              "raw": "{\n  \"summary\": \"Backend Developer enfocada en DDD & Clean Architecture con Java 21.\"\n}"
             },
             "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}"] }
           }
         },
         {
-          "name": "❌ PATCH /profiles/{id} — 404 perfil no existe",
+          "name": "ERR PATCH /profiles/{id} — 404 perfil no existe",
           "event": [
             {
               "listen": "test",
@@ -159,14 +160,14 @@
           }
         },
         {
-          "name": "❌ PATCH /profiles/{id} — 422 enum inválido",
+          "name": "ERR PATCH /profiles/{id} — 422 enum invalido",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status 422', () => pm.response.to.have.status(422));",
-                  "pm.test('title Valor no válido', () => pm.expect(pm.response.json().title).to.eql('Valor no válido'));"
+                  "pm.test('title Valor no valido', () => pm.expect(pm.response.json().title).to.eql('Valor no valido'));"
                 ]
               }
             }
@@ -184,10 +185,10 @@
       ]
     },
     {
-      "name": "CM-18 — Experiencia laboral y educación",
+      "name": "CM-18 — Experiencia laboral y educacion",
       "item": [
         {
-          "name": "✅ POST /profiles/{id}/work-experiences — agrega experiencia ENDED",
+          "name": "OK POST /profiles/{id}/work-experiences — agrega experiencia ENDED",
           "event": [
             {
               "listen": "test",
@@ -206,13 +207,13 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"company\": \"Bancolombia\",\n  \"position\": \"Desarrolladora Backend Jr\",\n  \"description\": \"Desarrollo de APIs REST en Java 17 con Spring Boot para el módulo de pagos digitales.\",\n  \"startDate\": \"2023-06\",\n  \"endDate\": \"2024-12\",\n  \"employmentStatus\": \"ENDED\",\n  \"seniority\": \"JUNIOR\",\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"company\": \"Bancolombia\",\n  \"position\": \"Desarrolladora Backend Jr\",\n  \"description\": \"Desarrollo de APIs REST en Java 17 con Spring Boot para el modulo de pagos digitales.\",\n  \"startDate\": \"2023-06\",\n  \"endDate\": \"2024-12\",\n  \"employmentStatus\": \"ENDED\",\n  \"seniority\": \"JUNIOR\",\n  \"provenance\": \"MANUAL\"\n}"
             },
             "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/work-experiences", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","work-experiences"] }
           }
         },
         {
-          "name": "✅ POST /profiles/{id}/work-experiences — agrega experiencia CURRENT (sin endDate)",
+          "name": "OK POST /profiles/{id}/work-experiences — agrega experiencia CURRENT (sin endDate)",
           "event": [
             {
               "listen": "test",
@@ -235,7 +236,7 @@
           }
         },
         {
-          "name": "❌ POST /work-experiences — 422 ENDED sin endDate",
+          "name": "ERR POST /work-experiences — 422 ENDED sin endDate",
           "event": [
             {
               "listen": "test",
@@ -257,7 +258,7 @@
           }
         },
         {
-          "name": "✅ DELETE /profiles/{id}/work-experiences/{expId} — elimina experiencia",
+          "name": "OK DELETE /profiles/{id}/work-experiences/{expId} — elimina experiencia",
           "event": [
             {
               "listen": "test",
@@ -275,7 +276,7 @@
           }
         },
         {
-          "name": "✅ POST /profiles/{id}/educations — agrega educación completada",
+          "name": "OK POST /profiles/{id}/educations — agrega educacion completada",
           "event": [
             {
               "listen": "test",
@@ -294,13 +295,13 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"institution\": \"Universidad del Cauca\",\n  \"degree\": \"Ingeniería de Sistemas\",\n  \"fieldOfStudy\": \"Ingeniería de Software\",\n  \"level\": \"UNDERGRADUATE\",\n  \"startDate\": \"2021-01\",\n  \"endDate\": \"2025-12\",\n  \"inProgress\": false,\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"institution\": \"Universidad del Cauca\",\n  \"degree\": \"Ingenieria de Sistemas\",\n  \"fieldOfStudy\": \"Ingenieria de Software\",\n  \"level\": \"UNDERGRADUATE\",\n  \"startDate\": \"2021-01\",\n  \"endDate\": \"2025-12\",\n  \"inProgress\": false,\n  \"provenance\": \"MANUAL\"\n}"
             },
             "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/educations", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","educations"] }
           }
         },
         {
-          "name": "✅ POST /profiles/{id}/educations — agrega educación en curso (sin endDate)",
+          "name": "OK POST /profiles/{id}/educations — agrega educacion en curso (sin endDate, solo year)",
           "event": [
             {
               "listen": "test",
@@ -317,13 +318,13 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"institution\": \"Coursera\",\n  \"degree\": \"Especialización en Arquitectura de Software\",\n  \"fieldOfStudy\": \"Cloud Native & Microservicios\",\n  \"level\": \"SPECIALIZATION\",\n  \"startDate\": \"2026-01\",\n  \"inProgress\": true,\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"institution\": \"Coursera\",\n  \"degree\": \"Especializacion en Arquitectura de Software\",\n  \"fieldOfStudy\": \"Cloud Native & Microservicios\",\n  \"level\": \"SPECIALIZATION\",\n  \"startDate\": \"2026\",\n  \"inProgress\": true,\n  \"provenance\": \"MANUAL\"\n}"
             },
             "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/educations", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","educations"] }
           }
         },
         {
-          "name": "✅ DELETE /profiles/{id}/educations/{eduId} — elimina educación",
+          "name": "OK DELETE /profiles/{id}/educations/{eduId} — elimina educacion",
           "event": [
             {
               "listen": "test",
@@ -343,10 +344,10 @@
       ]
     },
     {
-      "name": "CM-19 — Habilidades, salario y revisión",
+      "name": "CM-19 — Habilidades, salario y revision",
       "item": [
         {
-          "name": "✅ PATCH /profiles/{id}/salary-expectation — actualiza expectativa salarial",
+          "name": "OK PATCH /profiles/{id}/salary-expectation — actualiza expectativa salarial",
           "event": [
             {
               "listen": "test",
@@ -369,7 +370,7 @@
           }
         },
         {
-          "name": "✅ POST /profiles/{id}/skills — agrega habilidad Java",
+          "name": "OK POST /profiles/{id}/skills — agrega habilidad Java",
           "event": [
             {
               "listen": "test",
@@ -394,7 +395,7 @@
           }
         },
         {
-          "name": "✅ POST /profiles/{id}/skills — agrega habilidad Spring Boot",
+          "name": "OK POST /profiles/{id}/skills — agrega habilidad Spring Boot",
           "event": [
             {
               "listen": "test",
@@ -417,7 +418,7 @@
           }
         },
         {
-          "name": "✅ DELETE /profiles/{id}/skills/{skillId} — elimina habilidad Java",
+          "name": "OK DELETE /profiles/{id}/skills/{skillId} — elimina habilidad Java",
           "event": [
             {
               "listen": "test",
@@ -435,7 +436,7 @@
           }
         },
         {
-          "name": "❌ POST /review-requests — 422 perfil incompleto (sin rol objetivo)",
+          "name": "ERR POST /review-requests — 422 perfil incompleto (sin rol objetivo)",
           "event": [
             {
               "listen": "test",
@@ -458,7 +459,7 @@
       "name": "CM-20 — Roles objetivo",
       "item": [
         {
-          "name": "✅ POST /profiles/{id}/target-roles — agrega rol Backend Developer",
+          "name": "OK POST /profiles/{id}/target-roles — agrega rol Backend Developer (guarda role_id)",
           "event": [
             {
               "listen": "test",
@@ -483,14 +484,18 @@
           }
         },
         {
-          "name": "✅ POST /profiles/{id}/target-roles — agrega rol Software Architect",
+          "name": "OK POST /profiles/{id}/target-roles — agrega rol Software Architect (guarda role_id_2)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status 201', () => pm.response.to.have.status(201));",
-                  "pm.test('targetRoles tiene 2 entradas', () => pm.expect(pm.response.json().targetRoles.length).to.eql(2));"
+                  "pm.test('targetRoles tiene 2 entradas', () => pm.expect(pm.response.json().targetRoles.length).to.eql(2));",
+                  "const roles = pm.response.json().targetRoles;",
+                  "const architect = roles.find(r => r.title === 'Software Architect');",
+                  "pm.collectionVariables.set('role_id_2', architect.id);",
+                  "console.log('roleId2 guardado:', architect.id);"
                 ]
               }
             }
@@ -506,7 +511,7 @@
           }
         },
         {
-          "name": "❌ POST /target-roles — 409 rol duplicado (mismo title+seniority)",
+          "name": "ERR POST /target-roles — 409 rol duplicado (mismo title+seniority)",
           "event": [
             {
               "listen": "test",
@@ -529,7 +534,93 @@
           }
         },
         {
-          "name": "✅ POST /review-requests — 201 perfil completo (con nombre, resumen y rol)",
+          "name": "OK GET /profiles/{id} — obtiene perfil completo con roles cargados",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('id coincide', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('profile_id')));",
+                  "pm.test('targetRoles tiene 2 entradas', () => pm.expect(pm.response.json().targetRoles.length).to.eql(2));",
+                  "pm.test('status IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}"] }
+          }
+        },
+        {
+          "name": "ERR GET /profiles/{id} — 404 perfil no existe",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('title Perfil no encontrado', () => pm.expect(pm.response.json().title).to.eql('Perfil no encontrado'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/profiles/00000000-0000-0000-0000-000000000000", "host": ["{{base_url}}"], "path": ["api","v1","profiles","00000000-0000-0000-0000-000000000000"] }
+          }
+        },
+        {
+          "name": "OK PATCH /profiles/{id}/target-roles/{roleId} — actualiza titulo y seniority",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const roles = pm.response.json().targetRoles;",
+                  "const updated = roles.find(r => r.id === pm.collectionVariables.get('role_id'));",
+                  "pm.test('titulo actualizado', () => pm.expect(updated.title).to.eql('Lead Backend Developer'));",
+                  "pm.test('seniority actualizada', () => pm.expect(updated.seniority).to.eql('SENIOR'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lead Backend Developer\",\n  \"seniority\": \"SENIOR\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/{{role_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles","{{role_id}}"] }
+          }
+        },
+        {
+          "name": "ERR PATCH /target-roles/{roleId} — 422 roleId no existe en el perfil",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 o 404', () => pm.expect(pm.response.code).to.be.oneOf([404, 422]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"No existe\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/00000000-0000-0000-0000-000000000000", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles","00000000-0000-0000-0000-000000000000"] }
+          }
+        },
+        {
+          "name": "OK POST /review-requests — 201 perfil completo (con nombre, resumen y rol)",
           "event": [
             {
               "listen": "test",
@@ -547,26 +638,7 @@
           }
         },
         {
-          "name": "❌ DELETE /target-roles/{roleId} — 422 último rol (no se puede eliminar)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('422 o respuesta de error por rol único', () => {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([422, 409]);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/{{role_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles","{{role_id}}"] }
-          }
-        },
-        {
-          "name": "✅ DELETE /target-roles — elimina segundo rol (queda uno)",
+          "name": "OK DELETE /target-roles/{roleId2} — elimina Software Architect (queda 1)",
           "event": [
             {
               "listen": "test",
@@ -580,12 +652,25 @@
           ],
           "request": {
             "method": "DELETE",
-            "url": {
-              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/{{role_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api","v1","profiles","{{profile_id}}","target-roles","{{role_id}}"],
-              "description": "Antes de correr esta petición, reemplaza {{role_id}} con el id del SEGUNDO rol (Software Architect), no el primero. Puedes copiarlo de la respuesta anterior."
+            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/{{role_id_2}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles","{{role_id_2}}"] }
+          }
+        },
+        {
+          "name": "ERR DELETE /target-roles/{roleId} — 422 ultimo rol (no se puede eliminar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('title Ultimo rol objetivo', () => pm.expect(pm.response.json().title).to.include('ltimo'));"
+                ]
+              }
             }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/{{role_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles","{{role_id}}"] }
           }
         }
       ]
