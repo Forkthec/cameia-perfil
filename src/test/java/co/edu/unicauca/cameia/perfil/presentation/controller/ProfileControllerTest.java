@@ -3,17 +3,21 @@ package co.edu.unicauca.cameia.perfil.presentation.controller;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
+import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
+import co.edu.unicauca.cameia.perfil.presentation.dto.AddSkillRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateProfileInfoRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateSalaryExpectationRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -69,5 +73,66 @@ class ProfileControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().name()).isEqualTo("Ana Sofía");
         verify(profileAppService).updateProfileInfo(any(UpdateProfileInfoCommand.class));
+    }
+
+    // ── CM-19 ─────────────────────────────────────────────────────────────
+
+    @Test
+    void updateSalaryExpectation_delegatesAndReturns200() {
+        var id = UUID.randomUUID();
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-sal"));
+        when(profileAppService.updateSalaryExpectation(any())).thenReturn(profile);
+
+        var request = new UpdateSalaryExpectationRequest(new BigDecimal("3500000"));
+        var response = controller.updateSalaryExpectation(id, request);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        verify(profileAppService).updateSalaryExpectation(any());
+    }
+
+    @Test
+    void addSkill_delegatesAndReturns201() {
+        var id = UUID.randomUUID();
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-skill"));
+        when(profileAppService.addSkill(any())).thenReturn(profile);
+
+        var request = new AddSkillRequest("Java", "EXPERT", "MANUAL");
+        var response = controller.addSkill(id, request);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(201);
+        verify(profileAppService).addSkill(any());
+    }
+
+    @Test
+    void removeSkill_delegatesAndReturns200() {
+        var id = UUID.randomUUID();
+        var skillId = UUID.randomUUID();
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-delskill"));
+        when(profileAppService.removeSkill(id, skillId)).thenReturn(profile);
+
+        var response = controller.removeSkill(id, skillId);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        verify(profileAppService).removeSkill(id, skillId);
+    }
+
+    @Test
+    void requestReview_delegatesAndReturns201() {
+        var id = UUID.randomUUID();
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-rev"));
+        when(profileAppService.requestReview(id)).thenReturn(profile);
+
+        var response = controller.requestReview(id);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(201);
+        verify(profileAppService).requestReview(id);
+    }
+
+    @Test
+    void requestReview_propagatesIncompleteProfileException() {
+        var id = UUID.randomUUID();
+        when(profileAppService.requestReview(id)).thenThrow(new IncompleteProfileException());
+        assertThatThrownBy(() -> controller.requestReview(id))
+                .isInstanceOf(IncompleteProfileException.class);
     }
 }
