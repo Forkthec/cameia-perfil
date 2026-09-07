@@ -25,6 +25,55 @@
 
 ---
 
+## 0.1 Spec Driven Development — flujo obligatorio para toda HU nueva
+
+> Adoptado el 07/09/2026. Guía completa: [`docs/sdd.md`](docs/sdd.md).
+> Fuente: curso SDD de mouredev (github.com/mouredev/hello-sdd).
+
+**Ninguna HU se implementa sin spec previo.** El ciclo SDD tiene 7 fases:
+
+| Fase | Artefacto | Regla |
+|---|---|---|
+| 1 · Spec | `specs/NNN-nombre/spec.md` | Requisitos EARS — qué hace y por qué, sin decir cómo |
+| 2 · Clarification | notas en el spec | Resolver ambigüedades antes de diseñar |
+| 3 · Plan | `specs/NNN-nombre/plan.md` | Diseño técnico: capas, clases, migraciones, decisiones |
+| 4 · Tasks | `specs/NNN-nombre/tasks.md` | Checkboxes de 20-30 min, trazados al REQ-N del spec |
+| 5 · Implementation | código Java | Una tarea a la vez; marcar `[x]` antes de la siguiente |
+| 6 · Validation | suite de pruebas | Cada REQ-N del spec tiene al menos una prueba que lo cubre |
+| 7 · Loop | — | Si el scope cambia, se actualiza el spec (Spec Anchored) |
+
+### Notación EARS — los requisitos van así
+
+```
+El sistema [acción]
+Cuando [actor] [acción], el sistema [respuesta]
+Mientras [estado], el sistema [comportamiento]
+Si [condición no deseada], el sistema [manejo]
+Donde se proporcione [opción], el sistema [comportamiento]
+```
+
+### Estructura de carpetas
+
+```text
+specs/
+  NNN-nombre-hu/
+    spec.md    ← requisitos EARS
+    plan.md    ← diseño técnico
+    tasks.md   ← checkboxes
+```
+
+### Checklist de entrada a una rama CM-NNN-...
+
+- [ ] `spec.md` escrito y aclarado (sin TBDs sin resolver)
+- [ ] `plan.md` aprobado
+- [ ] `tasks.md` con checkboxes trazados al spec
+- [ ] Ninguna clase nueva en el plan que no esté en §3.1 o justificada
+
+> CM-16..CM-20 se implementaron antes de adoptar SDD. A partir de **CM-21**
+> el ciclo es obligatorio desde la Fase 1.
+
+---
+
 ## 1. Qué es este microservicio
 
 Dueño de: perfiles profesionales, experiencia, educación, habilidades, roles objetivo y la
