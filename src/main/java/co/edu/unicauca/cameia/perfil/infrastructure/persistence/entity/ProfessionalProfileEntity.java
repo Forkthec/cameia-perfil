@@ -33,9 +33,6 @@ public class ProfessionalProfileEntity {
     @Column(name = "nombre", length = 255)
     private String name;
 
-    @Column(name = "titular", length = 255)
-    private String headline;
-
     @Column(name = "resumen", length = 2000)
     private String summary;
 
@@ -81,7 +78,6 @@ public class ProfessionalProfileEntity {
     public UUID getId() { return id; }
     public String getFirebaseUid() { return firebaseUid; }
     public String getName() { return name; }
-    public String getHeadline() { return headline; }
     public String getSummary() { return summary; }
     public BigDecimal getSalaryExpectation() { return salaryExpectation; }
     public WorkModality getPreferredModality() { return preferredModality; }
@@ -98,7 +94,6 @@ public class ProfessionalProfileEntity {
     public void setId(UUID id) { this.id = id; }
     public void setFirebaseUid(String firebaseUid) { this.firebaseUid = firebaseUid; }
     public void setName(String name) { this.name = name; }
-    public void setHeadline(String headline) { this.headline = headline; }
     public void setSummary(String summary) { this.summary = summary; }
     public void setSalaryExpectation(BigDecimal salaryExpectation) { this.salaryExpectation = salaryExpectation; }
     public void setPreferredModality(WorkModality preferredModality) { this.preferredModality = preferredModality; }

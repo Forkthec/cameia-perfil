@@ -71,7 +71,6 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
         e.setId(d.getId().value());
         e.setFirebaseUid(d.getFirebaseUid().value());
         e.setName(d.getName() != null ? d.getName().value() : null);
-        e.setHeadline(d.getHeadline());
         e.setSummary(d.getSummary() != null ? d.getSummary().value() : null);
         e.setSalaryExpectation(d.getSalaryExpectation() != null ? d.getSalaryExpectation().amount() : null);
         e.setPreferredModality(d.getPreferredModality());
@@ -167,7 +166,6 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
                 ProfileId.of(e.getId()),
                 new FirebaseUid(e.getFirebaseUid()),
                 e.getName() != null ? new ProfileName(e.getName()) : null,
-                e.getHeadline(),
                 e.getSummary() != null ? new ProfessionalSummary(e.getSummary()) : null,
                 e.getSalaryExpectation() != null ? new SalaryExpectation(e.getSalaryExpectation()) : null,
                 e.getPreferredModality(),

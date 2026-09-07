@@ -80,7 +80,7 @@ class ProfileAppServiceTest {
     void updateProfileInfo_appliesNameAndSummary() {
         var profile = freshProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), "Ana Sofía", null, "Dev backend", null, null));
+        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), "Ana Sofía", "Dev backend", null, null));
         assertThat(profile.getName().value()).isEqualTo("Ana Sofía");
         assertThat(profile.getSummary().value()).isEqualTo("Dev backend");
         verify(repository).save(profile);
@@ -90,7 +90,7 @@ class ProfileAppServiceTest {
     void updateProfileInfo_throwsNotFoundWhenProfileMissing() {
         when(repository.findById(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.updateProfileInfo(
-                new UpdateProfileInfoCommand(UUID.randomUUID(), null, null, null, null, null)))
+                new UpdateProfileInfoCommand(UUID.randomUUID(), null, null, null, null)))
                 .isInstanceOf(ProfileNotFoundException.class);
     }
 
@@ -99,9 +99,9 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         profile.updateName(new ProfileName("Nombre original"));
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), null, "nuevo headline", null, null, null));
+        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), null, "nuevo resumen", null, null));
         assertThat(profile.getName().value()).isEqualTo("Nombre original");
-        assertThat(profile.getHeadline()).isEqualTo("nuevo headline");
+        assertThat(profile.getSummary().value()).isEqualTo("nuevo resumen");
     }
 
     // ── CM-18 ────────────────────────────────────────────────────────────
