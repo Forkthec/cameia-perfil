@@ -43,9 +43,29 @@ services:
     networks: [cameia-perfil-net]
 
   # ---------------------------------------------------------------------------
+  # Broker de mensajería. Requerido por RabbitConfig (colas declaradas en C2).
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: cameia-perfil-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "15672:15672"   # consola de administración (opcional, solo para inspección)
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [cameia-perfil-net]
+
+  # ---------------------------------------------------------------------------
   # El microservicio.
   # ---------------------------------------------------------------------------
   app:
+
     build:
       context: .
       dockerfile: Dockerfile
@@ -53,6 +73,8 @@ services:
     container_name: cameia-perfil-app
     depends_on:
       db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: cameia-perfil
@@ -62,6 +84,10 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-cameia_perfil}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-cameia_local}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
       LOG_LEVEL: INFO
     ports:
@@ -74,7 +100,12 @@ services:
       timeout: 5s
       retries: 12
       start_period: 40s
-    networks: [cameia-perfil-net]
+    networks:
+      - cameia-perfil-net
+      # Red compartida con cameia-gateway. Permite que el gateway resuelva este
+      # contenedor por nombre (cameia-perfil-app) sin exponer puertos adicionales.
+      # Prerequisito: docker network create cameia-net
+      - cameia-net
 
   # ---------------------------------------------------------------------------
   # Compilacion y pruebas. No se levanta con 'up': se invoca a demanda.
@@ -114,3 +145,7 @@ volumes:
 networks:
   cameia-perfil-net:
     driver: bridge
+  # Red externa compartida con cameia-gateway. Debe existir antes de 'up':
+  #   docker network create cameia-net
+  cameia-net:
+    external: true
