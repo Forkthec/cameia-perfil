@@ -10,6 +10,7 @@ import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectation
 import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
@@ -21,11 +22,12 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfileSkill;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.SalaryExpectation;
-import co.edu.unicauca.cameia.perfil.domain.model.Seniority;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
+import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
+import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -40,8 +42,12 @@ public class ProfileAppService {
 
     private static final Logger log = LoggerFactory.getLogger(ProfileAppService.class);
     private final ProfessionalProfileRepository repository;
+    private final ProfessionalRoleRepository roleRepository;
 
-    ProfileAppService(ProfessionalProfileRepository repository) { this.repository = repository; }
+    ProfileAppService(ProfessionalProfileRepository repository, ProfessionalRoleRepository roleRepository) {
+        this.repository = repository;
+        this.roleRepository = roleRepository;
+    }
 
     // ── CM-16 ────────────────────────────────────────────────────────────
 
@@ -74,7 +80,7 @@ public class ProfileAppService {
         var p = load(cmd.profileId());
         p.addWorkExperience(new WorkExperience(UUID.randomUUID(), cmd.company(), cmd.position(), cmd.description(),
                 YearMonth.parse(cmd.startDate()), cmd.endDate() != null ? YearMonth.parse(cmd.endDate()) : null,
-                EmploymentStatus.valueOf(cmd.employmentStatus()), Seniority.valueOf(cmd.seniority()), DataProvenance.valueOf(cmd.provenance())));
+                EmploymentStatus.valueOf(cmd.employmentStatus()), DataProvenance.valueOf(cmd.provenance())));
         repository.save(p); return p;
     }
 
@@ -133,26 +139,39 @@ public class ProfileAppService {
 
     public ProfessionalProfile getProfile(UUID id) { return load(id); }
 
-    @Transactional
-    public ProfessionalProfile updateTargetRole(UpdateTargetRoleCommand cmd) {
-        var p = load(cmd.profileId());
-        p.updateTargetRole(cmd.roleId(),
-                cmd.title(),
-                cmd.seniority() != null ? Seniority.valueOf(cmd.seniority()) : null);
-        repository.save(p); return p;
-    }
+    // ── CM-21 / CM-23 ────────────────────────────────────────────────────
 
     @Transactional
     public ProfessionalProfile addTargetRole(AddTargetRoleCommand cmd) {
         var p = load(cmd.profileId());
-        p.addTargetRole(new co.edu.unicauca.cameia.perfil.domain.model.TargetRole(
-                UUID.randomUUID(), cmd.title(), Seniority.valueOf(cmd.seniority()), DataProvenance.valueOf(cmd.provenance())));
+        var role = roleRepository.findById(cmd.professionalRoleId())
+                .orElseThrow(() -> new ProfessionalRoleNotFoundException(cmd.professionalRoleId()));
+        p.addTargetRole(new TargetRole(UUID.randomUUID(), role.id(), role.nombre(), DataProvenance.valueOf(cmd.provenance())));
+        repository.save(p); return p;
+    }
+
+    @Transactional
+    public ProfessionalProfile updateTargetRole(UpdateTargetRoleCommand cmd) {
+        var p = load(cmd.profileId());
+        var role = roleRepository.findById(cmd.professionalRoleId())
+                .orElseThrow(() -> new ProfessionalRoleNotFoundException(cmd.professionalRoleId()));
+        p.updateTargetRole(cmd.roleId(), role.id(), role.nombre());
         repository.save(p); return p;
     }
 
     @Transactional
     public ProfessionalProfile removeTargetRole(UUID profileId, UUID roleId) {
         var p = load(profileId); p.removeTargetRole(roleId); repository.save(p); return p;
+    }
+
+    // ── CM-22 ────────────────────────────────────────────────────────────
+
+    @Transactional
+    public ProfessionalProfile completeProfile(UUID profileId) {
+        var p = load(profileId);
+        p.complete();
+        repository.save(p);
+        return p;
     }
 
     // ── Shared ────────────────────────────────────────────────────────────

@@ -2,7 +2,6 @@ package co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity;
 
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
-import co.edu.unicauca.cameia.perfil.domain.model.Seniority;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -16,10 +15,7 @@ import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.util.UUID;
 
-/**
- * Columnas: ver migraciÃ³n V1. DesviaciÃ³n del C4: usa {@code estado_empleo VARCHAR} en lugar de
- * {@code actual BOOLEAN}, y {@code DATE} en lugar de month-precision en el dominio (el adaptador convierte).
- */
+/** CM-21: eliminada columna seniority. Desviación del C4: usa estado_empleo VARCHAR en lugar de actual BOOLEAN. */
 @Entity
 @Table(name = "experiencia_laboral")
 public class WorkExperienceEntity {
@@ -52,10 +48,6 @@ public class WorkExperienceEntity {
     private EmploymentStatus employmentStatus;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "seniority", length = 20)
-    private Seniority seniority;
-
-    @Enumerated(EnumType.STRING)
     @Column(name = "procedencia", nullable = false, length = 20)
     private DataProvenance provenance;
 
@@ -69,7 +61,6 @@ public class WorkExperienceEntity {
     public LocalDate getStartDate() { return startDate; }
     public LocalDate getEndDate() { return endDate; }
     public EmploymentStatus getEmploymentStatus() { return employmentStatus; }
-    public Seniority getSeniority() { return seniority; }
     public DataProvenance getProvenance() { return provenance; }
 
     public void setId(UUID id) { this.id = id; }
@@ -80,7 +71,5 @@ public class WorkExperienceEntity {
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
     public void setEmploymentStatus(EmploymentStatus employmentStatus) { this.employmentStatus = employmentStatus; }
-    public void setSeniority(Seniority seniority) { this.seniority = seniority; }
     public void setProvenance(DataProvenance provenance) { this.provenance = provenance; }
 }
-

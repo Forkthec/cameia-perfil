@@ -10,20 +10,30 @@ import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
+import co.edu.unicauca.cameia.perfil.domain.model.Education;
+import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
+import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileSkill;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRole;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
+import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
+import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
+import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,7 +48,14 @@ import static org.mockito.Mockito.when;
 class ProfileAppServiceTest {
 
     @Mock ProfessionalProfileRepository repository;
-    @InjectMocks ProfileAppService service;
+    @Mock ProfessionalRoleRepository roleRepository;
+
+    ProfileAppService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new ProfileAppService(repository, roleRepository);
+    }
 
     // ── CM-16 ────────────────────────────────────────────────────────────
 
@@ -111,7 +128,7 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
         service.addWorkExperience(new AddWorkExperienceCommand(
-                UUID.randomUUID(), "ACME", "Dev", null, "2022-01", null, "CURRENT", "JUNIOR", "MANUAL"));
+                UUID.randomUUID(), "ACME", "Dev", null, "2022-01", null, "CURRENT", "MANUAL"));
         assertThat(profile.getWorkExperiences()).hasSize(1);
         assertThat(profile.getWorkExperiences().get(0).getCompany()).isEqualTo("ACME");
         verify(repository).save(profile);
@@ -120,14 +137,10 @@ class ProfileAppServiceTest {
     @Test
     void removeWorkExperience_removesFromProfileAndSaves() {
         var profile = freshProfile();
-        // Precarga una experiencia directamente en el dominio (sin pasar por el servicio)
-        // para aislar el test de removeWorkExperience del de addWorkExperience.
         profile.addWorkExperience(new co.edu.unicauca.cameia.perfil.domain.model.WorkExperience(
-                java.util.UUID.randomUUID(), "ACME", "Dev", null,
-                java.time.YearMonth.of(2022, 1), null,
-                co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus.CURRENT,
-                co.edu.unicauca.cameia.perfil.domain.model.Seniority.JUNIOR,
-                co.edu.unicauca.cameia.perfil.domain.model.DataProvenance.MANUAL));
+                UUID.randomUUID(), "ACME", "Dev", null,
+                YearMonth.of(2022, 1), null,
+                EmploymentStatus.CURRENT, DataProvenance.MANUAL));
         var expId = profile.getWorkExperiences().get(0).getId();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
         service.removeWorkExperience(UUID.randomUUID(), expId);
@@ -159,11 +172,7 @@ class ProfileAppServiceTest {
     @Test
     void removeSkill_removesSkillAndSaves() {
         var profile = freshProfile();
-        // Precarga la habilidad directamente en el dominio para aislar el test.
-        profile.addSkill(new co.edu.unicauca.cameia.perfil.domain.model.ProfileSkill(
-                UUID.randomUUID(), "Java",
-                co.edu.unicauca.cameia.perfil.domain.model.SkillLevel.ADVANCED,
-                co.edu.unicauca.cameia.perfil.domain.model.DataProvenance.MANUAL));
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
         var skillId = profile.getProfileSkills().get(0).getId();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
         service.removeSkill(UUID.randomUUID(), skillId);
@@ -189,29 +198,49 @@ class ProfileAppServiceTest {
         verify(repository).save(profile);
     }
 
-    // ── CM-20 ────────────────────────────────────────────────────────────
+    // ── CM-20 / CM-21 / CM-23 ────────────────────────────────────────────
 
     @Test
     void addTargetRole_addsRoleAndSaves() {
         var profile = freshProfile();
+        var roleId = UUID.randomUUID();
+        var catRole = new ProfessionalRole(roleId, "Backend Developer", "Desarrollo");
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), "Backend Developer", "JUNIOR", "MANUAL"));
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(catRole));
+        service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), roleId, "MANUAL"));
         assertThat(profile.getTargetRoles()).hasSize(1);
-        assertThat(profile.getTargetRoles().get(0).getTitle()).isEqualTo("Backend Developer");
+        assertThat(profile.getTargetRoles().get(0).getRoleTitle()).isEqualTo("Backend Developer");
         verify(repository).save(profile);
     }
 
     @Test
-    void removeTargetRole_throwsLastTargetRoleWhenOnlyOne() {
-        var profile = freshProfile();
-        profile.addTargetRole(new co.edu.unicauca.cameia.perfil.domain.model.TargetRole(
-                UUID.randomUUID(), "Backend Developer",
-                co.edu.unicauca.cameia.perfil.domain.model.Seniority.JUNIOR,
-                co.edu.unicauca.cameia.perfil.domain.model.DataProvenance.MANUAL));
+    void removeTargetRole_throwsLastTargetRoleWhenOnlyOneOnCompletedProfile() {
+        var profile = completeProfile();
+        profile.complete();
         var roleId = profile.getTargetRoles().get(0).getId();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
         assertThatThrownBy(() -> service.removeTargetRole(UUID.randomUUID(), roleId))
                 .isInstanceOf(LastTargetRoleException.class);
+        verify(repository, never()).save(any());
+    }
+
+    // ── CM-22 ────────────────────────────────────────────────────────────
+
+    @Test
+    void completeProfile_setsStatusToCompleted() {
+        var profile = completeProfile();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        service.completeProfile(UUID.randomUUID());
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
+        verify(repository).save(profile);
+    }
+
+    @Test
+    void completeProfile_throwsIncompleteWhenNotReady() {
+        var profile = freshProfile();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        assertThatThrownBy(() -> service.completeProfile(UUID.randomUUID()))
+                .isInstanceOf(IncompleteProfileException.class);
         verify(repository, never()).save(any());
     }
 
@@ -226,6 +255,8 @@ class ProfileAppServiceTest {
                 .hasMessageContaining(id.toString());
     }
 
+    // ── Helpers ──────────────────────────────────────────────────────────
+
     private static ProfessionalProfile freshProfile() {
         return ProfessionalProfile.create(new FirebaseUid("firebase-svc-test"));
     }
@@ -234,9 +265,10 @@ class ProfileAppServiceTest {
         var p = ProfessionalProfile.create(new FirebaseUid("firebase-complete"));
         p.updateName(new ProfileName("Ana Sofía"));
         p.updateSummary(new ProfessionalSummary("Desarrolladora backend con experiencia en Java y DDD."));
-        p.addTargetRole(new co.edu.unicauca.cameia.perfil.domain.model.TargetRole(
-                UUID.randomUUID(), "Backend Developer", co.edu.unicauca.cameia.perfil.domain.model.Seniority.JUNIOR,
-                co.edu.unicauca.cameia.perfil.domain.model.DataProvenance.MANUAL));
+        p.addTargetRole(new TargetRole(UUID.randomUUID(), UUID.randomUUID(), "Backend Developer", DataProvenance.MANUAL));
+        p.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
+        p.addEducation(new Education(UUID.randomUUID(), "Universidad X", "Ingeniería", "Sistemas",
+                EducationLevel.UNDERGRADUATE, YearMonth.of(2018, 1), null, false, DataProvenance.MANUAL));
         return p;
     }
 }

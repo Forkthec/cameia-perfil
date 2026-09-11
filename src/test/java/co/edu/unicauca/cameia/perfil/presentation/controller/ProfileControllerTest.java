@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -140,14 +141,15 @@ class ProfileControllerTest {
 
     @Test
     void postReviewRequests_returns422WhenProfileIncomplete() throws Exception {
-        when(profileAppService.requestReview(any())).thenThrow(new IncompleteProfileException());
+        when(profileAppService.requestReview(any()))
+                .thenThrow(new IncompleteProfileException(List.of("nombre", "resumen")));
 
         mockMvc.perform(post("/api/v1/profiles/{id}/review-requests", UUID.randomUUID()))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.title").value("Perfil incompleto"));
+                .andExpect(jsonPath("$.missingRequirements").isArray());
     }
 
-    // ── CM-20 ─────────────────────────────────────────────────────────────
+    // ── CM-20 / CM-21 / CM-23 ─────────────────────────────────────────────
 
     @Test
     void postTargetRoles_returns201() throws Exception {
@@ -157,8 +159,8 @@ class ProfileControllerTest {
         mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"title": "Backend Developer", "seniority": "JUNIOR", "provenance": "MANUAL"}
-                                """))
+                                {"professionalRoleId": "%s", "provenance": "MANUAL"}
+                                """.formatted(UUID.randomUUID())))
                 .andExpect(status().isCreated());
     }
 
@@ -169,8 +171,8 @@ class ProfileControllerTest {
         mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"title": "Backend Developer", "seniority": "JUNIOR", "provenance": "MANUAL"}
-                                """))
+                                {"professionalRoleId": "%s", "provenance": "MANUAL"}
+                                """.formatted(UUID.randomUUID())))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title").value("Rol objetivo duplicado"));
     }
@@ -182,8 +184,8 @@ class ProfileControllerTest {
         mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"title": "Extra Role", "seniority": "JUNIOR", "provenance": "MANUAL"}
-                                """))
+                                {"professionalRoleId": "%s", "provenance": "MANUAL"}
+                                """.formatted(UUID.randomUUID())))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.title").value("Máximo de roles objetivo alcanzado"));
     }
@@ -196,5 +198,26 @@ class ProfileControllerTest {
         mockMvc.perform(delete("/api/v1/profiles/{id}/target-roles/{roleId}",
                         UUID.randomUUID(), UUID.randomUUID()))
                 .andExpect(status().isOk());
+    }
+
+    // ── CM-22 ─────────────────────────────────────────────────────────────
+
+    @Test
+    void postCompletion_returns201() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-comp"));
+        when(profileAppService.completeProfile(any())).thenReturn(profile);
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID()))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void postCompletion_returns422WhenIncomplete() throws Exception {
+        when(profileAppService.completeProfile(any()))
+                .thenThrow(new IncompleteProfileException(List.of("nombre", "resumen", "educacion")));
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID()))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.missingRequirements").isArray());
     }
 }
