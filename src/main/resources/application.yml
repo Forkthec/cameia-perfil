@@ -40,7 +40,9 @@ server:
   # ruta -> servicio del Gateway. 8082 sale de la plantilla del Gateway
   # (03092026_v1_env-example-gateway-spring.md: PERFIL_BASE_URL=http://localhost:8082),
   # que el documento multirepo marca como ejemplo local, no como decision aprobada.
-  port: ${SERVER_PORT:8082}
+  # Cloud Run inyecta PORT; Docker Compose local usa SERVER_PORT. El fallback en cadena
+  # garantiza compatibilidad con ambos entornos sin cambiar docker-compose.yml.
+  port: ${PORT:${SERVER_PORT:8082}}
 
 management:
   endpoints:
