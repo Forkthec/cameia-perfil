@@ -1,0 +1,81 @@
+name: CI # nombre de este pipeline, visible en la pestaña "Actions" de GitHub
+
+# Corre en cada PR hacia develop/main y en cada push a develop (integración), tal como exige
+# la guía DevOps del sprint (§2.7): valida el cambio antes de fusionar y otra vez al integrar.
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+# Cancela una corrida anterior del mismo PR/rama cuando llega un push nuevo: evita gastar
+# minutos de Actions verificando un commit que ya quedó obsoleto.
+concurrency:
+  group: ci-perfil-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Mínimo privilegio (guía DevOps §2.9): este job solo lee código, no publica nada ni
+# necesita escribir en el repo.
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Build, tests y cobertura
+    runs-on: ubuntu-latest # igual que los otros workflows del repo; sin motivo para otro
+    # Base de datos real para el job: las pruebas de persistencia (ProfessionalProfileRepositoryAdapterIT)
+    # no usan H2 ni Testcontainers a propósito (ver AGENTS.md §9) — necesitan PostgreSQL de verdad.
+    # Usuario/base/contraseña iguales a los valores por defecto de application.yml, así no hace
+    # falta pasar variables de entorno extra al paso de build.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: cameia_perfil
+          POSTGRES_USER: cameia_perfil
+          POSTGRES_PASSWORD: cameia_local
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      # Descarga el código del commit/PR que disparó el workflow.
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Instala Java 21 (Temurin) y cachea el repositorio local de Maven entre corridas.
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # El wrapper no trae permiso de ejecución en el repo (típico al crearse en
+      # Windows) — sin esto, "./mvnw" falla con "Permission denied" en el runner.
+      - name: Permiso de ejecución para mvnw
+        run: chmod +x mvnw
+
+      # "mvnw verify" compila, corre las pruebas (unitarias + la de integración contra
+      # Postgres) y, en la fase "verify", genera el reporte de cobertura de JaCoCo (ya
+      # configurado en pom.xml). Contraseña de la base solo existe dentro de este job.
+      - name: Build + pruebas + cobertura (mvnw verify)
+        env:
+          SPRING_DATASOURCE_PASSWORD: cameia_local
+        run: ./mvnw -B -ntp verify
+
+      # Publica pruebas y reporte de cobertura como artefacto, aunque un paso anterior
+      # haya fallado — permite revisar qué se alcanzó a ejecutar sin repetir la corrida.
+      - name: Publicar reportes (pruebas + cobertura)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cameia-perfil-reportes
+          path: |
+            target/surefire-reports/
+            target/site/jacoco/
+          retention-days: 14
+          if-no-files-found: warn
