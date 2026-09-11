@@ -52,22 +52,23 @@ public record ProfileResponse(
         );
     }
 
-    public record TargetRoleItem(UUID id, String title, String seniority, String provenance) {
+    /** CM-21/CM-23: seniority eliminado; profesionalRoleId y roleTitle reemplazan title. */
+    public record TargetRoleItem(UUID id, UUID professionalRoleId, String roleTitle, String provenance) {
         static TargetRoleItem from(TargetRole r) {
-            return new TargetRoleItem(r.getId(), r.getTitle(), r.getSeniority().name(), r.getProvenance().name());
+            return new TargetRoleItem(r.getId(), r.getProfessionalRoleId(), r.getRoleTitle(), r.getProvenance().name());
         }
     }
 
+    /** CM-21: seniority eliminado de experiencia laboral. */
     public record WorkExperienceItem(
             UUID id, String company, String position, String description,
-            String startDate, String endDate, String employmentStatus,
-            String seniority, String provenance) {
+            String startDate, String endDate, String employmentStatus, String provenance) {
         static WorkExperienceItem from(WorkExperience e) {
             return new WorkExperienceItem(
                     e.getId(), e.getCompany(), e.getPosition(), e.getDescription(),
                     formatYearMonth(e.getStartDate()),
                     e.getEndDate() != null ? formatYearMonth(e.getEndDate()) : null,
-                    e.getEmploymentStatus().name(), e.getSeniority().name(), e.getProvenance().name());
+                    e.getEmploymentStatus().name(), e.getProvenance().name());
         }
 
         private static String formatYearMonth(YearMonth ym) {

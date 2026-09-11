@@ -13,7 +13,6 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.ReviewStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.SalaryExpectation;
-import co.edu.unicauca.cameia.perfil.domain.model.Seniority;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
@@ -109,7 +108,6 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
         e.setStartDate(toFirstDayOfMonth(d.getStartDate()));
         e.setEndDate(d.getEndDate() != null ? toFirstDayOfMonth(d.getEndDate()) : null);
         e.setEmploymentStatus(d.getEmploymentStatus());
-        e.setSeniority(d.getSeniority());
         e.setProvenance(d.getProvenance());
         return e;
     }
@@ -133,8 +131,8 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
         TargetRoleEntity e = new TargetRoleEntity();
         e.setId(d.getId());
         e.setProfile(parent);
-        e.setRoleTitle(d.getTitle());
-        e.setSeniority(d.getSeniority());
+        e.setRolProfesionalId(d.getProfessionalRoleId());
+        e.setRoleTitle(d.getRoleTitle());
         e.setProvenance(d.getProvenance());
         e.setReviewStatus(ReviewStatus.PENDING_REVIEW);
         e.setCreatedAt(Instant.now());
@@ -182,7 +180,7 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
                 e.getId(), e.getCompany(), e.getPosition(), e.getDescription(),
                 toYearMonth(e.getStartDate()),
                 e.getEndDate() != null ? toYearMonth(e.getEndDate()) : null,
-                e.getEmploymentStatus(), e.getSeniority(), e.getProvenance());
+                e.getEmploymentStatus(), e.getProvenance());
     }
 
     private Education toEducationDomain(EducationEntity e) {
@@ -195,7 +193,7 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
     }
 
     private TargetRole toTargetRoleDomain(TargetRoleEntity e) {
-        return new TargetRole(e.getId(), e.getRoleTitle(), e.getSeniority(), e.getProvenance());
+        return new TargetRole(e.getId(), e.getRolProfesionalId(), e.getRoleTitle(), e.getProvenance());
     }
 
     private ProfileSkill toSkillDomain(ProfileSkillEntity e) {

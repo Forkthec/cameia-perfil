@@ -4,6 +4,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleExcepti
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -15,7 +16,7 @@ import java.util.UUID;
 /**
  * Agregado raíz del contexto de Perfil Profesional (glosario §6.2).
  *
- * <p>Concentra todas las invariantes de negocio de CM-16 a CM-20. Ninguna capa externa
+ * <p>Concentra todas las invariantes de negocio de CM-16 a CM-23. Ninguna capa externa
  * puede mutar el estado directamente: todo pasa por los métodos de este agregado.
  * Los getters de colecciones retornan vistas no modificables.
  */
@@ -89,33 +90,34 @@ public final class ProfessionalProfile {
     public void updatePreferredModality(WorkModality modality) { this.preferredModality = modality; touch(); }
     public void updateProvenance(DataProvenance provenance) { this.provenance = Objects.requireNonNull(provenance); touch(); }
 
-    // ── Expectativa salarial (CM-19) ─────────────────────────────────────
+    // ── Expectativa salarial (CM-19 — dormido en MVP, ver BE-14) ────────
     public void updateSalaryExpectation(SalaryExpectation expectation) { this.salaryExpectation = expectation; touch(); }
 
-    // ── Roles objetivo (CM-20) ───────────────────────────────────────────
+    // ── Roles objetivo (CM-20 / CM-23) ──────────────────────────────────
     public void addTargetRole(TargetRole role) {
         Objects.requireNonNull(role);
         if (targetRoles.size() >= MAX_TARGET_ROLES) throw new MaxTargetRolesExceededException(MAX_TARGET_ROLES);
-        if (targetRoles.stream().anyMatch(r -> r.isSameRoleAs(role))) throw new DuplicateTargetRoleException(role.getTitle());
+        if (targetRoles.stream().anyMatch(r -> r.isSameRoleAs(role))) throw new DuplicateTargetRoleException(role.getRoleTitle());
         targetRoles.add(role);
         touch();
     }
 
     public void removeTargetRole(UUID roleId) {
-        if (targetRoles.size() == 1) throw new LastTargetRoleException();
+        // Solo bloquea el último rol cuando el perfil ya está COMPLETED (BE-08)
+        if (this.status == ProfileStatus.COMPLETED && targetRoles.size() == 1) throw new LastTargetRoleException();
         targetRoles.removeIf(r -> r.getId().equals(Objects.requireNonNull(roleId)));
         touch();
     }
 
-    public void updateTargetRole(UUID roleId, String title, Seniority seniority) {
+    public void updateTargetRole(UUID roleId, UUID professionalRoleId, String roleTitle) {
         Objects.requireNonNull(roleId);
         TargetRole existing = targetRoles.stream().filter(r -> r.getId().equals(roleId))
                 .findFirst().orElseThrow(() -> new IllegalArgumentException("Rol objetivo no encontrado: " + roleId));
         DataProvenance prov = existing.getProvenance();
         targetRoles.removeIf(r -> r.getId().equals(roleId));
         targetRoles.add(new TargetRole(roleId,
-                title != null ? title : existing.getTitle(),
-                seniority != null ? seniority : existing.getSeniority(),
+                professionalRoleId != null ? professionalRoleId : existing.getProfessionalRoleId(),
+                roleTitle != null ? roleTitle : existing.getRoleTitle(),
                 prov));
         touch();
     }
@@ -130,18 +132,39 @@ public final class ProfessionalProfile {
     public void addSkill(ProfileSkill skill) { profileSkills.add(Objects.requireNonNull(skill)); touch(); }
     public void removeSkill(UUID skillId) { profileSkills.removeIf(s -> s.getId().equals(skillId)); touch(); }
 
-    // ── Transiciones de estado (CM-19) ───────────────────────────────────
+    // ── Transiciones de estado ───────────────────────────────────────────
+
+    /** Flujo futuro (IA + revisión humana). Conservado en CM-04/BE-04. */
     public void requestReview() {
-        if (!isComplete()) throw new IncompleteProfileException();
+        if (!isComplete()) throw new IncompleteProfileException(getMissingRequirements());
         this.status = ProfileStatus.IN_REVIEW;
+        touch();
+    }
+
+    /** Flujo manual MVP (CM-22): IN_PROGRESS → COMPLETED en una sola transacción. */
+    public void complete() {
+        if (this.status == ProfileStatus.COMPLETED) throw new ProfileAlreadyCompletedException();
+        List<String> missing = getMissingRequirements();
+        if (!missing.isEmpty()) throw new IncompleteProfileException(missing);
+        this.status = ProfileStatus.COMPLETED;
         touch();
     }
 
     public void markAsReviewed() { this.status = ProfileStatus.COMPLETED; this.reviewStatus = ReviewStatus.REVIEWED; touch(); }
     public void returnForRevision() { this.status = ProfileStatus.IN_PROGRESS; touch(); }
 
+    public List<String> getMissingRequirements() {
+        List<String> missing = new ArrayList<>();
+        if (name == null || name.value().isBlank()) missing.add("name");
+        if (summary == null || summary.value().isBlank()) missing.add("summary");
+        if (educations.isEmpty()) missing.add("al menos 1 educación");
+        if (profileSkills.isEmpty()) missing.add("al menos 1 habilidad");
+        if (targetRoles.isEmpty()) missing.add("al menos 1 rol objetivo");
+        return missing;
+    }
+
     public boolean isComplete() {
-        return name != null && summary != null && !targetRoles.isEmpty();
+        return getMissingRequirements().isEmpty();
     }
 
     // ── Getters ──────────────────────────────────────────────────────────

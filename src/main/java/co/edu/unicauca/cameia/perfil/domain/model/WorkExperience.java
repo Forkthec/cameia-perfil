@@ -24,12 +24,11 @@ public final class WorkExperience {
     private final YearMonth startDate;
     private final YearMonth endDate;
     private final EmploymentStatus employmentStatus;
-    private final Seniority seniority;
     private final DataProvenance provenance;
 
     public WorkExperience(UUID id, String company, String position, String description,
                           YearMonth startDate, YearMonth endDate,
-                          EmploymentStatus employmentStatus, Seniority seniority,
+                          EmploymentStatus employmentStatus,
                           DataProvenance provenance) {
         this.id = Objects.requireNonNull(id);
         this.company = requireNonBlankMax(company, "company", MAX_TEXT_LENGTH);
@@ -37,7 +36,6 @@ public final class WorkExperience {
         this.description = description;
         this.startDate = Objects.requireNonNull(startDate, "startDate es obligatoria");
         this.employmentStatus = Objects.requireNonNull(employmentStatus);
-        this.seniority = Objects.requireNonNull(seniority);
         this.provenance = Objects.requireNonNull(provenance);
         validateEndDate(employmentStatus, startDate, endDate);
         this.endDate = endDate;
@@ -69,6 +67,5 @@ public final class WorkExperience {
     public YearMonth getStartDate() { return startDate; }
     public YearMonth getEndDate() { return endDate; }
     public EmploymentStatus getEmploymentStatus() { return employmentStatus; }
-    public Seniority getSeniority() { return seniority; }
     public DataProvenance getProvenance() { return provenance; }
 }

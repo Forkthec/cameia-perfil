@@ -56,7 +56,7 @@ class WorkExperienceTest {
         // DEC_2022 como start, JAN_2022 como end → end < start
         assertThatThrownBy(() ->
                 new WorkExperience(UUID.randomUUID(), "ACME", "Dev", null,
-                        DEC_2022, JAN_2022, EmploymentStatus.ENDED, Seniority.JUNIOR, DataProvenance.MANUAL)
+                        DEC_2022, JAN_2022, EmploymentStatus.ENDED, DataProvenance.MANUAL)
         ).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("anterior");
     }
@@ -77,6 +77,6 @@ class WorkExperienceTest {
 
     private static WorkExperience exp(EmploymentStatus status, YearMonth endDate) {
         return new WorkExperience(UUID.randomUUID(), "ACME Corp", "Desarrolladora", null,
-                JAN_2022, endDate, status, Seniority.JUNIOR, DataProvenance.MANUAL);
+                JAN_2022, endDate, status, DataProvenance.MANUAL);
     }
 }

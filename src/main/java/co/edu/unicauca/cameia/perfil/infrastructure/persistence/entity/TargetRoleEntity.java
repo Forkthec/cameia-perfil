@@ -2,7 +2,6 @@ package co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity;
 
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.ReviewStatus;
-import co.edu.unicauca.cameia.perfil.domain.model.Seniority;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -16,6 +15,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
+/** CM-21: eliminada columna seniority. CM-23: agregada columna rol_profesional_id + nombre_rol (desnormalizado). */
 @Entity
 @Table(name = "rol_objetivo")
 public class TargetRoleEntity {
@@ -28,12 +28,11 @@ public class TargetRoleEntity {
     @JoinColumn(name = "perfil_id", nullable = false)
     private ProfessionalProfileEntity profile;
 
+    @Column(name = "rol_profesional_id")
+    private UUID rolProfesionalId;
+
     @Column(name = "nombre_rol", nullable = false, length = 255)
     private String roleTitle;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "seniority", nullable = false, length = 20)
-    private Seniority seniority;
 
     @Column(name = "id_sugerencia_empleo")
     private UUID jobSuggestionId;
@@ -53,8 +52,8 @@ public class TargetRoleEntity {
 
     public UUID getId() { return id; }
     public ProfessionalProfileEntity getProfile() { return profile; }
+    public UUID getRolProfesionalId() { return rolProfesionalId; }
     public String getRoleTitle() { return roleTitle; }
-    public Seniority getSeniority() { return seniority; }
     public UUID getJobSuggestionId() { return jobSuggestionId; }
     public DataProvenance getProvenance() { return provenance; }
     public ReviewStatus getReviewStatus() { return reviewStatus; }
@@ -62,11 +61,10 @@ public class TargetRoleEntity {
 
     public void setId(UUID id) { this.id = id; }
     public void setProfile(ProfessionalProfileEntity profile) { this.profile = profile; }
+    public void setRolProfesionalId(UUID rolProfesionalId) { this.rolProfesionalId = rolProfesionalId; }
     public void setRoleTitle(String roleTitle) { this.roleTitle = roleTitle; }
-    public void setSeniority(Seniority seniority) { this.seniority = seniority; }
     public void setJobSuggestionId(UUID jobSuggestionId) { this.jobSuggestionId = jobSuggestionId; }
     public void setProvenance(DataProvenance provenance) { this.provenance = provenance; }
     public void setReviewStatus(ReviewStatus reviewStatus) { this.reviewStatus = reviewStatus; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }
-
