@@ -25,6 +25,17 @@
 
 ---
 
+## 0.2 Regla de oro — tasks.md siempre al día
+
+> Adoptada el 11/09/2026, después de detectar que los tasks.md quedaban sin marcar al cerrar contexto.
+
+**Marcar `[x]` en `tasks.md` en el momento en que se completa cada tarea, no al final de la HU ni al abrir el PR.**
+Si una HU ya está implementada y su tasks.md tiene `[ ]` sin marcar, eso se corrige antes de cualquier otra cosa.
+
+Esto aplica a Claude y a cualquier persona que trabaje en una rama. El PR no se abre con checkboxes vacíos.
+
+---
+
 ## 0.1 Spec Driven Development — flujo obligatorio para toda HU nueva
 
 > Adoptado el 07/09/2026. Guía completa: [`docs/sdd.md`](docs/sdd.md).
@@ -782,15 +793,19 @@ Validación: <pruebas realizadas> + revisión manual + revisión de seguridad
 
 ## 11. Las Historias de Usuario de este repositorio
 
-Sprint 1, 21 puntos. **Ninguna está implementada todavía.**
+Sprint 1. Estado al 11/09/2026.
 
-| Jira | HU | Endpoints | Reglas duras |
-|---|---|---|---|
-| CM-16 | HU-2.2 | `POST /api/v1/profiles` | Revalida límite de perfiles por plan. Crea en `IN_PROGRESS` |
-| CM-17 | HU-2.3 | `PATCH /api/v1/profiles/{id}` | Editar un campo `AI_SUGGESTED` lo pasa a `AI_EDITED` |
-| CM-18 | HU-2.4 | `PATCH …/experience`, `PATCH …/education` | `ACTUAL`/`FIN_DESCONOCIDO` → `fecha_fin` nula; `FINALIZADA` → no nula |
-| CM-19 | HU-2.5 | `PATCH …/skills`, `POST …/finalize` | Finalizar exige campos mínimos **y ≥1 rol objetivo** |
-| CM-20 | HU-2.11 | `GET`/`POST …/roles`, `PATCH`/`DELETE …/roles/{id}` | Entre **1 y 5** roles, sin duplicados, **no se elimina el último** |
+| Jira | HU | Endpoints | Estado | Reglas duras |
+|---|---|---|---|---|
+| CM-16 | HU-2.2 | `POST /api/v1/profiles` | ✅ PR #1 | Crea en `IN_PROGRESS` |
+| CM-17 | HU-2.3 | `PATCH /api/v1/profiles/{id}` | ✅ PR #1 | Editar campo `AI_SUGGESTED` → `AI_EDITED` |
+| CM-18 | HU-2.4 | `POST …/work-experiences`, `POST …/educations` | ✅ PR #1 | `CURRENT`/`UNKNOWN_END` → `fecha_fin` nula; `ENDED` → no nula |
+| CM-19 | HU-2.5 | `PATCH …/salary-expectation`, `POST …/skills` | ✅ PR #1 | Finalizar exige campos mínimos y ≥1 rol objetivo |
+| CM-20 | HU-2.11 | `GET`/`POST …/target-roles`, `PATCH`/`DELETE …/target-roles/{id}` | ✅ PR #1 | 1-5 roles, sin duplicados, no se elimina el último |
+| CM-21 | eliminar-seniority-mvp | (transversal) | ✅ PR #22 | Seniority fuera del contrato; reemplazado por `professionalRoleId` + `roleTitle` |
+| CM-22 | completitud-perfil | `POST …/completion` | ✅ PR #22 | 5 requisitos: nombre, resumen, ≥1 edu, ≥1 skill, ≥1 rol → `IN_PROGRESS → COMPLETED` |
+| CM-23 | catalogo-roles-profesionales | `GET /api/v1/professional-roles` | ✅ PR #22 | Catálogo seed ~47 roles TI; FK desde `rol_objetivo`; lookup obligatorio en add/update |
+| CM-24 | limpieza-contrato-openapi | (transversal) | ✅ PR #22 | 201 en POST, `@Hidden` en salary, `@Valid` en DTOs, handler 400 para Bean Validation |
 
 Más dos lecturas que consume Entrevista:
-`GET /api/v1/profiles?status=COMPLETED` y `GET /api/v1/roles/suggestions?q={texto}`.
+`GET /api/v1/profiles?status=COMPLETED` y `GET /api/v1/roles/suggestions?q={texto}` — **pendientes de Sprint 2**.
