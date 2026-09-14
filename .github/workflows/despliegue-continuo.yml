@@ -1,0 +1,96 @@
+name: CD # despliegue a Cloud Run (staging desde develop)
+
+# CM-157: segunda pieza del mismo bloque que CM-156 (cameia-gateway), mismo patrón. Corre
+# solo en push a develop, nunca en pull_request, para no gastar minutos de Actions ni
+# desplegar código sin fusionar.
+on:
+  push:
+    branches: [develop]
+
+concurrency:
+  group: cd-perfil-${{ github.ref }}
+  cancel-in-progress: false # nunca cancelar un deploy a medias
+
+# Mínimo privilegio: solo lee código y pide el token OIDC para WIF (guía DevOps §2.9).
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGION: us-east1
+  SERVICE: cameia-perfil
+  # Repositorio de Artifact Registry ya aprovisionado por Terraform (CM-150).
+  AR_REPO: cameia
+  # Red y subred de cameia-infra (CM-150), para que Cloud Run llegue por VPC a la IP
+  # privada de Cloud SQL y, vía Cloud NAT, salga con la IP fija que CloudAMQP autoriza.
+  VPC_NETWORK: cameia-staging
+  VPC_SUBNET: cameia-staging-us-east1
+
+jobs:
+  desplegar-staging:
+    name: Build, publicar imagen y desplegar a Cloud Run (staging)
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Credencial temporal vía Workload Identity Federation — misma cuenta de servicio
+      # compartida que cameia-gateway (github-action-cameia-backend, CM-156), con su
+      # binding WIF condicionado a este repo por separado.
+      - name: Autenticar en GCP (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Configurar gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Autenticar Docker contra Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      # Tag corto (7 caracteres), misma convención que cameia-gateway y la guía DevOps.
+      - name: Calcular tag de imagen
+        id: imagen
+        run: |
+          SHA_CORTO="${GITHUB_SHA::7}"
+          IMAGEN="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.SERVICE }}:${SHA_CORTO}"
+          echo "imagen=${IMAGEN}" >> "$GITHUB_OUTPUT"
+
+      - name: Build de la imagen
+        run: docker build -t "${{ steps.imagen.outputs.imagen }}" .
+
+      - name: Publicar imagen en Artifact Registry
+        run: docker push "${{ steps.imagen.outputs.imagen }}"
+
+      # min-instances=1 por ADR-0002 (cameia-infra): Perfil sirve HTTP y consume RabbitMQ
+      # en el mismo proceso (sin Worker Pool separado, desviación documentada), así que no
+      # puede escalar a cero o el consumidor deja de recibir mensajes.
+      #
+      # SPRING_DATASOURCE_URL apunta a la IP privada de Cloud SQL (10.20.0.3, verificada
+      # con `gcloud sql instances describe`), alcanzable solo porque el servicio corre
+      # dentro de la VPC (--network/--subnet de abajo). SPRING_DATASOURCE_PASSWORD y
+      # SPRING_RABBITMQ_ADDRESSES vienen de Secret Manager, nunca en texto plano; requieren
+      # que la cuenta de ejecución tenga secretAccessor sobre esos 2 secretos (pendiente,
+      # ver CM-157).
+      - name: Desplegar a Cloud Run
+        run: |
+          gcloud run deploy "${{ env.SERVICE }}" \
+            --image="${{ steps.imagen.outputs.imagen }}" \
+            --project="${{ vars.GCP_PROJECT_ID }}" \
+            --region="${{ env.REGION }}" \
+            --platform=managed \
+            --allow-unauthenticated \
+            --min-instances=1 \
+            --max-instances=2 \
+            --service-account="25798898664-compute@developer.gserviceaccount.com" \
+            --network="${{ env.VPC_NETWORK }}" \
+            --subnet="${{ env.VPC_SUBNET }}" \
+            --vpc-egress=all-traffic \
+            --set-env-vars="SPRING_DATASOURCE_URL=jdbc:postgresql://10.20.0.3:5432/cameia_perfil,SPRING_DATASOURCE_USERNAME=cameia_perfil" \
+            --set-secrets="SPRING_DATASOURCE_PASSWORD=cloudsql-staging-perfil-password:latest,SPRING_RABBITMQ_ADDRESSES=rabbitmq-amqps-url:latest"
+
+      - name: URL del servicio desplegado
+        run: gcloud run services describe "${{ env.SERVICE }}" --project="${{ vars.GCP_PROJECT_ID }}" --region="${{ env.REGION }}" --format="value(status.url)"
