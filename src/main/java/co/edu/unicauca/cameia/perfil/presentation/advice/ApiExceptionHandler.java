@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.presentation.advice;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
@@ -69,6 +70,12 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail handleMaxTargetRoles(MaxTargetRolesExceededException ex) {
         var p = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
         p.setTitle("Máximo de roles objetivo alcanzado"); return p;
+    }
+
+    @ExceptionHandler(DuplicateSkillException.class)
+    ProblemDetail handleDuplicateSkill(DuplicateSkillException ex) {
+        var p = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        p.setTitle("Habilidad duplicada"); return p;
     }
 
     @ExceptionHandler(DuplicateTargetRoleException.class)

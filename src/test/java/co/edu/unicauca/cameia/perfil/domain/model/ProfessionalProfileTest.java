@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.domain.model;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
@@ -143,6 +144,39 @@ class ProfessionalProfileTest {
         profile.complete();
         assertThatThrownBy(profile::complete)
                 .isInstanceOf(ProfileAlreadyCompletedException.class);
+    }
+
+    // ── addSkill() ────────────────────────────────────────────────────────
+
+    @Test
+    void addSkill_throwsDuplicateForSameNameIgnoringCase() {
+        var profile = ProfessionalProfile.create(UID);
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
+
+        assertThatThrownBy(() -> profile.addSkill(
+                new ProfileSkill(UUID.randomUUID(), "JAVA", SkillLevel.BASIC, DataProvenance.MANUAL)))
+                .isInstanceOf(DuplicateSkillException.class);
+    }
+
+    @Test
+    void addSkill_throwsDuplicateForSameNameIgnoringExtraSpaces() {
+        var profile = ProfessionalProfile.create(UID);
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), "Java Script", SkillLevel.ADVANCED, DataProvenance.MANUAL));
+
+        assertThatThrownBy(() -> profile.addSkill(
+                new ProfileSkill(UUID.randomUUID(), "Java  Script", SkillLevel.BASIC, DataProvenance.MANUAL)))
+                .isInstanceOf(DuplicateSkillException.class);
+    }
+
+    @Test
+    void addSkill_allowsDifferentSkillNames() {
+        var profile = ProfessionalProfile.create(UID);
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
+
+        assertThatCode(() -> profile.addSkill(
+                new ProfileSkill(UUID.randomUUID(), "Python", SkillLevel.BASIC, DataProvenance.MANUAL)))
+                .doesNotThrowAnyException();
+        assertThat(profile.getProfileSkills()).hasSize(2);
     }
 
     // ── requestReview() ───────────────────────────────────────────────────

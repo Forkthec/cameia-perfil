@@ -170,6 +170,8 @@ class ProfileController {
             @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "La habilidad ya está asociada al perfil (comparación sin distinción de mayúsculas ni espacios)",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/{id}/skills")
