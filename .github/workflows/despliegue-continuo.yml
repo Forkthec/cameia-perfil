@@ -65,16 +65,15 @@ jobs:
       - name: Publicar imagen en Artifact Registry
         run: docker push "${{ steps.imagen.outputs.imagen }}"
 
-      # min-instances=1 por ADR-0002 (cameia-infra): Perfil sirve HTTP y consume RabbitMQ
-      # en el mismo proceso (sin Worker Pool separado, desviación documentada), así que no
-      # puede escalar a cero o el consumidor deja de recibir mensajes.
-      #
-      # SPRING_DATASOURCE_URL apunta a la IP privada de Cloud SQL (10.20.0.3, verificada
-      # con `gcloud sql instances describe`), alcanzable solo porque el servicio corre
-      # dentro de la VPC (--network/--subnet de abajo). SPRING_DATASOURCE_PASSWORD y
-      # SPRING_RABBITMQ_ADDRESSES vienen de Secret Manager, nunca en texto plano; requieren
-      # que la cuenta de ejecución tenga secretAccessor sobre esos 2 secretos (pendiente,
-      # ver CM-157).
+      # min-instances=1 por ADR-0002: el consumidor RabbitMQ vive en el mismo proceso,
+      # no puede escalar a cero. IP de Cloud SQL fija (10.20.0.3), solo alcanzable
+      # dentro de la VPC (--network/--subnet). Password y RabbitMQ vienen de Secret
+      # Manager, nunca en texto plano — verifiqué antes de este deploy que la cuenta de
+      # ejecución ya tiene secretAccessor sobre los dos (CM-157).
+      # Sin --allow-unauthenticated: mismo motivo que cameia-gateway (CM-156) — el SA de
+      # despliegue no tiene permiso de setIamPolicy y no se le da uno nuevo para esto.
+      # Grep completo de @Value/@ConfigurationProperties en src/main: no hay ninguna otra
+      # variable obligatoria sin default (a diferencia de FIREBASE_PROJECT_ID en gateway).
       - name: Desplegar a Cloud Run
         run: |
           gcloud run deploy "${{ env.SERVICE }}" \
@@ -82,7 +81,6 @@ jobs:
             --project="${{ vars.GCP_PROJECT_ID }}" \
             --region="${{ env.REGION }}" \
             --platform=managed \
-            --allow-unauthenticated \
             --min-instances=1 \
             --max-instances=2 \
             --service-account="25798898664-compute@developer.gserviceaccount.com" \
