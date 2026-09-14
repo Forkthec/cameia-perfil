@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.domain.model;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
@@ -129,7 +130,19 @@ public final class ProfessionalProfile {
     public void removeEducation(UUID eduId) { educations.removeIf(e -> e.getId().equals(eduId)); touch(); }
 
     // ── Habilidades (CM-19) ──────────────────────────────────────────────
-    public void addSkill(ProfileSkill skill) { profileSkills.add(Objects.requireNonNull(skill)); touch(); }
+    public void addSkill(ProfileSkill skill) {
+        Objects.requireNonNull(skill);
+        String normalizado = normalizarNombreHabilidad(skill.getSkillName());
+        boolean duplicada = profileSkills.stream()
+                .anyMatch(s -> normalizarNombreHabilidad(s.getSkillName()).equals(normalizado));
+        if (duplicada) throw new DuplicateSkillException(skill.getSkillName());
+        profileSkills.add(skill);
+        touch();
+    }
+
+    private static String normalizarNombreHabilidad(String nombre) {
+        return nombre.trim().replaceAll("\\s+", " ").toLowerCase(java.util.Locale.ROOT);
+    }
     public void removeSkill(UUID skillId) { profileSkills.removeIf(s -> s.getId().equals(skillId)); touch(); }
 
     // ── Transiciones de estado ───────────────────────────────────────────

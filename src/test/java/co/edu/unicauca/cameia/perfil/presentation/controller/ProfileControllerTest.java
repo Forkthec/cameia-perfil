@@ -3,6 +3,7 @@ package co.edu.unicauca.cameia.perfil.presentation.controller;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
@@ -118,6 +119,29 @@ class ProfileControllerTest {
                                 {"skillName": "Java", "level": "EXPERT", "provenance": "MANUAL"}
                                 """))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void postSkills_returns409WhenDuplicate() throws Exception {
+        when(profileAppService.addSkill(any())).thenThrow(new DuplicateSkillException("Java"));
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/skills", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"skillName": "Java", "level": "ADVANCED", "provenance": "MANUAL"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Habilidad duplicada"));
+    }
+
+    @Test
+    void postSkills_returns400WhenLevelIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/profiles/{id}/skills", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"skillName": "Java", "provenance": "MANUAL"}
+                                """))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
