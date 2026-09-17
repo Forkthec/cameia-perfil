@@ -65,15 +65,21 @@ jobs:
       - name: Publicar imagen en Artifact Registry
         run: docker push "${{ steps.imagen.outputs.imagen }}"
 
-      # min-instances=1 por ADR-0002: el consumidor RabbitMQ vive en el mismo proceso,
-      # no puede escalar a cero. IP de Cloud SQL fija (10.20.0.3), solo alcanzable
-      # dentro de la VPC (--network/--subnet). Password y RabbitMQ vienen de Secret
-      # Manager, nunca en texto plano — verifiqué antes de este deploy que la cuenta de
-      # ejecución ya tiene secretAccessor sobre los dos (CM-157).
-      # Sin --allow-unauthenticated: mismo motivo que cameia-gateway (CM-156) — el SA de
-      # despliegue no tiene permiso de setIamPolicy y no se le da uno nuevo para esto.
-      # Grep completo de @Value/@ConfigurationProperties en src/main: no hay ninguna otra
-      # variable obligatoria sin default (a diferencia de FIREBASE_PROJECT_ID en gateway).
+      # --ingress=internal: este servicio no atiende usuarios directamente, solo otro
+      # componente interno de la plataforma -- exponerlo directamente a internet
+      # ampliaría la superficie de ataque sin ningún beneficio funcional. Antes de este
+      # cambio el servicio quedaba con el ingreso por defecto (alcanzable por red desde
+      # cualquier origen), aunque sin ningún permiso de invocación otorgado a nadie.
+      #
+      # min-instances=1: el consumidor de la cola de mensajes vive en el mismo proceso
+      # que atiende HTTP, así que no puede escalar a cero sin dejar de consumir
+      # mensajes. IP de Cloud SQL fija, solo alcanzable dentro de la VPC. La contraseña
+      # de la base y la URL de la cola vienen de secretos gestionados, nunca en texto
+      # plano.
+      #
+      # Sin --allow-unauthenticated: la identidad que ejecuta este despliegue no tiene
+      # permiso para cambiar quién puede invocar el servicio, y no se le da ese permiso
+      # solo para esto.
       - name: Desplegar a Cloud Run
         run: |
           gcloud run deploy "${{ env.SERVICE }}" \
@@ -81,6 +87,7 @@ jobs:
             --project="${{ vars.GCP_PROJECT_ID }}" \
             --region="${{ env.REGION }}" \
             --platform=managed \
+            --ingress=internal \
             --min-instances=1 \
             --max-instances=2 \
             --service-account="25798898664-compute@developer.gserviceaccount.com" \
