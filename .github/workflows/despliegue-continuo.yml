@@ -1,10 +1,17 @@
 name: CD # despliegue a Cloud Run (staging desde develop)
 
-# CM-157: segunda pieza del mismo bloque que CM-156 (cameia-gateway), mismo patrón. Corre
-# solo en push a develop, nunca en pull_request, para no gastar minutos de Actions ni
-# desplegar código sin fusionar.
+# Se dispara con workflow_run del workflow "CI" de este mismo repo, no con push directo
+# a develop: así el despliegue nunca corre sobre un commit cuyas pruebas fallaron
+# (disparado directo por push, el job de pruebas y el de despliegue correrían en
+# paralelo sobre el mismo evento, sin que uno esperara al otro). github.sha no sirve
+# dentro de un workflow disparado por workflow_run -- apunta a la punta de la rama en el
+# momento del evento, no al commit que realmente terminó de pasar las pruebas -- por eso
+# este workflow usa github.event.workflow_run.head_sha en su lugar, tanto para el
+# checkout como para calcular el tag de la imagen.
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [develop]
 
 concurrency:
@@ -29,11 +36,14 @@ env:
 jobs:
   desplegar-staging:
     name: Build, publicar imagen y desplegar a Cloud Run (staging)
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: staging
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       # Credencial temporal vía Workload Identity Federation — misma cuenta de servicio
       # compartida que cameia-gateway (github-action-cameia-backend, CM-156), con su
@@ -51,11 +61,13 @@ jobs:
       - name: Autenticar Docker contra Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      # Tag corto (7 caracteres), misma convención que cameia-gateway y la guía DevOps.
+      # Tag corto (7 caracteres) calculado a partir del commit que disparó el evento
+      # workflow_run, no de GITHUB_SHA -- este último no corresponde a ese commit dentro
+      # de un workflow disparado de esa forma.
       - name: Calcular tag de imagen
         id: imagen
         run: |
-          SHA_CORTO="${GITHUB_SHA::7}"
+          SHA_CORTO=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
           IMAGEN="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.SERVICE }}:${SHA_CORTO}"
           echo "imagen=${IMAGEN}" >> "$GITHUB_OUTPUT"
 
