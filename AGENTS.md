@@ -486,6 +486,9 @@ class ProfessionalProfileRepositoryJpaAdapter implements ProfessionalProfileRepo
 11. **Persistir un dato generado por IA sin `procedencia` y `estadoRevision`.**
 12. Inyectar un `JpaRepository` desde `application`.
 
+Antes de abrir un PR que toque autenticación, autorización o datos de otro usuario: revisar
+`cameia-infra/docs/seguridad/matriz-asvs-nivel1.md` (DoD §Condicionales).
+
 ## 6.1 Prácticas de Spring Boot — cómo se aplican **aquí**
 
 > Fuente: guía oficial de buenas prácticas de Spring Boot (`guidelines.md`, 14 puntos).
