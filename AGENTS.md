@@ -810,6 +810,7 @@ Sprint 1. Estado al 11/09/2026.
 | CM-23 | catalogo-roles-profesionales | `GET /api/v1/professional-roles` | ✅ PR #22 | Catálogo seed ~47 roles TI; FK desde `rol_objetivo`; lookup obligatorio en add/update |
 | CM-24 | limpieza-contrato-openapi | (transversal) | ✅ PR #22 | 201 en POST, `@Hidden` en salary, `@Valid` en DTOs, handler 400 para Bean Validation |
 | CM-25 | validacion-habilidad-duplicada | `POST …/skills` | ✅ PR #32 | Duplicados rechazados case-insensitive + colapso espacios; `@NotBlank` en `AddSkillRequest`; 409 en Swagger |
+| CM-174 | verificacion-propiedad-perfil | (transversal — 15 endpoints) | 🔄 rama CM-174 | OWASP ASVS §8.2.2 IDOR: `loadForUser()` en servicio; 401 si falta `X-User-Id`, 403 si uid ≠ dueño; Swagger documenta ambos códigos |
 
 Más dos lecturas que consume Entrevista:
 `GET /api/v1/profiles?status=COMPLETED` y `GET /api/v1/roles/suggestions?q={texto}` — **pendientes de Sprint 2**.
