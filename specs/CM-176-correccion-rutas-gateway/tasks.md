@@ -5,25 +5,25 @@
 
 ## Fase 1 — Código: la ruta del catálogo (REQ-1, REQ-2, REQ-3)
 
-- [ ] `ProfessionalRoleController` — cambiar `@RequestMapping("/api/v1/professional-roles")`
+- [x] `ProfessionalRoleController` — cambiar `@RequestMapping("/api/v1/professional-roles")`
       por `@RequestMapping("/api/v1/profiles/professional-roles")` (una línea; no se toca el
       `@GetMapping`, ni el `@Tag`, ni el `@ApiResponse`, ni `ProfessionalRoleAppService`)
 
 ## Fase 2 — `AGENTS.md`: la regla que faltaba (REQ-5, REQ-6)
 
-- [ ] Insertar la nueva **§5.4 «Rutas HTTP — TODAS cuelgan de `/api/v1/profiles`»** después de
+- [x] Insertar la nueva **§5.4 «Rutas HTTP — TODAS cuelgan de `/api/v1/profiles`»** después de
       §5.3 y antes de §6, con el texto del `plan.md`: predicado del Gateway citado, tabla de
       formas de ruta, ejemplo MAL/BIEN, y el aviso sobre las dos lecturas pendientes de Sprint 2
-- [ ] Agregar el antipatrón 13 a la lista de §6: exponer un endpoint fuera de
+- [x] Agregar el antipatrón 13 a la lista de §6: exponer un endpoint fuera de
       `/api/v1/profiles/**`
-- [ ] §11 — actualizar la fila de CM-23 a `GET /api/v1/profiles/professional-roles`
-- [ ] §11 — agregar la fila de CM-176
+- [x] §11 — actualizar la fila de CM-23 a `GET /api/v1/profiles/professional-roles`
+- [x] §11 — agregar la fila de CM-176
 
 ## Fase 3 — Verificación (REQ-4)
 
-- [ ] `docker compose run --rm verify` en verde, con `ProfileControllerTest` y
+- [x] `docker compose run --rm verify` en verde (72 tests, 0 fallos, 19/09/2026), con `ProfileControllerTest` y
       `ArquitecturaTest` incluidos, y la salida real pegada en el PR
-- [ ] Comprobación manual con el servicio levantado: `GET /api/v1/profiles/professional-roles`
+- [x] Comprobación manual con el servicio levantado (19/09/2026): `GET /api/v1/profiles/professional-roles`
       responde 200 y `GET /api/v1/professional-roles` responde 404
 
 ## Fase 4 — Cierre

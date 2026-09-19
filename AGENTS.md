@@ -454,6 +454,52 @@ class ProfessionalProfileRepositoryJpaAdapter implements ProfessionalProfileRepo
 - Mientras no exista carpeta `mapper` aprobada, los métodos `toDomain` / `toEntity` van privados
   dentro del adaptador.
 
+### 5.4 Rutas HTTP — TODAS cuelgan de `/api/v1/profiles`
+
+**La ruta base de este microservicio no la decide el controlador: la decide el Gateway.**
+`cameia-gateway` enruta hacia aquí con un único predicado de path:
+
+```yaml
+- id: cameia-perfil
+  uri: ${CAMEIA_PERFIL_URL}
+  predicates:
+    - Path=/api/v1/profiles/**
+```
+
+Consecuencia directa, y no es negociable desde este repositorio:
+
+> **Todo endpoint de este microservicio empieza por `/api/v1/profiles`.**
+> Un endpoint que no cumpla eso compila, arranca, pasa sus pruebas y responde en Swagger UI —
+> y aun así es **inalcanzable en el despliegue real**, porque el Gateway responde 404 antes de
+> que la petición llegue aquí. Es un fallo que ninguna prueba de este repositorio detecta.
+
+| Qué estás exponiendo | Ruta |
+|---|---|
+| El recurso perfil | `/api/v1/profiles` |
+| Un perfil concreto | `/api/v1/profiles/{id}` |
+| Un sub-recurso de un perfil | `/api/v1/profiles/{id}/<sub-recurso-en-plural>` |
+| Un catálogo o recurso transversal del contexto | `/api/v1/profiles/<recurso-en-plural>` |
+
+```java
+// MAL: existe, funciona en local, y el Gateway nunca lo alcanza
+@RequestMapping("/api/v1/professional-roles")
+
+// BIEN: dentro del predicado Path=/api/v1/profiles/**
+@RequestMapping("/api/v1/profiles/professional-roles")
+```
+
+Lo que **no** cambia: el recurso sigue en **inglés y en plural** (§2 y §5.1), las propiedades
+JSON siguen en `snake_case` (§6.1 punto 7) y el `/v1/` sigue en la URL (§9).
+
+**Cuidado con las dos lecturas que quedan pendientes.** Las que consume Entrevista (§11) están
+escritas en los documentos de handoff con la forma vieja:
+`GET /api/v1/roles/suggestions?q={texto}` **no enruta**. Cuando se implemente en Sprint 2 va
+dentro del prefijo —por ejemplo `GET /api/v1/profiles/role-suggestions?q={texto}`— y se avisa a
+Entrevista y a Gateway en el mismo PR.
+
+**Si un endpoint realmente necesita vivir fuera del prefijo**, no se escribe y ya: se pide el
+predicado nuevo al equipo de Gateway y se espera la respuesta. Es §0 — no asumir, preguntar.
+
 ---
 
 ## 6. Clean Code — límites que se revisan en el PR
@@ -485,6 +531,7 @@ class ProfessionalProfileRepositoryJpaAdapter implements ProfessionalProfileRepo
 10. **Guardar el archivo binario del CV.** Solo `textoExtraido`, nunca el binario.
 11. **Persistir un dato generado por IA sin `procedencia` y `estadoRevision`.**
 12. Inyectar un `JpaRepository` desde `application`.
+13. **Exponer un endpoint fuera de `/api/v1/profiles/**`**, que el Gateway no enruta (§5.4).
 
 Antes de abrir un PR que toque autenticación, autorización o datos de otro usuario: revisar
 `cameia-infra/docs/seguridad/matriz-asvs-nivel1.md` (DoD §Condicionales).
@@ -807,10 +854,11 @@ Sprint 1. Estado al 11/09/2026.
 | CM-20 | HU-2.11 | `GET`/`POST …/target-roles`, `PATCH`/`DELETE …/target-roles/{id}` | ✅ PR #1 | 1-5 roles, sin duplicados, no se elimina el último |
 | CM-21 | eliminar-seniority-mvp | (transversal) | ✅ PR #22 | Seniority fuera del contrato; reemplazado por `professionalRoleId` + `roleTitle` |
 | CM-22 | completitud-perfil | `POST …/completion` | ✅ PR #22 | 5 requisitos: nombre, resumen, ≥1 edu, ≥1 skill, ≥1 rol → `IN_PROGRESS → COMPLETED` |
-| CM-23 | catalogo-roles-profesionales | `GET /api/v1/professional-roles` | ✅ PR #22 | Catálogo seed ~47 roles TI; FK desde `rol_objetivo`; lookup obligatorio en add/update |
+| CM-23 | catalogo-roles-profesionales | `GET …/profiles/professional-roles` | ✅ PR #22 | Catálogo seed ~47 roles TI; FK desde `rol_objetivo`; lookup obligatorio en add/update |
 | CM-24 | limpieza-contrato-openapi | (transversal) | ✅ PR #22 | 201 en POST, `@Hidden` en salary, `@Valid` en DTOs, handler 400 para Bean Validation |
 | CM-25 | validacion-habilidad-duplicada | `POST …/skills` | ✅ PR #32 | Duplicados rechazados case-insensitive + colapso espacios; `@NotBlank` en `AddSkillRequest`; 409 en Swagger |
 | CM-174 | verificacion-propiedad-perfil | (transversal — 15 endpoints) | 🔄 rama CM-174 | OWASP ASVS §8.2.2 IDOR: `loadForUser()` en servicio; 401 si falta `X-User-Id`, 403 si uid ≠ dueño; Swagger documenta ambos códigos |
+| CM-176 | correccion-rutas-gateway | `GET …/profiles/professional-roles` | 🔄 rama CM-176 | Toda ruta dentro de `Path=/api/v1/profiles/**` (§5.4); ruta vieja eliminada sin alias |
 
 Más dos lecturas que consume Entrevista:
 `GET /api/v1/profiles?status=COMPLETED` y `GET /api/v1/roles/suggestions?q={texto}` — **pendientes de Sprint 2**.
