@@ -18,7 +18,7 @@ import java.util.List;
 /** Catálogo de roles profesionales TI (CM-23). Solo lectura. */
 @Tag(name = "Roles Profesionales", description = "Catálogo de roles TI disponibles para usar como rol objetivo")
 @RestController
-@RequestMapping("/api/v1/professional-roles")
+@RequestMapping("/api/v1/profiles/professional-roles")
 class ProfessionalRoleController {
 
     private final ProfessionalRoleAppService service;
