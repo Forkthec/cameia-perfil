@@ -1,6 +1,8 @@
 package co.edu.unicauca.cameia.perfil.presentation.advice;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
+import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
@@ -70,6 +72,18 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail handleMaxTargetRoles(MaxTargetRolesExceededException ex) {
         var p = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
         p.setTitle("Máximo de roles objetivo alcanzado"); return p;
+    }
+
+    @ExceptionHandler(ProfileAccessDeniedException.class)
+    ProblemDetail handleAccessDenied(ProfileAccessDeniedException ex) {
+        var p = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        p.setTitle("Acceso denegado"); return p;
+    }
+
+    @ExceptionHandler(IdentityRequiredException.class)
+    ProblemDetail handleIdentityRequired(IdentityRequiredException ex) {
+        var p = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
+        p.setTitle("Identidad requerida"); return p;
     }
 
     @ExceptionHandler(DuplicateSkillException.class)

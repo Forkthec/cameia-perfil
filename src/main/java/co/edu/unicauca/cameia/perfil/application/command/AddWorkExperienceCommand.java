@@ -6,6 +6,7 @@ import java.util.UUID;
 /** Intención de agregar una experiencia laboral al perfil (CM-18). Seniority eliminado en CM-21. */
 public record AddWorkExperienceCommand(
         UUID profileId,
+        String uid,
         String company,
         String position,
         String description,

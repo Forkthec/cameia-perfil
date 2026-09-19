@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /** Intención de agregar un rol objetivo al perfil desde el catálogo (CM-23). */
-public record AddTargetRoleCommand(UUID profileId, UUID professionalRoleId, String provenance) {
+public record AddTargetRoleCommand(UUID profileId, String uid, UUID professionalRoleId, String provenance) {
 
     public AddTargetRoleCommand {
         Objects.requireNonNull(profileId, "profileId es obligatorio");

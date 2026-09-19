@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /** Intención de agregar una habilidad al perfil (CM-19). */
-public record AddSkillCommand(UUID profileId, String skillName, String level, String provenance) {
+public record AddSkillCommand(UUID profileId, String uid, String skillName, String level, String provenance) {
 
     public AddSkillCommand {
         Objects.requireNonNull(profileId, "profileId es obligatorio");

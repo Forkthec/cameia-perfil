@@ -5,10 +5,11 @@ import java.util.UUID;
 
 /**
  * Intención de actualizar la información general de un perfil (CM-17).
- * Todos los campos excepto {@code profileId} son opcionales: {@code null} significa "no cambiar".
+ * Todos los campos excepto {@code profileId} y {@code uid} son opcionales: {@code null} significa "no cambiar".
  */
 public record UpdateProfileInfoCommand(
         UUID profileId,
+        String uid,
         String name,
         String summary,
         String preferredModality,

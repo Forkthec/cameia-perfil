@@ -6,6 +6,7 @@ import java.util.UUID;
 /** Intención de agregar una educación al perfil (CM-18). */
 public record AddEducationCommand(
         UUID profileId,
+        String uid,
         String institution,
         String degree,
         String fieldOfStudy,
