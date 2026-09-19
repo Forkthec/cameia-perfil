@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-/** Endpoints del perfil profesional (CM-16 a CM-24). */
+/** Endpoints del perfil profesional (CM-16 a CM-174). */
 @Tag(name = "Perfiles", description = "Gestión del perfil profesional del candidato")
 @RestController
 @RequestMapping("/api/v1/profiles")
@@ -70,12 +70,17 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Perfil encontrado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @GetMapping("/{id}")
-    ResponseEntity<ProfileResponse> getProfile(@PathVariable UUID id) {
-        return ResponseEntity.ok(ProfileResponse.from(profileAppService.getProfile(id)));
+    ResponseEntity<ProfileResponse> getProfile(@PathVariable UUID id,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.getProfile(id, uid)));
     }
 
     @Operation(summary = "Actualizar información básica del perfil")
@@ -84,14 +89,19 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
             @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PatchMapping("/{id}")
     ResponseEntity<ProfileResponse> updateProfileInfo(@PathVariable UUID id,
-                                                      @Valid @RequestBody UpdateProfileInfoRequest r) {
+            @Valid @RequestBody UpdateProfileInfoRequest r,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.ok(ProfileResponse.from(profileAppService.updateProfileInfo(
-                new UpdateProfileInfoCommand(id, r.name(), r.summary(), r.preferredModality(), r.provenance()))));
+                new UpdateProfileInfoCommand(id, uid, r.name(), r.summary(), r.preferredModality(), r.provenance()))));
     }
 
     @Operation(summary = "Agregar experiencia laboral al perfil")
@@ -100,6 +110,10 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
             @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "422", description = "Datos de fechas inconsistentes (ej: endDate anterior a startDate)",
@@ -107,9 +121,10 @@ class ProfileController {
     })
     @PostMapping("/{id}/work-experiences")
     ResponseEntity<ProfileResponse> addWorkExperience(@PathVariable UUID id,
-                                                      @Valid @RequestBody AddWorkExperienceRequest r) {
+            @Valid @RequestBody AddWorkExperienceRequest r,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addWorkExperience(
-                new AddWorkExperienceCommand(id, r.company(), r.position(), r.description(),
+                new AddWorkExperienceCommand(id, uid, r.company(), r.position(), r.description(),
                         r.startDate(), r.endDate(), r.employmentStatus(), r.provenance()))));
     }
 
@@ -117,12 +132,17 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Experiencia laboral eliminada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil o experiencia no encontrados",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @DeleteMapping("/{id}/work-experiences/{expId}")
-    ResponseEntity<ProfileResponse> removeWorkExperience(@PathVariable UUID id, @PathVariable UUID expId) {
-        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeWorkExperience(id, expId)));
+    ResponseEntity<ProfileResponse> removeWorkExperience(@PathVariable UUID id, @PathVariable UUID expId,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeWorkExperience(id, uid, expId)));
     }
 
     @Operation(summary = "Agregar educación al perfil")
@@ -131,14 +151,19 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
             @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/{id}/educations")
     ResponseEntity<ProfileResponse> addEducation(@PathVariable UUID id,
-                                                 @Valid @RequestBody AddEducationRequest r) {
+            @Valid @RequestBody AddEducationRequest r,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addEducation(
-                new AddEducationCommand(id, r.institution(), r.degree(), r.fieldOfStudy(),
+                new AddEducationCommand(id, uid, r.institution(), r.degree(), r.fieldOfStudy(),
                         r.level(), r.startDate(), r.endDate(), r.inProgress(), r.provenance()))));
     }
 
@@ -146,21 +171,27 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Educación eliminada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil o educación no encontrados",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @DeleteMapping("/{id}/educations/{eduId}")
-    ResponseEntity<ProfileResponse> removeEducation(@PathVariable UUID id, @PathVariable UUID eduId) {
-        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeEducation(id, eduId)));
+    ResponseEntity<ProfileResponse> removeEducation(@PathVariable UUID id, @PathVariable UUID eduId,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeEducation(id, uid, eduId)));
     }
 
     /** CM-24: oculto en Swagger (fuera del MVP). */
     @Hidden
     @PatchMapping("/{id}/salary-expectation")
     ResponseEntity<ProfileResponse> updateSalaryExpectation(@PathVariable UUID id,
-                                                            @RequestBody UpdateSalaryExpectationRequest r) {
+            @RequestBody UpdateSalaryExpectationRequest r,
+            @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.ok(ProfileResponse.from(profileAppService.updateSalaryExpectation(
-                new UpdateSalaryExpectationCommand(id, r.amount()))));
+                new UpdateSalaryExpectationCommand(id, uid, r.amount()))));
     }
 
     @Operation(summary = "Agregar habilidad al perfil")
@@ -169,6 +200,10 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
             @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "409", description = "La habilidad ya está asociada al perfil (comparación sin distinción de mayúsculas ni espacios)",
@@ -176,21 +211,27 @@ class ProfileController {
     })
     @PostMapping("/{id}/skills")
     ResponseEntity<ProfileResponse> addSkill(@PathVariable UUID id,
-                                             @Valid @RequestBody AddSkillRequest r) {
+            @Valid @RequestBody AddSkillRequest r,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addSkill(
-                new AddSkillCommand(id, r.skillName(), r.level(), r.provenance()))));
+                new AddSkillCommand(id, uid, r.skillName(), r.level(), r.provenance()))));
     }
 
     @Operation(summary = "Eliminar habilidad del perfil")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Habilidad eliminada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil o habilidad no encontrados",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @DeleteMapping("/{id}/skills/{skillId}")
-    ResponseEntity<ProfileResponse> removeSkill(@PathVariable UUID id, @PathVariable UUID skillId) {
-        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeSkill(id, skillId)));
+    ResponseEntity<ProfileResponse> removeSkill(@PathVariable UUID id, @PathVariable UUID skillId,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeSkill(id, uid, skillId)));
     }
 
     @Operation(summary = "Solicitar revisión del perfil",
@@ -199,15 +240,20 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Revisión solicitada; estado cambia a IN_REVIEW",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "422", description = "Perfil incompleto; el cuerpo contiene la lista de requisitos faltantes",
                     content = @Content(schema = @Schema(implementation = CompletionErrorResponse.class)))
     })
     @PostMapping("/{id}/review-requests")
-    ResponseEntity<ProfileResponse> requestReview(@PathVariable UUID id) {
+    ResponseEntity<ProfileResponse> requestReview(@PathVariable UUID id,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ProfileResponse.from(profileAppService.requestReview(id)));
+                .body(ProfileResponse.from(profileAppService.requestReview(id, uid)));
     }
 
     @Operation(summary = "Agregar rol objetivo al perfil")
@@ -215,6 +261,10 @@ class ProfileController {
             @ApiResponse(responseCode = "201", description = "Rol objetivo agregado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
             @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil o rol profesional no encontrados",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
@@ -225,9 +275,10 @@ class ProfileController {
     })
     @PostMapping("/{id}/target-roles")
     ResponseEntity<ProfileResponse> addTargetRole(@PathVariable UUID id,
-                                                  @Valid @RequestBody AddTargetRoleRequest r) {
+            @Valid @RequestBody AddTargetRoleRequest r,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addTargetRole(
-                new AddTargetRoleCommand(id, r.professionalRoleId(), r.provenance()))));
+                new AddTargetRoleCommand(id, uid, r.professionalRoleId(), r.provenance()))));
     }
 
     @Operation(summary = "Actualizar rol objetivo del perfil")
@@ -236,6 +287,10 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
             @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil, rol objetivo o rol profesional no encontrados",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil",
@@ -243,23 +298,29 @@ class ProfileController {
     })
     @PatchMapping("/{id}/target-roles/{roleId}")
     ResponseEntity<ProfileResponse> updateTargetRole(@PathVariable UUID id, @PathVariable UUID roleId,
-                                                     @Valid @RequestBody UpdateTargetRoleRequest r) {
+            @Valid @RequestBody UpdateTargetRoleRequest r,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.ok(ProfileResponse.from(profileAppService.updateTargetRole(
-                new UpdateTargetRoleCommand(id, roleId, r.professionalRoleId()))));
+                new UpdateTargetRoleCommand(id, uid, roleId, r.professionalRoleId()))));
     }
 
     @Operation(summary = "Eliminar rol objetivo del perfil")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Rol objetivo eliminado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil o rol objetivo no encontrados",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "422", description = "No se puede eliminar el único rol objetivo de un perfil COMPLETED",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @DeleteMapping("/{id}/target-roles/{roleId}")
-    ResponseEntity<ProfileResponse> removeTargetRole(@PathVariable UUID id, @PathVariable UUID roleId) {
-        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeTargetRole(id, roleId)));
+    ResponseEntity<ProfileResponse> removeTargetRole(@PathVariable UUID id, @PathVariable UUID roleId,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeTargetRole(id, uid, roleId)));
     }
 
     @Operation(summary = "Marcar perfil como COMPLETED",
@@ -268,6 +329,10 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Perfil marcado como COMPLETED",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "409", description = "El perfil ya está en estado COMPLETED",
@@ -276,8 +341,9 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = CompletionErrorResponse.class)))
     })
     @PostMapping("/{id}/completion")
-    ResponseEntity<ProfileResponse> completeProfile(@PathVariable UUID id) {
+    ResponseEntity<ProfileResponse> completeProfile(@PathVariable UUID id,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ProfileResponse.from(profileAppService.completeProfile(id)));
+                .body(ProfileResponse.from(profileAppService.completeProfile(id, uid)));
     }
 }

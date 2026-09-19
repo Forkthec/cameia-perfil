@@ -47,6 +47,9 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ProfileAppServiceTest {
 
+    static final String SVC_UID = "firebase-svc-test";
+    static final String COMPLETE_UID = "firebase-complete";
+
     @Mock ProfessionalProfileRepository repository;
     @Mock ProfessionalRoleRepository roleRepository;
 
@@ -97,7 +100,7 @@ class ProfileAppServiceTest {
     void updateProfileInfo_appliesNameAndSummary() {
         var profile = freshProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), "Ana Sofía", "Dev backend", null, null));
+        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, "Ana Sofía", "Dev backend", null, null));
         assertThat(profile.getName().value()).isEqualTo("Ana Sofía");
         assertThat(profile.getSummary().value()).isEqualTo("Dev backend");
         verify(repository).save(profile);
@@ -107,7 +110,7 @@ class ProfileAppServiceTest {
     void updateProfileInfo_throwsNotFoundWhenProfileMissing() {
         when(repository.findById(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.updateProfileInfo(
-                new UpdateProfileInfoCommand(UUID.randomUUID(), null, null, null, null)))
+                new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, null, null, null)))
                 .isInstanceOf(ProfileNotFoundException.class);
     }
 
@@ -116,7 +119,7 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         profile.updateName(new ProfileName("Nombre original"));
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), null, "nuevo resumen", null, null));
+        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, "nuevo resumen", null, null));
         assertThat(profile.getName().value()).isEqualTo("Nombre original");
         assertThat(profile.getSummary().value()).isEqualTo("nuevo resumen");
     }
@@ -128,7 +131,7 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
         service.addWorkExperience(new AddWorkExperienceCommand(
-                UUID.randomUUID(), "ACME", "Dev", null, "2022-01", null, "CURRENT", "MANUAL"));
+                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2022-01", null, "CURRENT", "MANUAL"));
         assertThat(profile.getWorkExperiences()).hasSize(1);
         assertThat(profile.getWorkExperiences().get(0).getCompany()).isEqualTo("ACME");
         verify(repository).save(profile);
@@ -143,7 +146,7 @@ class ProfileAppServiceTest {
                 EmploymentStatus.CURRENT, DataProvenance.MANUAL));
         var expId = profile.getWorkExperiences().get(0).getId();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.removeWorkExperience(UUID.randomUUID(), expId);
+        service.removeWorkExperience(UUID.randomUUID(), SVC_UID, expId);
         assertThat(profile.getWorkExperiences()).isEmpty();
         verify(repository).save(profile);
     }
@@ -154,7 +157,7 @@ class ProfileAppServiceTest {
     void updateSalaryExpectation_setsAmountAndSaves() {
         var profile = freshProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.updateSalaryExpectation(new UpdateSalaryExpectationCommand(UUID.randomUUID(), new BigDecimal("3500000")));
+        service.updateSalaryExpectation(new UpdateSalaryExpectationCommand(UUID.randomUUID(), SVC_UID, new BigDecimal("3500000")));
         assertThat(profile.getSalaryExpectation().amount()).isEqualByComparingTo("3500000");
         verify(repository).save(profile);
     }
@@ -163,7 +166,7 @@ class ProfileAppServiceTest {
     void addSkill_addsSkillAndSaves() {
         var profile = freshProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.addSkill(new AddSkillCommand(UUID.randomUUID(), "Java", "ADVANCED", "MANUAL"));
+        service.addSkill(new AddSkillCommand(UUID.randomUUID(), SVC_UID, "Java", "ADVANCED", "MANUAL"));
         assertThat(profile.getProfileSkills()).hasSize(1);
         assertThat(profile.getProfileSkills().get(0).getSkillName()).isEqualTo("Java");
         verify(repository).save(profile);
@@ -175,7 +178,7 @@ class ProfileAppServiceTest {
         profile.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
         var skillId = profile.getProfileSkills().get(0).getId();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.removeSkill(UUID.randomUUID(), skillId);
+        service.removeSkill(UUID.randomUUID(), SVC_UID, skillId);
         assertThat(profile.getProfileSkills()).isEmpty();
         verify(repository).save(profile);
     }
@@ -184,7 +187,7 @@ class ProfileAppServiceTest {
     void requestReview_throwsIncompleteWhenProfileLacksRequiredFields() {
         var profile = freshProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        assertThatThrownBy(() -> service.requestReview(UUID.randomUUID()))
+        assertThatThrownBy(() -> service.requestReview(UUID.randomUUID(), SVC_UID))
                 .isInstanceOf(IncompleteProfileException.class);
         verify(repository, never()).save(any());
     }
@@ -193,7 +196,7 @@ class ProfileAppServiceTest {
     void requestReview_changesStatusToInReview() {
         var profile = completeProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.requestReview(UUID.randomUUID());
+        service.requestReview(UUID.randomUUID(), COMPLETE_UID);
         assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_REVIEW);
         verify(repository).save(profile);
     }
@@ -207,7 +210,7 @@ class ProfileAppServiceTest {
         var catRole = new ProfessionalRole(roleId, "Backend Developer", "Desarrollo");
         when(repository.findById(any())).thenReturn(Optional.of(profile));
         when(roleRepository.findById(roleId)).thenReturn(Optional.of(catRole));
-        service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), roleId, "MANUAL"));
+        service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), SVC_UID, roleId, "MANUAL"));
         assertThat(profile.getTargetRoles()).hasSize(1);
         assertThat(profile.getTargetRoles().get(0).getRoleTitle()).isEqualTo("Backend Developer");
         verify(repository).save(profile);
@@ -219,7 +222,7 @@ class ProfileAppServiceTest {
         profile.complete();
         var roleId = profile.getTargetRoles().get(0).getId();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        assertThatThrownBy(() -> service.removeTargetRole(UUID.randomUUID(), roleId))
+        assertThatThrownBy(() -> service.removeTargetRole(UUID.randomUUID(), COMPLETE_UID, roleId))
                 .isInstanceOf(LastTargetRoleException.class);
         verify(repository, never()).save(any());
     }
@@ -230,7 +233,7 @@ class ProfileAppServiceTest {
     void completeProfile_setsStatusToCompleted() {
         var profile = completeProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        service.completeProfile(UUID.randomUUID());
+        service.completeProfile(UUID.randomUUID(), COMPLETE_UID);
         assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
         verify(repository).save(profile);
     }
@@ -239,7 +242,7 @@ class ProfileAppServiceTest {
     void completeProfile_throwsIncompleteWhenNotReady() {
         var profile = freshProfile();
         when(repository.findById(any())).thenReturn(Optional.of(profile));
-        assertThatThrownBy(() -> service.completeProfile(UUID.randomUUID()))
+        assertThatThrownBy(() -> service.completeProfile(UUID.randomUUID(), SVC_UID))
                 .isInstanceOf(IncompleteProfileException.class);
         verify(repository, never()).save(any());
     }
@@ -258,11 +261,11 @@ class ProfileAppServiceTest {
     // ── Helpers ──────────────────────────────────────────────────────────
 
     private static ProfessionalProfile freshProfile() {
-        return ProfessionalProfile.create(new FirebaseUid("firebase-svc-test"));
+        return ProfessionalProfile.create(new FirebaseUid(SVC_UID));
     }
 
     private static ProfessionalProfile completeProfile() {
-        var p = ProfessionalProfile.create(new FirebaseUid("firebase-complete"));
+        var p = ProfessionalProfile.create(new FirebaseUid(COMPLETE_UID));
         p.updateName(new ProfileName("Ana Sofía"));
         p.updateSummary(new ProfessionalSummary("Desarrolladora backend con experiencia en Java y DDD."));
         p.addTargetRole(new TargetRole(UUID.randomUUID(), UUID.randomUUID(), "Backend Developer", DataProvenance.MANUAL));

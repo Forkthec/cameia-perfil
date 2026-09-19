@@ -5,8 +5,10 @@ import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoComman
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
+import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
@@ -27,6 +29,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -85,12 +88,65 @@ class ProfileControllerTest {
         when(profileAppService.updateProfileInfo(any(UpdateProfileInfoCommand.class))).thenReturn(profile);
 
         mockMvc.perform(patch("/api/v1/profiles/{id}", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-002")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name": "Ana Sofía"}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Ana Sofía"));
+    }
+
+    // ── CM-174 ────────────────────────────────────────────────────────────
+
+    @Test
+    void getProfile_returns403WhenProfileIsOwnedByAnotherUser() throws Exception {
+        when(profileAppService.getProfile(any(UUID.class), any(String.class)))
+                .thenThrow(new ProfileAccessDeniedException());
+
+        mockMvc.perform(get("/api/v1/profiles/{id}", UUID.randomUUID())
+                        .header("X-User-Id", "uid-other"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("Acceso denegado"));
+    }
+
+    @Test
+    void getProfile_returns401WhenXUserIdIsMissing() throws Exception {
+        when(profileAppService.getProfile(any(UUID.class), any()))
+                .thenThrow(new IdentityRequiredException());
+
+        mockMvc.perform(get("/api/v1/profiles/{id}", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.title").value("Identidad requerida"));
+    }
+
+    @Test
+    void patchProfile_returns403WhenProfileIsOwnedByAnotherUser() throws Exception {
+        when(profileAppService.updateProfileInfo(any()))
+                .thenThrow(new ProfileAccessDeniedException());
+
+        mockMvc.perform(patch("/api/v1/profiles/{id}", UUID.randomUUID())
+                        .header("X-User-Id", "uid-other")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Intruso"}
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("Acceso denegado"));
+    }
+
+    @Test
+    void patchProfile_returns401WhenXUserIdIsMissing() throws Exception {
+        when(profileAppService.updateProfileInfo(any()))
+                .thenThrow(new IdentityRequiredException());
+
+        mockMvc.perform(patch("/api/v1/profiles/{id}", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Sin uid"}
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.title").value("Identidad requerida"));
     }
 
     // ── CM-19 ─────────────────────────────────────────────────────────────
@@ -101,6 +157,7 @@ class ProfileControllerTest {
         when(profileAppService.updateSalaryExpectation(any())).thenReturn(profile);
 
         mockMvc.perform(patch("/api/v1/profiles/{id}/salary-expectation", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-sal")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"amount": 3500000}
@@ -114,6 +171,7 @@ class ProfileControllerTest {
         when(profileAppService.addSkill(any())).thenReturn(profile);
 
         mockMvc.perform(post("/api/v1/profiles/{id}/skills", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-skill")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"skillName": "Java", "level": "EXPERT", "provenance": "MANUAL"}
@@ -126,6 +184,7 @@ class ProfileControllerTest {
         when(profileAppService.addSkill(any())).thenThrow(new DuplicateSkillException("Java"));
 
         mockMvc.perform(post("/api/v1/profiles/{id}/skills", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-skill")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"skillName": "Java", "level": "ADVANCED", "provenance": "MANUAL"}
@@ -137,6 +196,7 @@ class ProfileControllerTest {
     @Test
     void postSkills_returns400WhenLevelIsMissing() throws Exception {
         mockMvc.perform(post("/api/v1/profiles/{id}/skills", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-skill")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"skillName": "Java", "provenance": "MANUAL"}
@@ -147,28 +207,31 @@ class ProfileControllerTest {
     @Test
     void deleteSkill_returns200() throws Exception {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-delskill"));
-        when(profileAppService.removeSkill(any(), any())).thenReturn(profile);
+        when(profileAppService.removeSkill(any(), any(), any())).thenReturn(profile);
 
         mockMvc.perform(delete("/api/v1/profiles/{id}/skills/{skillId}",
-                        UUID.randomUUID(), UUID.randomUUID()))
+                        UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-delskill"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void postReviewRequests_returns201() throws Exception {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-rev"));
-        when(profileAppService.requestReview(any())).thenReturn(profile);
+        when(profileAppService.requestReview(any(), any())).thenReturn(profile);
 
-        mockMvc.perform(post("/api/v1/profiles/{id}/review-requests", UUID.randomUUID()))
+        mockMvc.perform(post("/api/v1/profiles/{id}/review-requests", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-rev"))
                 .andExpect(status().isCreated());
     }
 
     @Test
     void postReviewRequests_returns422WhenProfileIncomplete() throws Exception {
-        when(profileAppService.requestReview(any()))
+        when(profileAppService.requestReview(any(), any()))
                 .thenThrow(new IncompleteProfileException(List.of("nombre", "resumen")));
 
-        mockMvc.perform(post("/api/v1/profiles/{id}/review-requests", UUID.randomUUID()))
+        mockMvc.perform(post("/api/v1/profiles/{id}/review-requests", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-rev"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.missingRequirements").isArray());
     }
@@ -181,6 +244,7 @@ class ProfileControllerTest {
         when(profileAppService.addTargetRole(any())).thenReturn(profile);
 
         mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-role")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"professionalRoleId": "%s", "provenance": "MANUAL"}
@@ -193,6 +257,7 @@ class ProfileControllerTest {
         when(profileAppService.addTargetRole(any())).thenThrow(new DuplicateTargetRoleException("Backend Developer"));
 
         mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-role")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"professionalRoleId": "%s", "provenance": "MANUAL"}
@@ -206,6 +271,7 @@ class ProfileControllerTest {
         when(profileAppService.addTargetRole(any())).thenThrow(new MaxTargetRolesExceededException(5));
 
         mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-role")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"professionalRoleId": "%s", "provenance": "MANUAL"}
@@ -217,10 +283,11 @@ class ProfileControllerTest {
     @Test
     void deleteTargetRole_returns200() throws Exception {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-delrole"));
-        when(profileAppService.removeTargetRole(any(), any())).thenReturn(profile);
+        when(profileAppService.removeTargetRole(any(), any(), any())).thenReturn(profile);
 
         mockMvc.perform(delete("/api/v1/profiles/{id}/target-roles/{roleId}",
-                        UUID.randomUUID(), UUID.randomUUID()))
+                        UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-delrole"))
                 .andExpect(status().isOk());
     }
 
@@ -229,18 +296,20 @@ class ProfileControllerTest {
     @Test
     void postCompletion_returns201() throws Exception {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-comp"));
-        when(profileAppService.completeProfile(any())).thenReturn(profile);
+        when(profileAppService.completeProfile(any(), any())).thenReturn(profile);
 
-        mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID()))
+        mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-comp"))
                 .andExpect(status().isCreated());
     }
 
     @Test
     void postCompletion_returns422WhenIncomplete() throws Exception {
-        when(profileAppService.completeProfile(any()))
+        when(profileAppService.completeProfile(any(), any()))
                 .thenThrow(new IncompleteProfileException(List.of("nombre", "resumen", "educacion")));
 
-        mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID()))
+        mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-comp"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.missingRequirements").isArray());
     }

@@ -8,6 +8,8 @@ import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
+import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
@@ -65,7 +67,7 @@ public class ProfileAppService {
 
     @Transactional
     public ProfessionalProfile updateProfileInfo(UpdateProfileInfoCommand cmd) {
-        var p = load(cmd.profileId());
+        var p = loadForUser(cmd.profileId(), cmd.uid());
         if (cmd.name() != null) p.updateName(new ProfileName(cmd.name()));
         if (cmd.summary() != null) p.updateSummary(new ProfessionalSummary(cmd.summary()));
         if (cmd.preferredModality() != null) p.updatePreferredModality(WorkModality.valueOf(cmd.preferredModality()));
@@ -77,7 +79,7 @@ public class ProfileAppService {
 
     @Transactional
     public ProfessionalProfile addWorkExperience(AddWorkExperienceCommand cmd) {
-        var p = load(cmd.profileId());
+        var p = loadForUser(cmd.profileId(), cmd.uid());
         p.addWorkExperience(new WorkExperience(UUID.randomUUID(), cmd.company(), cmd.position(), cmd.description(),
                 YearMonth.parse(cmd.startDate()), cmd.endDate() != null ? YearMonth.parse(cmd.endDate()) : null,
                 EmploymentStatus.valueOf(cmd.employmentStatus()), DataProvenance.valueOf(cmd.provenance())));
@@ -85,13 +87,13 @@ public class ProfileAppService {
     }
 
     @Transactional
-    public ProfessionalProfile removeWorkExperience(UUID profileId, UUID expId) {
-        var p = load(profileId); p.removeWorkExperience(expId); repository.save(p); return p;
+    public ProfessionalProfile removeWorkExperience(UUID profileId, String uid, UUID expId) {
+        var p = loadForUser(profileId, uid); p.removeWorkExperience(expId); repository.save(p); return p;
     }
 
     @Transactional
     public ProfessionalProfile addEducation(AddEducationCommand cmd) {
-        var p = load(cmd.profileId());
+        var p = loadForUser(cmd.profileId(), cmd.uid());
         p.addEducation(new Education(UUID.randomUUID(), cmd.institution(), cmd.degree(), cmd.fieldOfStudy(),
                 EducationLevel.valueOf(cmd.level()), YearMonth.parse(normalizeYearMonth(cmd.startDate())),
                 cmd.endDate() != null ? YearMonth.parse(normalizeYearMonth(cmd.endDate())) : null,
@@ -105,45 +107,45 @@ public class ProfileAppService {
     }
 
     @Transactional
-    public ProfessionalProfile removeEducation(UUID profileId, UUID eduId) {
-        var p = load(profileId); p.removeEducation(eduId); repository.save(p); return p;
+    public ProfessionalProfile removeEducation(UUID profileId, String uid, UUID eduId) {
+        var p = loadForUser(profileId, uid); p.removeEducation(eduId); repository.save(p); return p;
     }
 
     // ── CM-19 ────────────────────────────────────────────────────────────
 
     @Transactional
     public ProfessionalProfile updateSalaryExpectation(UpdateSalaryExpectationCommand cmd) {
-        var p = load(cmd.profileId());
+        var p = loadForUser(cmd.profileId(), cmd.uid());
         p.updateSalaryExpectation(new SalaryExpectation(cmd.amount()));
         repository.save(p); return p;
     }
 
     @Transactional
     public ProfessionalProfile addSkill(AddSkillCommand cmd) {
-        var p = load(cmd.profileId());
+        var p = loadForUser(cmd.profileId(), cmd.uid());
         p.addSkill(new ProfileSkill(UUID.randomUUID(), cmd.skillName(), SkillLevel.valueOf(cmd.level()), DataProvenance.valueOf(cmd.provenance())));
         repository.save(p); return p;
     }
 
     @Transactional
-    public ProfessionalProfile removeSkill(UUID profileId, UUID skillId) {
-        var p = load(profileId); p.removeSkill(skillId); repository.save(p); return p;
+    public ProfessionalProfile removeSkill(UUID profileId, String uid, UUID skillId) {
+        var p = loadForUser(profileId, uid); p.removeSkill(skillId); repository.save(p); return p;
     }
 
     @Transactional
-    public ProfessionalProfile requestReview(UUID profileId) {
-        var p = load(profileId); p.requestReview(); repository.save(p); return p;
+    public ProfessionalProfile requestReview(UUID profileId, String uid) {
+        var p = loadForUser(profileId, uid); p.requestReview(); repository.save(p); return p;
     }
 
     // ── CM-20 ────────────────────────────────────────────────────────────
 
-    public ProfessionalProfile getProfile(UUID id) { return load(id); }
+    public ProfessionalProfile getProfile(UUID id, String uid) { return loadForUser(id, uid); }
 
     // ── CM-21 / CM-23 ────────────────────────────────────────────────────
 
     @Transactional
     public ProfessionalProfile addTargetRole(AddTargetRoleCommand cmd) {
-        var p = load(cmd.profileId());
+        var p = loadForUser(cmd.profileId(), cmd.uid());
         var role = roleRepository.findById(cmd.professionalRoleId())
                 .orElseThrow(() -> new ProfessionalRoleNotFoundException(cmd.professionalRoleId()));
         p.addTargetRole(new TargetRole(UUID.randomUUID(), role.id(), role.nombre(), DataProvenance.valueOf(cmd.provenance())));
@@ -152,7 +154,7 @@ public class ProfileAppService {
 
     @Transactional
     public ProfessionalProfile updateTargetRole(UpdateTargetRoleCommand cmd) {
-        var p = load(cmd.profileId());
+        var p = loadForUser(cmd.profileId(), cmd.uid());
         var role = roleRepository.findById(cmd.professionalRoleId())
                 .orElseThrow(() -> new ProfessionalRoleNotFoundException(cmd.professionalRoleId()));
         p.updateTargetRole(cmd.roleId(), role.id(), role.nombre());
@@ -160,15 +162,15 @@ public class ProfileAppService {
     }
 
     @Transactional
-    public ProfessionalProfile removeTargetRole(UUID profileId, UUID roleId) {
-        var p = load(profileId); p.removeTargetRole(roleId); repository.save(p); return p;
+    public ProfessionalProfile removeTargetRole(UUID profileId, String uid, UUID roleId) {
+        var p = loadForUser(profileId, uid); p.removeTargetRole(roleId); repository.save(p); return p;
     }
 
     // ── CM-22 ────────────────────────────────────────────────────────────
 
     @Transactional
-    public ProfessionalProfile completeProfile(UUID profileId) {
-        var p = load(profileId);
+    public ProfessionalProfile completeProfile(UUID profileId, String uid) {
+        var p = loadForUser(profileId, uid);
         p.complete();
         repository.save(p);
         return p;
@@ -181,5 +183,12 @@ public class ProfileAppService {
     private ProfessionalProfile load(UUID profileId) {
         return repository.findById(ProfileId.of(profileId))
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
+    }
+
+    private ProfessionalProfile loadForUser(UUID profileId, String uid) {
+        if (uid == null || uid.isBlank()) throw new IdentityRequiredException();
+        var p = load(profileId);
+        if (!p.getFirebaseUid().value().equals(uid)) throw new ProfileAccessDeniedException();
+        return p;
     }
 }
