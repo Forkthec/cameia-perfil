@@ -22,13 +22,23 @@ public class ProfessionalRoleEntity {
     @Column(name = "categoria", nullable = false, length = 100)
     private String categoria;
 
+    @Column(name = "nombre_en", nullable = false, length = 255)
+    private String nombreEn;
+
+    @Column(name = "categoria_en", nullable = false, length = 100)
+    private String categoriaEn;
+
     public ProfessionalRoleEntity() {}
 
     public UUID getId() { return id; }
     public String getNombre() { return nombre; }
     public String getCategoria() { return categoria; }
+    public String getNombreEn() { return nombreEn; }
+    public String getCategoriaEn() { return categoriaEn; }
 
     public void setId(UUID id) { this.id = id; }
     public void setNombre(String nombre) { this.nombre = nombre; }
     public void setCategoria(String categoria) { this.categoria = categoria; }
+    public void setNombreEn(String nombreEn) { this.nombreEn = nombreEn; }
+    public void setCategoriaEn(String categoriaEn) { this.categoriaEn = categoriaEn; }
 }

@@ -857,6 +857,7 @@ Sprint 1. Estado al 11/09/2026.
 | CM-23 | catalogo-roles-profesionales | `GET …/profiles/professional-roles` | ✅ PR #22 | Catálogo seed ~47 roles TI; FK desde `rol_objetivo`; lookup obligatorio en add/update |
 | CM-24 | limpieza-contrato-openapi | (transversal) | ✅ PR #22 | 201 en POST, `@Hidden` en salary, `@Valid` en DTOs, handler 400 para Bean Validation |
 | CM-25 | validacion-habilidad-duplicada | `POST …/skills` | ✅ PR #32 | Duplicados rechazados case-insensitive + colapso espacios; `@NotBlank` en `AddSkillRequest`; 409 en Swagger |
+| CM-82  | catalogo-roles-i18n | `GET …/profiles/professional-roles?lang=es\|en` | 🔄 rama CM-82 | i18n español/inglés: columnas `nombre_en`+`categoria_en` en V4; parámetro `lang` (default `es`); 400 para idioma no soportado; sin autenticación |
 | CM-174 | verificacion-propiedad-perfil | (transversal — 15 endpoints) | 🔄 rama CM-174 | OWASP ASVS §8.2.2 IDOR: `loadForUser()` en servicio; 401 si falta `X-User-Id`, 403 si uid ≠ dueño; Swagger documenta ambos códigos |
 | CM-176 | correccion-rutas-gateway | `GET …/profiles/professional-roles` | 🔄 rama CM-176 | Toda ruta dentro de `Path=/api/v1/profiles/**` (§5.4); ruta vieja eliminada sin alias |
 
