@@ -43,7 +43,7 @@ class ProfessionalRoleControllerTest {
         when(service.listAllByLang(eq("es")))
                 .thenReturn(List.of(new ProfessionalRole(ROLE_ID, "Desarrollador Frontend", "Desarrollo")));
 
-        mockMvc.perform(get("/api/v1/professional-roles"))
+        mockMvc.perform(get("/api/v1/profiles/professional-roles"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].nombre").value("Desarrollador Frontend"))
                 .andExpect(jsonPath("$[0].categoria").value("Desarrollo"))
@@ -55,7 +55,7 @@ class ProfessionalRoleControllerTest {
         when(service.listAllByLang(eq("en")))
                 .thenReturn(List.of(new ProfessionalRole(ROLE_ID, "Frontend Developer", "Development")));
 
-        mockMvc.perform(get("/api/v1/professional-roles").param("lang", "en"))
+        mockMvc.perform(get("/api/v1/profiles/professional-roles").param("lang", "en"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].nombre").value("Frontend Developer"))
                 .andExpect(jsonPath("$[0].categoria").value("Development"));
@@ -63,7 +63,7 @@ class ProfessionalRoleControllerTest {
 
     @Test
     void listAll_returns400ForUnsupportedLang() throws Exception {
-        mockMvc.perform(get("/api/v1/professional-roles").param("lang", "fr"))
+        mockMvc.perform(get("/api/v1/profiles/professional-roles").param("lang", "fr"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Parámetro inválido"))
                 .andExpect(jsonPath("$.detail").value("El valor 'fr' no es un idioma soportado. Use 'es' o 'en'."));
