@@ -1,25 +1,53 @@
 {
   "info": {
-    "name": "CAMEIA — cameia-perfil Sprint 1 (CM-16 a CM-20)",
+    "name": "CAMEIA â€” cameia-perfil Sprint 1 (CM-16 a CM-20)",
     "_postman_id": "cameia-perfil-sprint1",
-    "description": "Colección de pruebas funcionales para los endpoints del microservicio cameia-perfil. Ejecutar en orden: CM-16 → CM-17 → CM-18 → CM-19 → CM-20. El test de CM-16 guarda el profileId automáticamente en la variable de entorno.",
+    "description": "ColecciÃ³n de pruebas funcionales para los endpoints del microservicio cameia-perfil. Ejecutar en orden: CM-16 â†’ CM-17 â†’ CM-18 â†’ CM-19 â†’ CM-20. El test de CM-16 guarda el profileId automÃ¡ticamente en la variable de entorno.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url",  "value": "http://localhost:8082", "type": "string" },
-    { "key": "profile_id","value": "", "type": "string" },
-    { "key": "exp_id",    "value": "", "type": "string" },
-    { "key": "edu_id",    "value": "", "type": "string" },
-    { "key": "skill_id",  "value": "", "type": "string" },
-    { "key": "role_id",   "value": "", "type": "string" },
-    { "key": "role_id_2", "value": "", "type": "string" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:8082",
+      "type": "string"
+    },
+    {
+      "key": "profile_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "exp_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "edu_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "skill_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "role_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "role_id_2",
+      "value": "",
+      "type": "string"
+    }
   ],
   "item": [
     {
-      "name": "CM-16 — Crear perfil profesional",
+      "name": "CM-16 â€” Crear perfil profesional",
       "item": [
         {
-          "name": "OK POST /profiles — crea perfil nuevo (guarda profileId)",
+          "name": "OK POST /profiles â€” crea perfil nuevo (guarda profileId)",
           "event": [
             {
               "listen": "test",
@@ -39,13 +67,26 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "firebase-uid-ana-sofia-001" }
+              {
+                "key": "X-User-Id",
+                "value": "firebase-uid-ana-sofia-001"
+              }
             ],
-            "url": { "raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api","v1","profiles"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
           }
         },
         {
-          "name": "ERR POST /profiles — 409 UID ya registrado",
+          "name": "ERR POST /profiles â€” 409 UID ya registrado",
           "event": [
             {
               "listen": "test",
@@ -60,13 +101,26 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "firebase-uid-ana-sofia-001" }
+              {
+                "key": "X-User-Id",
+                "value": "firebase-uid-ana-sofia-001"
+              }
             ],
-            "url": { "raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api","v1","profiles"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
           }
         },
         {
-          "name": "ERR POST /profiles — 400 sin header X-User-Id",
+          "name": "ERR POST /profiles â€” 400 sin header X-User-Id",
           "event": [
             {
               "listen": "test",
@@ -80,16 +134,26 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": { "raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api","v1","profiles"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
           }
         }
       ]
     },
     {
-      "name": "CM-17 — Actualizar info basica del perfil",
+      "name": "CM-17 â€” Actualizar info basica del perfil",
       "item": [
         {
-          "name": "OK PATCH /profiles/{id} — actualiza nombre y resumen",
+          "name": "OK PATCH /profiles/{id} â€” actualiza nombre y resumen",
           "event": [
             {
               "listen": "test",
@@ -104,16 +168,32 @@
           ],
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Ana Sofia Arango\",\n  \"summary\": \"Estudiante de Ingenieria de Sistemas en la Universidad del Cauca, especializada en arquitectura DDD y microservicios con Java 21 y Spring Boot.\",\n  \"preferredModality\": \"HYBRID\",\n  \"provenance\": \"MANUAL\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}"
+              ]
+            }
           }
         },
         {
-          "name": "OK PATCH /profiles/{id} — actualiza solo summary (nombre no cambia)",
+          "name": "OK PATCH /profiles/{id} â€” actualiza solo summary (nombre no cambia)",
           "event": [
             {
               "listen": "test",
@@ -128,16 +208,32 @@
           ],
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"summary\": \"Backend Developer enfocada en DDD & Clean Architecture con Java 21.\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}"
+              ]
+            }
           }
         },
         {
-          "name": "ERR PATCH /profiles/{id} — 404 perfil no existe",
+          "name": "ERR PATCH /profiles/{id} â€” 404 perfil no existe",
           "event": [
             {
               "listen": "test",
@@ -151,16 +247,32 @@
           ],
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"No existe\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/00000000-0000-0000-0000-000000000000", "host": ["{{base_url}}"], "path": ["api","v1","profiles","00000000-0000-0000-0000-000000000000"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
           }
         },
         {
-          "name": "ERR PATCH /profiles/{id} — 422 enum invalido",
+          "name": "ERR PATCH /profiles/{id} â€” 422 enum invalido",
           "event": [
             {
               "listen": "test",
@@ -174,21 +286,37 @@
           ],
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"preferredModality\": \"PRESENCIAL_TOTAL\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}"
+              ]
+            }
           }
         }
       ]
     },
     {
-      "name": "CM-18 — Experiencia laboral y educacion",
+      "name": "CM-18 â€” Experiencia laboral y educacion",
       "item": [
         {
-          "name": "OK POST /profiles/{id}/work-experiences — agrega experiencia ENDED",
+          "name": "OK POST /profiles/{id}/work-experiences â€” agrega experiencia ENDED",
           "event": [
             {
               "listen": "test",
@@ -204,16 +332,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"company\": \"Bancolombia\",\n  \"position\": \"Desarrolladora Backend Jr\",\n  \"description\": \"Desarrollo de APIs REST en Java 17 con Spring Boot para el modulo de pagos digitales.\",\n  \"startDate\": \"2023-06\",\n  \"endDate\": \"2024-12\",\n  \"employmentStatus\": \"ENDED\",\n  \"seniority\": \"JUNIOR\",\n  \"provenance\": \"MANUAL\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/work-experiences", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","work-experiences"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/work-experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "work-experiences"
+              ]
+            }
           }
         },
         {
-          "name": "OK POST /profiles/{id}/work-experiences — agrega experiencia CURRENT (sin endDate)",
+          "name": "OK POST /profiles/{id}/work-experiences â€” agrega experiencia CURRENT (sin endDate)",
           "event": [
             {
               "listen": "test",
@@ -227,16 +372,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"company\": \"Pragma\",\n  \"position\": \"Desarrolladora Backend Semi-Senior\",\n  \"description\": \"Arquitectura de microservicios con Spring Cloud y Kafka.\",\n  \"startDate\": \"2025-01\",\n  \"employmentStatus\": \"CURRENT\",\n  \"seniority\": \"SEMI_SENIOR\",\n  \"provenance\": \"MANUAL\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/work-experiences", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","work-experiences"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/work-experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "work-experiences"
+              ]
+            }
           }
         },
         {
-          "name": "ERR POST /work-experiences — 422 ENDED sin endDate",
+          "name": "ERR POST /work-experiences â€” 422 ENDED sin endDate",
           "event": [
             {
               "listen": "test",
@@ -249,16 +411,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"company\": \"Empresa X\",\n  \"position\": \"Dev\",\n  \"startDate\": \"2022-01\",\n  \"employmentStatus\": \"ENDED\",\n  \"seniority\": \"JUNIOR\",\n  \"provenance\": \"MANUAL\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/work-experiences", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","work-experiences"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/work-experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "work-experiences"
+              ]
+            }
           }
         },
         {
-          "name": "OK DELETE /profiles/{id}/work-experiences/{expId} — elimina experiencia",
+          "name": "OK DELETE /profiles/{id}/work-experiences/{expId} â€” elimina experiencia",
           "event": [
             {
               "listen": "test",
@@ -272,11 +451,24 @@
           ],
           "request": {
             "method": "DELETE",
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/work-experiences/{{exp_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","work-experiences","{{exp_id}}"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/work-experiences/{{exp_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "work-experiences",
+                "{{exp_id}}"
+              ]
+            }
           }
         },
         {
-          "name": "OK POST /profiles/{id}/educations — agrega educacion completada",
+          "name": "OK POST /profiles/{id}/educations â€” agrega educacion completada",
           "event": [
             {
               "listen": "test",
@@ -292,16 +484,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"institution\": \"Universidad del Cauca\",\n  \"degree\": \"Ingenieria de Sistemas\",\n  \"fieldOfStudy\": \"Ingenieria de Software\",\n  \"level\": \"UNDERGRADUATE\",\n  \"startDate\": \"2021-01\",\n  \"endDate\": \"2025-12\",\n  \"inProgress\": false,\n  \"provenance\": \"MANUAL\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/educations", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","educations"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/educations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "educations"
+              ]
+            }
           }
         },
         {
-          "name": "OK POST /profiles/{id}/educations — agrega educacion en curso (sin endDate, solo year)",
+          "name": "OK POST /profiles/{id}/educations â€” agrega educacion en curso (sin endDate, solo year)",
           "event": [
             {
               "listen": "test",
@@ -315,16 +524,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"institution\": \"Coursera\",\n  \"degree\": \"Especializacion en Arquitectura de Software\",\n  \"fieldOfStudy\": \"Cloud Native & Microservicios\",\n  \"level\": \"SPECIALIZATION\",\n  \"startDate\": \"2026\",\n  \"inProgress\": true,\n  \"provenance\": \"MANUAL\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/educations", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","educations"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/educations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "educations"
+              ]
+            }
           }
         },
         {
-          "name": "OK DELETE /profiles/{id}/educations/{eduId} — elimina educacion",
+          "name": "OK DELETE /profiles/{id}/educations/{eduId} â€” elimina educacion",
           "event": [
             {
               "listen": "test",
@@ -338,16 +564,29 @@
           ],
           "request": {
             "method": "DELETE",
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/educations/{{edu_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","educations","{{edu_id}}"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/educations/{{edu_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "educations",
+                "{{edu_id}}"
+              ]
+            }
           }
         }
       ]
     },
     {
-      "name": "CM-19 — Habilidades, salario y revision",
+      "name": "CM-19 â€” Habilidades, salario y revision",
       "item": [
         {
-          "name": "OK PATCH /profiles/{id}/salary-expectation — actualiza expectativa salarial",
+          "name": "OK PATCH /profiles/{id}/salary-expectation â€” actualiza expectativa salarial",
           "event": [
             {
               "listen": "test",
@@ -361,16 +600,33 @@
           ],
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"amount\": 4500000\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/salary-expectation", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","salary-expectation"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/salary-expectation",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "salary-expectation"
+              ]
+            }
           }
         },
         {
-          "name": "OK POST /profiles/{id}/skills — agrega habilidad Java",
+          "name": "OK POST /profiles/{id}/skills â€” agrega habilidad Java",
           "event": [
             {
               "listen": "test",
@@ -386,16 +642,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"skillName\": \"Java\",\n  \"level\": \"ADVANCED\",\n  \"provenance\": \"MANUAL\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/skills", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","skills"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/skills",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "skills"
+              ]
+            }
           }
         },
         {
-          "name": "OK POST /profiles/{id}/skills — agrega habilidad Spring Boot",
+          "name": "OK POST /profiles/{id}/skills â€” agrega habilidad Spring Boot",
           "event": [
             {
               "listen": "test",
@@ -409,16 +682,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"skillName\": \"Spring Boot\",\n  \"level\": \"INTERMEDIATE\",\n  \"provenance\": \"MANUAL\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/skills", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","skills"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/skills",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "skills"
+              ]
+            }
           }
         },
         {
-          "name": "OK DELETE /profiles/{id}/skills/{skillId} — elimina habilidad Java",
+          "name": "OK DELETE /profiles/{id}/skills/{skillId} â€” elimina habilidad Java",
           "event": [
             {
               "listen": "test",
@@ -432,11 +722,24 @@
           ],
           "request": {
             "method": "DELETE",
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/skills/{{skill_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","skills","{{skill_id}}"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/skills/{{skill_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "skills",
+                "{{skill_id}}"
+              ]
+            }
           }
         },
         {
-          "name": "ERR POST /review-requests — 422 perfil incompleto (sin rol objetivo)",
+          "name": "ERR POST /review-requests â€” 422 perfil incompleto (sin rol objetivo)",
           "event": [
             {
               "listen": "test",
@@ -450,16 +753,28 @@
           ],
           "request": {
             "method": "POST",
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/review-requests", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","review-requests"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/review-requests",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "review-requests"
+              ]
+            }
           }
         }
       ]
     },
     {
-      "name": "CM-20 — Roles objetivo",
+      "name": "CM-20 â€” Roles objetivo",
       "item": [
         {
-          "name": "OK POST /profiles/{id}/target-roles — agrega rol Backend Developer (guarda role_id)",
+          "name": "OK POST /profiles/{id}/target-roles â€” agrega rol Backend Developer (guarda role_id)",
           "event": [
             {
               "listen": "test",
@@ -475,16 +790,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Backend Developer\",\n  \"seniority\": \"SEMI_SENIOR\",\n  \"provenance\": \"MANUAL\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "target-roles"
+              ]
+            }
           }
         },
         {
-          "name": "OK POST /profiles/{id}/target-roles — agrega rol Software Architect (guarda role_id_2)",
+          "name": "OK POST /profiles/{id}/target-roles â€” agrega rol Software Architect (guarda role_id_2)",
           "event": [
             {
               "listen": "test",
@@ -502,16 +834,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Software Architect\",\n  \"seniority\": \"SENIOR\",\n  \"provenance\": \"MANUAL\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "target-roles"
+              ]
+            }
           }
         },
         {
-          "name": "ERR POST /target-roles — 409 rol duplicado (mismo title+seniority)",
+          "name": "ERR POST /target-roles â€” 409 rol duplicado (mismo title+seniority)",
           "event": [
             {
               "listen": "test",
@@ -525,16 +874,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Backend Developer\",\n  \"seniority\": \"SEMI_SENIOR\",\n  \"provenance\": \"MANUAL\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "target-roles"
+              ]
+            }
           }
         },
         {
-          "name": "OK GET /profiles/{id} — obtiene perfil completo con roles cargados",
+          "name": "OK GET /profiles/{id} â€” obtiene perfil completo con roles cargados",
           "event": [
             {
               "listen": "test",
@@ -550,11 +916,22 @@
           ],
           "request": {
             "method": "GET",
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}"
+              ]
+            }
           }
         },
         {
-          "name": "ERR GET /profiles/{id} — 404 perfil no existe",
+          "name": "ERR GET /profiles/{id} â€” 404 perfil no existe",
           "event": [
             {
               "listen": "test",
@@ -568,11 +945,22 @@
           ],
           "request": {
             "method": "GET",
-            "url": { "raw": "{{base_url}}/api/v1/profiles/00000000-0000-0000-0000-000000000000", "host": ["{{base_url}}"], "path": ["api","v1","profiles","00000000-0000-0000-0000-000000000000"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
           }
         },
         {
-          "name": "OK PATCH /profiles/{id}/target-roles/{roleId} — actualiza titulo y seniority",
+          "name": "OK PATCH /profiles/{id}/target-roles/{roleId} â€” actualiza titulo y seniority",
           "event": [
             {
               "listen": "test",
@@ -589,16 +977,34 @@
           ],
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Lead Backend Developer\",\n  \"seniority\": \"SENIOR\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/{{role_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles","{{role_id}}"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/{{role_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "target-roles",
+                "{{role_id}}"
+              ]
+            }
           }
         },
         {
-          "name": "ERR PATCH /target-roles/{roleId} — 422 roleId no existe en el perfil",
+          "name": "ERR PATCH /target-roles/{roleId} â€” 422 roleId no existe en el perfil",
           "event": [
             {
               "listen": "test",
@@ -611,16 +1017,34 @@
           ],
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"No existe\"\n}"
             },
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/00000000-0000-0000-0000-000000000000", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles","00000000-0000-0000-0000-000000000000"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "target-roles",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
           }
         },
         {
-          "name": "OK POST /review-requests — 201 perfil completo (con nombre, resumen y rol)",
+          "name": "OK POST /review-requests â€” 201 perfil completo (con nombre, resumen y rol)",
           "event": [
             {
               "listen": "test",
@@ -634,11 +1058,23 @@
           ],
           "request": {
             "method": "POST",
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/review-requests", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","review-requests"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/review-requests",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "review-requests"
+              ]
+            }
           }
         },
         {
-          "name": "OK DELETE /target-roles/{roleId2} — elimina Software Architect (queda 1)",
+          "name": "OK DELETE /target-roles/{roleId2} â€” elimina Software Architect (queda 1)",
           "event": [
             {
               "listen": "test",
@@ -652,11 +1088,24 @@
           ],
           "request": {
             "method": "DELETE",
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/{{role_id_2}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles","{{role_id_2}}"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/{{role_id_2}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "target-roles",
+                "{{role_id_2}}"
+              ]
+            }
           }
         },
         {
-          "name": "ERR DELETE /target-roles/{roleId} — 422 ultimo rol (no se puede eliminar)",
+          "name": "ERR DELETE /target-roles/{roleId} â€” 422 ultimo rol (no se puede eliminar)",
           "event": [
             {
               "listen": "test",
@@ -670,8 +1119,128 @@
           ],
           "request": {
             "method": "DELETE",
-            "url": { "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/{{role_id}}", "host": ["{{base_url}}"], "path": ["api","v1","profiles","{{profile_id}}","target-roles","{{role_id}}"] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/{{role_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "target-roles",
+                "{{role_id}}"
+              ]
+            }
           }
+        }
+      ]
+    },
+    {
+      "name": "CM-82 — Catálogo roles profesionales (i18n)",
+      "item": [
+        {
+          "name": "OK GET /professional-roles — español (default)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/professional-roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "professional-roles"
+              ]
+            },
+            "description": "Sin parámetro lang → devuelve roles en español. Respuesta esperada: 200 con lista de roles (nombre en español)."
+          },
+          "response": []
+        },
+        {
+          "name": "OK GET /professional-roles?lang=es — español explícito",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/professional-roles?lang=es",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "professional-roles"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "es"
+                }
+              ]
+            },
+            "description": "lang=es → devuelve roles en español. Respuesta esperada: 200 con nombre como \"Desarrollador Frontend\"."
+          },
+          "response": []
+        },
+        {
+          "name": "OK GET /professional-roles?lang=en — inglés",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/professional-roles?lang=en",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "professional-roles"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "en"
+                }
+              ]
+            },
+            "description": "lang=en → devuelve roles en inglés. Respuesta esperada: 200 con nombre como \"Frontend Developer\"."
+          },
+          "response": []
+        },
+        {
+          "name": "ERR GET /professional-roles?lang=fr — 400 idioma no soportado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/professional-roles?lang=fr",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "professional-roles"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "fr"
+                }
+              ]
+            },
+            "description": "Idioma no soportado → 400 ProblemDetail con title=\"Parámetro inválido\"."
+          },
+          "response": []
         }
       ]
     }
