@@ -22,16 +22,27 @@ class ProfessionalRoleRepositoryAdapter implements ProfessionalRoleRepository {
     @Override
     @Transactional(readOnly = true)
     public Optional<ProfessionalRole> findById(UUID id) {
-        return jpa.findById(id).map(this::toDomain);
+        return jpa.findById(id).map(e -> toDomain(e, "es"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ProfessionalRole> findAll() {
-        return jpa.findAll().stream().map(this::toDomain).toList();
+        return findAllByLang("es");
     }
 
-    private ProfessionalRole toDomain(ProfessionalRoleEntity e) {
-        return new ProfessionalRole(e.getId(), e.getNombre(), e.getCategoria());
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProfessionalRole> findAllByLang(String lang) {
+        if ("en".equals(lang)) {
+            return jpa.findAllOrderedEn().stream().map(e -> toDomain(e, "en")).toList();
+        }
+        return jpa.findAllOrderedEs().stream().map(e -> toDomain(e, "es")).toList();
+    }
+
+    private ProfessionalRole toDomain(ProfessionalRoleEntity e, String lang) {
+        String nombre = "en".equals(lang) ? e.getNombreEn() : e.getNombre();
+        String categoria = "en".equals(lang) ? e.getCategoriaEn() : e.getCategoria();
+        return new ProfessionalRole(e.getId(), nombre, categoria);
     }
 }

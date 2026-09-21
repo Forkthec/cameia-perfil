@@ -20,4 +20,8 @@ public class ProfessionalRoleAppService {
     public List<ProfessionalRole> listAll() {
         return repository.findAll();
     }
+
+    public List<ProfessionalRole> listAllByLang(String lang) {
+        return repository.findAllByLang(lang);
+    }
 }

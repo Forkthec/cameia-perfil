@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface ProfessionalRoleRepository {
     Optional<ProfessionalRole> findById(UUID id);
     List<ProfessionalRole> findAll();
+    List<ProfessionalRole> findAllByLang(String lang);
 }
