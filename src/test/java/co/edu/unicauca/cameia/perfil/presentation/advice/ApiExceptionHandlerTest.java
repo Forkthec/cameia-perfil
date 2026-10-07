@@ -144,6 +144,42 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("El rechazo registra código, requestId y la identidad del Usuario")
+    void rejection_shouldLogCodeRequestIdAndUid_whenIdentityPresent() throws Exception {
+        toThrow = ProfileAlreadyExistsException::new;
+
+        mockMvc.perform(get("/boom").header("X-User-Id", "uid-ana-001").header("X-Request-Id", "req-log-1"))
+                .andExpect(status().isConflict());
+
+        assertThat(logs.list).anySatisfy(event -> assertThat(event.getFormattedMessage())
+                .contains("code=PROFILE_LIMIT_REACHED").contains("requestId=req-log-1")
+                .contains("firebaseUid=uid-ana-001"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   ", "uid\nINFO falso", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"})
+    @DisplayName("Una identidad en blanco, con saltos de línea o de más de 128 caracteres se registra como guion")
+    void rejection_shouldLogDashUid_whenIdentityIsNotLoggable(String uid) throws Exception {
+        toThrow = ProfileAlreadyExistsException::new;
+
+        mockMvc.perform(get("/boom").header("X-User-Id", uid)).andExpect(status().isConflict());
+
+        assertThat(logs.list).anySatisfy(event ->
+                assertThat(event.getFormattedMessage()).endsWith("firebaseUid=-"));
+    }
+
+    @Test
+    @DisplayName("Sin la identidad, el rechazo registra la identidad como guion")
+    void rejection_shouldLogDashUid_whenIdentityMissing() throws Exception {
+        toThrow = ProfileAlreadyExistsException::new;
+
+        mockMvc.perform(get("/boom")).andExpect(status().isConflict());
+
+        assertThat(logs.list).anySatisfy(event ->
+                assertThat(event.getFormattedMessage()).contains("firebaseUid=-"));
+    }
+
+    @Test
     @DisplayName("Un identificador de petición válido se devuelve igual en cuerpo y encabezado")
     void requestId_shouldEchoValidHeader_whenPresent() throws Exception {
         toThrow = ProfileAccessDeniedException::new;

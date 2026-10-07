@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.REQUEST_ID_HEADER;
+import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.firebaseUid;
 import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.problem;
 import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.requestId;
 import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.respond;
@@ -44,7 +45,6 @@ import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
-    private static final String IDENTITY_HEADER = "X-User-Id";
 
     /** Un campo rechazado, tal como lo necesita el cliente para marcarlo. */
     private record FieldProblem(String field, ErrorCode code, String message) { }
@@ -60,15 +60,15 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler({IllegalArgumentException.class, DateTimeException.class})
     ResponseEntity<Object> handleInvalidValue(RuntimeException ex, WebRequest request) {
         var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-        log.warn("Valor rechazado sin campo: code={} requestId={} origen={}",
-                ErrorCode.REQUEST_INVALID_VALUE, requestId, origin(ex));
+        log.warn("Valor rechazado sin campo: code={} requestId={} firebaseUid={} origen={}",
+                ErrorCode.REQUEST_INVALID_VALUE, requestId, firebaseUid(request), origin(ex));
         return respond(problem(ErrorCode.REQUEST_INVALID_VALUE, null), requestId);
     }
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<Object> handleUnexpected(Exception ex, WebRequest request) {
         var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-        log.error("Fallo no controlado: requestId={}", requestId, ex);
+        log.error("Fallo no controlado: requestId={} firebaseUid={}", requestId, firebaseUid(request), ex);
         return respond(problem(ErrorCode.INTERNAL_ERROR, null), requestId);
     }
 
@@ -77,7 +77,8 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             MethodArgumentNotValidException ex, HttpHeaders headers,
             HttpStatusCode status, WebRequest request) {
         var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-        log.warn("Petición rechazada: code={} requestId={}", ErrorCode.VALIDATION_FAILED, requestId);
+        log.warn("Petición rechazada: code={} requestId={} firebaseUid={}",
+                ErrorCode.VALIDATION_FAILED, requestId, firebaseUid(request));
         var problem = problem(ErrorCode.VALIDATION_FAILED, null);
         problem.setProperty("errors", fieldProblems(ex));
         return respond(problem, requestId);
@@ -96,7 +97,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             HttpStatusCode status, WebRequest request) {
         if (ex instanceof MissingRequestHeaderException missing) {
             // Sin el encabezado de identidad no hay Usuario: 401. Cualquier otro encabezado ausente es un valor no válido.
-            var code = IDENTITY_HEADER.equalsIgnoreCase(missing.getHeaderName())
+            var code = ProblemResponses.IDENTITY_HEADER.equalsIgnoreCase(missing.getHeaderName())
                     ? ErrorCode.IDENTITY_REQUIRED : ErrorCode.REQUEST_INVALID_VALUE;
             return reject(code, null, request);
         }
@@ -147,14 +148,15 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             return response;
         }
         var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-        log.warn("Petición rechazada por el framework: status={} requestId={}", statusCode.value(), requestId);
+        log.warn("Petición rechazada por el framework: status={} requestId={} firebaseUid={}",
+                statusCode.value(), requestId, firebaseUid(request));
         return withHeaders(respond(problem, requestId), response.getHeaders());
     }
 
     /** Registra el rechazo y responde el problema del código, con el mensaje dado o el del catálogo. */
     private ResponseEntity<Object> reject(ErrorCode code, String detail, WebRequest request) {
         var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-        log.warn("Petición rechazada: code={} requestId={}", code, requestId);
+        log.warn("Petición rechazada: code={} requestId={} firebaseUid={}", code, requestId, firebaseUid(request));
         return respond(problem(code, detail), requestId);
     }
 

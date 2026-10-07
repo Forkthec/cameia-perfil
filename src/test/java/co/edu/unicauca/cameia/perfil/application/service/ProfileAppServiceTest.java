@@ -101,7 +101,7 @@ class ProfileAppServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "   ", "	"})
+    @ValueSource(strings = {"", "   ", "\t"})
     @DisplayName("Una identidad en blanco se rechaza antes de consultar el repositorio")
     void createProfile_shouldThrowIdentityRequired_whenUidIsBlank(String uid) {
         assertThatThrownBy(() -> service.createProfile(new CreateProfileCommand(uid)))

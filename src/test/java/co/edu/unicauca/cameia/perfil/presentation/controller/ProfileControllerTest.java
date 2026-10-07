@@ -93,7 +93,7 @@ class ProfileControllerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "   ", "	"})
+    @ValueSource(strings = {"", "   ", "\t"})
     @DisplayName("Una identidad en blanco responde 401 aunque el encabezado llegue")
     void postProfiles_shouldReturn401_whenXUserIdIsBlank(String uid) throws Exception {
         when(profileAppService.createProfile(new CreateProfileCommand(uid))).thenThrow(new IdentityRequiredException());

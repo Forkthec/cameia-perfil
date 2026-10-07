@@ -1,10 +1,12 @@
 package co.edu.unicauca.cameia.perfil.presentation.advice;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
+import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.context.request.WebRequest;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -21,6 +23,10 @@ final class ProblemResponses {
 
     /** Encabezado con el identificador de la petición, recibido del Gateway o generado aquí. */
     static final String REQUEST_ID_HEADER = "X-Request-Id";
+
+    /** Encabezado con la identidad del Usuario que pone el Gateway. */
+    static final String IDENTITY_HEADER = "X-User-Id";
+    private static final String NO_UID = "-";
 
     private static final MediaType PROBLEM_JSON_UTF8 =
             new MediaType("application", "problem+json", StandardCharsets.UTF_8);
@@ -82,5 +88,20 @@ final class ProblemResponses {
     static String requestId(String received) {
         return received != null && REQUEST_ID_FORMAT.matcher(received).matches()
                 ? received : UUID.randomUUID().toString();
+    }
+
+    /**
+     * Devuelve la identidad del Usuario para el registro, nunca para la respuesta.
+     *
+     * @param request petición en curso
+     * @return el valor de {@code X-User-Id}, o {@code -} si falta, está en blanco, mide más de 128
+     *         caracteres o trae caracteres de control (que permitirían falsear líneas del registro)
+     */
+    static String firebaseUid(WebRequest request) {
+        var uid = request.getHeader(IDENTITY_HEADER);
+        if (uid == null || uid.isBlank() || uid.length() > FirebaseUid.MAX_LENGTH) {
+            return NO_UID;
+        }
+        return uid.chars().anyMatch(Character::isISOControl) ? NO_UID : uid;
     }
 }
