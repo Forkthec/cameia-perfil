@@ -10,6 +10,7 @@ import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,13 +18,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Prueba de integración de la capa de persistencia.
  *
- * <p>Requiere PostgreSQL real vía docker-compose. La anotación {@code @Transactional}
- * garantiza rollback automático al final de cada test: la BD queda limpia sin fixture de limpieza.
- *
- * <p>No usa H2 ni Testcontainers (AGENTS.md §9). Corre con:
- * {@code docker compose run --rm verify}
+ * <p>Requiere Docker en ejecución: Testcontainers levanta un PostgreSQL real, no H2. La anotación
+ * {@code @Transactional} garantiza rollback automático al final de cada test: la BD queda limpia
+ * sin fixture de limpieza.
  */
 @SpringBootTest
+@Import(PostgresTestConfiguration.class)
 @Transactional
 class ProfessionalProfileRepositoryAdapterIT {
 
