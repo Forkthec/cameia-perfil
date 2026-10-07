@@ -87,7 +87,9 @@ Dependencias `spring-boot-testcontainers` y `testcontainers-postgresql` en `pom.
 - En los tres archivos, reemplazar la ruta vieja de la carpeta por la nueva.
 - Commit `CM-271 | docs(spec): spec, plan y tareas de CM-271`.
 
-## [ ] T-0.5 · Cierre del PR 0 (parada)
+## [x] T-0.5 · Cierre del PR 0 (parada)
+
+> Hecha. PR Draft #57 hacia `develop`, CI en verde (Surefire 75, Failsafe 5).
 
 - Medir con `git diff --shortstat origin/develop...HEAD` y correr `./mvnw.cmd -B clean verify`.
 - Reportar a Paula con el formato de las reglas. Título previsto del PR: `CM-271 | test(perfil): pruebas de integración con PostgreSQL real en clean verify [IA-ASISTIDO]`.
@@ -106,14 +108,18 @@ Ya hechas:
 - `ApiExceptionHandlerTest`, ajuste de `ProfileControllerTest` y OpenAPI parcial;
 - identidad en blanco → 401.
 
-## [ ] T-A.5 · Rebase y mensajes — ≤ 20 min
+## [x] T-A.5 · Rebase y mensajes — ≤ 20 min
+
+> Hecha. Los 5 commits quedan encima del PR 0; `clean verify` 102 + 5 en verde.
 
 - `git rebase --onto CM-271-testcontainers-perfil 42320d9` (deja los 5 commits encima del PR 0).
 - **Conflicto en `docs/errores.md`.** Conservar la estructura de `develop` (secciones «Formato», «Códigos que el servicio emite», «Respuestas sin código», «Cómo se agrega un código»). Dentro, poner la tabla de códigos de la rama. Dejar en «Respuestas sin código» solo lo que siga sin código.
 - **Mensajes.** Quitar ` [IA-ASISTIDO]` de los 5 commits con `git filter-branch -f --msg-filter "sed 's/ \[IA-ASISTIDO\]//'" CM-271-testcontainers-perfil..HEAD`, y agregar la línea `Co-Authored-By` si falta.
 - **Verificación.** `./mvnw.cmd -B clean verify` en verde **antes** de seguir. Si algo falla por cambios de `develop`, detenerse y reportar.
 
-## [ ] T-A.6 · Dividir el manejador — ≤ 30 min, ≈ 0 líneas netas
+## [x] T-A.6 · Dividir el manejador — ≤ 30 min, ≈ 0 líneas netas
+
+> Hecha (`807f349`). `ErrorCatalog` expone `of(ErrorCode)` (estado, título y mensaje en un `record Definition`), `fieldCode`, `fieldMessage` y `pathIdCode`. Suite 106/0/0/0.
 
 - **Crear** `presentation/advice/ErrorCatalog.java`: clase `final` con constructor privado y Javadoc. Recibe del manejador, sin cambiar sus valores, las tablas `STATUS`, `TITLES`, `FIELD_CODES` y `FIELD_MESSAGES`, expuestas con métodos estáticos de paquete:
   - `HttpStatus statusOf(ErrorCode)` (lanza `IllegalStateException` si falta: es un error de programación que la prueba detecta);
@@ -124,7 +130,9 @@ Ya hechas:
 - **Mover** a `ErrorCatalogTest` las pruebas que recorren los mapas.
 - **Verificación.** Suite en verde; `ApiExceptionHandler` y `ErrorCatalog` con menos de 200 líneas cada una (`(Get-Content <archivo>).Count`).
 
-## [ ] T-A.7 · Identidad en 401 en todos los casos — ≤ 30 min, ≈ 60 líneas
+## [x] T-A.7 · Identidad en 401 en todos los casos — ≤ 30 min, ≈ 60 líneas
+
+> Hecha (`c7a2880`). El constructor de `ProfileAppService` es de paquete, así que el controlador prueba la traducción a 401 con el servicio simulado y los límites reales (128, 129, en blanco) están en `ProfileAppServiceTest`. Otro encabezado ausente responde 422 `REQUEST_INVALID_VALUE` (un código, un estado), no 400.
 
 - **Cubre** REQ-PE-10 y D8.
 - **`ProfileAppService`.** Un solo método privado que reemplaza las dos comprobaciones actuales:
@@ -146,7 +154,9 @@ Ya hechas:
   - servicio: `loadForUser` con 129 caracteres → `IdentityRequiredException` (no 403).
 - **Verificación.** `-Dtest=ProfileControllerTest,ProfileAppServiceTest`.
 
-## [ ] T-A.8 · Fecha mal escrita en 422 — ≤ 15 min, ≈ 25 líneas
+## [x] T-A.8 · Fecha mal escrita en 422 — ≤ 15 min, ≈ 25 líneas
+
+> Hecha (`2058e04`).
 
 - **Cubre** REQ-PE-11.
 - El `@ExceptionHandler` del respaldo pasa a atrapar `{IllegalArgumentException.class, DateTimeException.class}`, con el mismo código, el mismo texto y el mismo log de origen.
@@ -155,7 +165,9 @@ Ya hechas:
   - `startDate` `"31/02/2020"` → 422 `REQUEST_INVALID_VALUE`;
   - en los dos, el `detail` no contiene `Text` ni `parse`.
 
-## [ ] T-A.9 · Errores del framework con código — ≤ 30 min, ≈ 120 líneas
+## [x] T-A.9 · Errores del framework con código — ≤ 30 min, ≈ 120 líneas
+
+> Hecha (`430d859`). Nombres de `@PathVariable` iguales a la tarjeta. También `NoHandlerFoundException` → 404 `ROUTE_NOT_FOUND`; los demás errores del framework conservan estado y texto y ganan `requestId` y charset. La construcción de la respuesta pasó a `ProblemResponses` para dejar el manejador bajo 200 líneas. Con la app real, la ruta inexistente responde `ROUTE_NOT_FOUND` (`ResponseCharsetIT`).
 
 - **Cubre** REQ-PE-12 y D10.
 - **`ErrorCode`.** Agregar `ROUTE_NOT_FOUND`, `METHOD_NOT_ALLOWED`, `CONTENT_TYPE_NOT_ALLOWED`, `PROFILE_ID_INVALID_FORMAT`, `WORK_EXPERIENCE_ID_INVALID_FORMAT`, `EDUCATION_ID_INVALID_FORMAT`, `SKILL_ID_INVALID_FORMAT` y `TARGET_ROLE_ID_INVALID_FORMAT`, cada uno con Javadoc de una línea.
@@ -180,7 +192,9 @@ Ya hechas:
   - `DELETE /api/v1/profiles/{uuid}/skills/xyz` → 422 `SKILL_ID_INVALID_FORMAT`;
   - en todas, `$.requestId` presente y el `detail` sin `no-es-uuid`, `xyz`, `Failed` ni `convert`.
 
-## [ ] T-A.10 · Finalización incompleta e idioma del catálogo con la forma común — ≤ 30 min, ≈ 90 líneas
+## [x] T-A.10 · Finalización incompleta e idioma del catálogo con la forma común — ≤ 30 min, ≈ 90 líneas
+
+> Hecha (`f3114c1`).
 
 - **Cubre** REQ-PE-16, REQ-PE-17 y D11.
 - **Finalización:**
@@ -198,13 +212,17 @@ Ya hechas:
   - `?lang=en` → 200 en inglés.
 - Ajustar en `ProfessionalRoleControllerTest` la prueba que esperaba 400.
 
-## [ ] T-A.11 · `firebaseUid` en el registro — ≤ 15 min, ≈ 20 líneas
+## [x] T-A.11 · `firebaseUid` en el registro — ≤ 15 min, ≈ 20 líneas
+
+> Hecha (`f0e10e1`). En todos los registros del manejador; también se registra `-` si la identidad trae caracteres de control. Las pruebas usan el `ListAppender` que ya tenía `ApiExceptionHandlerTest`.
 
 - **Cubre** REQ-PE-07.
 - El método común que registra los rechazos agrega `firebaseUid={}` con el valor de `X-User-Id`, solo si existe, no está en blanco y mide 128 caracteres o menos. En otro caso escribe `firebaseUid=-`.
 - **Prueba.** Con `OutputCaptureExtension`, un 409 con `X-User-Id: uid-ana-001` registra `code=`, `requestId=` y `firebaseUid=uid-ana-001`; una petición sin el encabezado registra `firebaseUid=-`.
 
-## [ ] T-A.12 · `charset` en las respuestas de éxito — ≤ 20 min, ≈ 40 líneas
+## [x] T-A.12 · `charset` en las respuestas de éxito — ≤ 20 min, ≈ 40 líneas
+
+> Hecha (`2007e3a`). En Spring Boot 4 la propiedad vigente es `spring.servlet.encoding.force-response`; `server.servlet.encoding.force-response` está retirada y no se aplica. Con la propiedad apagada, `ResponseCharsetIT` falla.
 
 - **Cubre** REQ-PE-13.
 - En `application.yml`, agregar `server.servlet.encoding.force-response: true` junto a la configuración existente de `server` (si no hay, crearla).
@@ -214,14 +232,18 @@ Ya hechas:
   - un 404 de ruta, igual.
 - **Trampa.** Si el `Content-Type` del 201 no trae `charset`, **detenerse y reportar** con el encabezado real. No probar otras configuraciones.
 
-## [ ] T-A.13 · Pruebas de los códigos de campo, Javadoc y limpieza — ≤ 30 min, ≈ 120 líneas
+## [x] T-A.13 · Pruebas de los códigos de campo, Javadoc y limpieza — ≤ 30 min, ≈ 120 líneas
+
+> Hecha (`6f228a0`). 38 casos. Queda un `TODO` dentro del mensaje de `ProfileAlreadyExistsException`, que T-B.1 reemplaza por el texto aprobado.
 
 - **Cubre** REQ-PE-15 y el caso 21.
 - **Prueba parametrizada** en `ProfileControllerTest`, una fila por clave de `FIELD_CODES`. Cada campo con `NotBlank` se prueba ausente, `null`, `""`, `"   "` y `"\t"`; cada campo con `NotNull`, ausente y `null`. Se espera 422 y `$.errors[0]` con `field`, el `code` y el `message` de la tabla de la spec, §5 (por ejemplo `company` → `COMPANY_REQUIRED` → «Ingresa la empresa.»).
 - **Javadoc** de clase y de constructor en cada excepción de `domain/exception`.
 - **Limpieza** de `CM-NNN`, de los separadores `// ── CM-xx` y de los `TODO` en los archivos que esta rama toca: `ProfileAppService`, `CreateProfileCommand`, `ProfileController`, las excepciones y `ProfessionalProfileRepository` (este último en el PR B). El comando `git grep -n -E "CM-[0-9]+|TODO" -- <archivos tocados>` debe quedar vacío.
 
-## [ ] T-A.14 · OpenAPI, documentación y cierre del PR A (parada)
+## [x] T-A.14 · OpenAPI, documentación y cierre del PR A (parada)
+
+> Hecha (`a9939e8`). `clean verify`: Surefire 187/0/0/0, Failsafe 8/0/0/0. Cobertura de lo nuevo o modificado: 100 % de líneas y ramas; repositorio 71,1 % de líneas y 60,8 % de ramas (PR 0: 63,7 % y 50,0 %). Diff 2.173 líneas: ningún corte en dos queda bajo 1.000; el corte en tres (T-A.1 a T-A.6, T-A.7 a T-A.12, T-A.13 y T-A.14) espera la decisión de Paula.
 
 - **OpenAPI.** Un `@Schema` del error común con `code`, `detail`, `requestId` y `errors[]`, con ejemplo. En `ProfileController`, cada `@ApiResponse` de error nombra su código; en `POST /api/v1/profiles` van 401 y 500 (el 409 lo agrega el PR B).
 - **`docs/errores.md`:**
