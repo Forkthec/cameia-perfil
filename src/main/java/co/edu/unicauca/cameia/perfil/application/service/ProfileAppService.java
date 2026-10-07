@@ -55,6 +55,7 @@ public class ProfileAppService {
 
     @Transactional
     public ProfessionalProfile createProfile(CreateProfileCommand command) {
+        if (command.firebaseUid() == null || command.firebaseUid().isBlank()) throw new IdentityRequiredException();
         var uid = new FirebaseUid(command.firebaseUid());
         if (repository.existsByFirebaseUid(uid)) throw new ProfileAlreadyExistsException();
         var profile = ProfessionalProfile.create(uid);
