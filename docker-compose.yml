@@ -124,17 +124,18 @@ services:
     # el cache .m2. Con el perfil, 'up' lo ignora y 'compose run verify' lo sigue
     # levantando sin necesidad de activarlo.
     profiles: ["tools"]
-    depends_on:
-      db:
-        condition: service_healthy
     working_dir: /workspace
     volumes:
       - .:/workspace
       - m2cache:/root/.m2
+      # Las pruebas levantan su propio PostgreSQL con Testcontainers: necesitan el Docker del equipo.
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-cameia_perfil}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-cameia_perfil}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-cameia_local}
+      # Desde dentro de este contenedor, los contenedores de prueba se alcanzan por el equipo anfitrión.
+      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+    # Docker Desktop ya define host.docker.internal; en Linux hace falta declararlo.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: ["mvn", "-B", "-ntp", "clean", "verify"]
     networks: [cameia-perfil-net]
 
