@@ -91,7 +91,7 @@ Fuera de alcance: sección 11.
 | `AddSkillRequest.level.NotBlank` | `SKILL_LEVEL_REQUIRED` | «Elige un nivel.» (CA-2.5.7) |
 | `AddTargetRoleRequest.professionalRoleId.NotNull` | `PROFESSIONAL_ROLE_ID_REQUIRED` | «Selecciona una opción.» |
 
-Los textos de esta tabla son los literales de los CA cuando existen; los demás («Selecciona una opción.») siguen RT-01. **PENDIENTE de Vela** (pregunta 5): confirmar «Selecciona una opción.» para `employmentStatus`, `provenance` y `professionalRoleId`, que la interfaz no deja vacíos.
+Los textos de esta tabla son los literales de los CA cuando existen; los demás («Selecciona una opción.») siguen RT-01. «Selecciona una opción.» lo fija RT-01 para listas (pregunta 5, cerrada sin consulta).
 
 `PROFILE_NOT_ALLOWED` y `TARGET_ROLE_NOT_ALLOWED` usan la causa `NOT_ALLOWED` del vocabulario cerrado. `ProfessionalRoleController` arma hoy su propio `ProblemDetail` (hallazgo 5): queda igual en esta tarea y se registra como pendiente con destino (pregunta 4).
 
@@ -151,4 +151,4 @@ CA-2.2.5 y 2.2.6 (Plan Premium, Sprint 3 de Jira) · Paywall (HU-2.12) · lectur
 | 2 | La validación pasa de 400 a 422 (RT-01-CA05) y `cameia-web` espera 400 en dos rutas. ¿Se cambia en esta tarea y se avisa a Frontend? | **Respondida (Paula, 6-oct-2026): sí, 422 y aviso a Frontend** | Sí: lo pide el CA; se avisa en el documento a Frontend | Bloque A |
 | 3 | ¿Se confirma D3 (`requestId` en el cuerpo desde esta tarea, como en Cuentas)? | **Respondida (Paula, 6-oct-2026): sí, requestId desde esta tarea** | Sí | T-A.3 |
 | 4 | `ProfessionalRoleController` arma su `ProblemDetail` y refleja el parámetro `lang` en el `detail` (hallazgo 5). ¿Se corrige en CM-271 o va a otra tarea? | **PENDIENTE de Paula** | A una pieza de CM-283 Parte 2 (es de HU-2.11, no de HU-2.2) | Nada de CM-271 |
-| 5 | Texto para `employmentStatus`, `provenance` y `professionalRoleId` vacíos (los CA no lo definen): «Selecciona una opción.» | **PENDIENTE de Vela** | «Selecciona una opción.» (RT-01) | Texto de tres filas de la tabla |
+| 5 | Texto para `employmentStatus`, `provenance` y `professionalRoleId` vacíos (los CA no lo definen): «Selecciona una opción.» | **Cerrada sin consulta (cambio sin alternativa):** RT-01 fija el texto para listas: «Selecciona una opción.» | «Selecciona una opción.» (RT-01) | Texto de tres filas de la tabla |
