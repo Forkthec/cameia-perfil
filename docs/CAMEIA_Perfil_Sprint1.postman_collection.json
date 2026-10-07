@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "CAMEIA â€” cameia-perfil Sprint 1 (CM-16 a CM-20)",
+    "name": "CAMEIA — cameia-perfil Sprint 1 (CM-16 a CM-20)",
     "_postman_id": "cameia-perfil-sprint1",
-    "description": "ColecciÃ³n de pruebas funcionales para los endpoints del microservicio cameia-perfil. Ejecutar en orden: CM-16 â†’ CM-17 â†’ CM-18 â†’ CM-19 â†’ CM-20. El test de CM-16 guarda el profileId automÃ¡ticamente en la variable de entorno.",
+    "description": "Colección de pruebas funcionales para los endpoints del microservicio cameia-perfil. Ejecutar en orden: CM-16 → CM-17 → CM-18 → CM-19 → CM-20. El test de CM-16 guarda el profileId automáticamente en la variable de entorno.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -44,10 +44,10 @@
   ],
   "item": [
     {
-      "name": "CM-16 â€” Crear perfil profesional",
+      "name": "CM-16 — Crear perfil profesional",
       "item": [
         {
-          "name": "OK POST /profiles â€” crea perfil nuevo (guarda profileId)",
+          "name": "OK POST /profiles — crea perfil nuevo (guarda profileId)",
           "event": [
             {
               "listen": "test",
@@ -190,10 +190,10 @@
       ]
     },
     {
-      "name": "CM-17 â€” Actualizar info basica del perfil",
+      "name": "CM-17 — Actualizar info basica del perfil",
       "item": [
         {
-          "name": "OK PATCH /profiles/{id} â€” actualiza nombre y resumen",
+          "name": "OK PATCH /profiles/{id} — actualiza nombre y resumen",
           "event": [
             {
               "listen": "test",
@@ -233,7 +233,7 @@
           }
         },
         {
-          "name": "OK PATCH /profiles/{id} â€” actualiza solo summary (nombre no cambia)",
+          "name": "OK PATCH /profiles/{id} — actualiza solo summary (nombre no cambia)",
           "event": [
             {
               "listen": "test",
@@ -273,7 +273,7 @@
           }
         },
         {
-          "name": "ERR PATCH /profiles/{id} â€” 404 perfil no existe",
+          "name": "ERR PATCH /profiles/{id} — 404 perfil no existe",
           "event": [
             {
               "listen": "test",
@@ -312,7 +312,7 @@
           }
         },
         {
-          "name": "ERR PATCH /profiles/{id} â€” 422 enum invalido",
+          "name": "ERR PATCH /profiles/{id} — 422 enum invalido",
           "event": [
             {
               "listen": "test",
@@ -353,10 +353,10 @@
       ]
     },
     {
-      "name": "CM-18 â€” Experiencia laboral y educacion",
+      "name": "CM-18 — Experiencia laboral y educacion",
       "item": [
         {
-          "name": "OK POST /profiles/{id}/work-experiences â€” agrega experiencia ENDED",
+          "name": "OK POST /profiles/{id}/work-experiences — agrega experiencia ENDED",
           "event": [
             {
               "listen": "test",
@@ -398,7 +398,7 @@
           }
         },
         {
-          "name": "OK POST /profiles/{id}/work-experiences â€” agrega experiencia CURRENT (sin endDate)",
+          "name": "OK POST /profiles/{id}/work-experiences — agrega experiencia CURRENT (sin endDate)",
           "event": [
             {
               "listen": "test",
@@ -438,7 +438,7 @@
           }
         },
         {
-          "name": "ERR POST /work-experiences â€” 422 ENDED sin endDate",
+          "name": "ERR POST /work-experiences — 422 ENDED sin endDate",
           "event": [
             {
               "listen": "test",
@@ -477,7 +477,7 @@
           }
         },
         {
-          "name": "OK DELETE /profiles/{id}/work-experiences/{expId} â€” elimina experiencia",
+          "name": "OK DELETE /profiles/{id}/work-experiences/{expId} — elimina experiencia",
           "event": [
             {
               "listen": "test",
@@ -508,7 +508,7 @@
           }
         },
         {
-          "name": "OK POST /profiles/{id}/educations â€” agrega educacion completada",
+          "name": "OK POST /profiles/{id}/educations — agrega educacion completada",
           "event": [
             {
               "listen": "test",
@@ -550,7 +550,7 @@
           }
         },
         {
-          "name": "OK POST /profiles/{id}/educations â€” agrega educacion en curso (sin endDate, solo year)",
+          "name": "OK POST /profiles/{id}/educations — agrega educacion en curso (sin endDate, solo year)",
           "event": [
             {
               "listen": "test",
@@ -590,7 +590,7 @@
           }
         },
         {
-          "name": "OK DELETE /profiles/{id}/educations/{eduId} â€” elimina educacion",
+          "name": "OK DELETE /profiles/{id}/educations/{eduId} — elimina educacion",
           "event": [
             {
               "listen": "test",
@@ -623,10 +623,10 @@
       ]
     },
     {
-      "name": "CM-19 â€” Habilidades, salario y revision",
+      "name": "CM-19 — Habilidades, salario y revision",
       "item": [
         {
-          "name": "OK PATCH /profiles/{id}/salary-expectation â€” actualiza expectativa salarial",
+          "name": "OK PATCH /profiles/{id}/salary-expectation — actualiza expectativa salarial",
           "event": [
             {
               "listen": "test",
@@ -666,7 +666,7 @@
           }
         },
         {
-          "name": "OK POST /profiles/{id}/skills â€” agrega habilidad Java",
+          "name": "OK POST /profiles/{id}/skills — agrega habilidad Java",
           "event": [
             {
               "listen": "test",
@@ -708,7 +708,7 @@
           }
         },
         {
-          "name": "OK POST /profiles/{id}/skills â€” agrega habilidad Spring Boot",
+          "name": "OK POST /profiles/{id}/skills — agrega habilidad Spring Boot",
           "event": [
             {
               "listen": "test",
@@ -748,7 +748,7 @@
           }
         },
         {
-          "name": "OK DELETE /profiles/{id}/skills/{skillId} â€” elimina habilidad Java",
+          "name": "OK DELETE /profiles/{id}/skills/{skillId} — elimina habilidad Java",
           "event": [
             {
               "listen": "test",
@@ -779,7 +779,7 @@
           }
         },
         {
-          "name": "ERR POST /review-requests â€” 422 perfil incompleto (sin rol objetivo)",
+          "name": "ERR POST /review-requests — 422 perfil incompleto (sin rol objetivo)",
           "event": [
             {
               "listen": "test",
@@ -811,10 +811,10 @@
       ]
     },
     {
-      "name": "CM-20 â€” Roles objetivo",
+      "name": "CM-20 — Roles objetivo",
       "item": [
         {
-          "name": "OK POST /profiles/{id}/target-roles â€” agrega rol Backend Developer (guarda role_id)",
+          "name": "OK POST /profiles/{id}/target-roles — agrega rol Backend Developer (guarda role_id)",
           "event": [
             {
               "listen": "test",
@@ -856,7 +856,7 @@
           }
         },
         {
-          "name": "OK POST /profiles/{id}/target-roles â€” agrega rol Software Architect (guarda role_id_2)",
+          "name": "OK POST /profiles/{id}/target-roles — agrega rol Software Architect (guarda role_id_2)",
           "event": [
             {
               "listen": "test",
@@ -900,7 +900,7 @@
           }
         },
         {
-          "name": "ERR POST /target-roles â€” 409 rol duplicado (mismo title+seniority)",
+          "name": "ERR POST /target-roles — 409 rol duplicado (mismo title+seniority)",
           "event": [
             {
               "listen": "test",
@@ -940,7 +940,7 @@
           }
         },
         {
-          "name": "OK GET /profiles/{id} â€” obtiene perfil completo con roles cargados",
+          "name": "OK GET /profiles/{id} — obtiene perfil completo con roles cargados",
           "event": [
             {
               "listen": "test",
@@ -971,7 +971,7 @@
           }
         },
         {
-          "name": "ERR GET /profiles/{id} â€” 404 perfil no existe",
+          "name": "ERR GET /profiles/{id} — 404 perfil no existe",
           "event": [
             {
               "listen": "test",
@@ -1000,7 +1000,7 @@
           }
         },
         {
-          "name": "OK PATCH /profiles/{id}/target-roles/{roleId} â€” actualiza titulo y seniority",
+          "name": "OK PATCH /profiles/{id}/target-roles/{roleId} — actualiza titulo y seniority",
           "event": [
             {
               "listen": "test",
@@ -1044,7 +1044,7 @@
           }
         },
         {
-          "name": "ERR PATCH /target-roles/{roleId} â€” 422 roleId no existe en el perfil",
+          "name": "ERR PATCH /target-roles/{roleId} — 422 roleId no existe en el perfil",
           "event": [
             {
               "listen": "test",
@@ -1084,7 +1084,7 @@
           }
         },
         {
-          "name": "OK POST /review-requests â€” 201 perfil completo (con nombre, resumen y rol)",
+          "name": "OK POST /review-requests — 201 perfil completo (con nombre, resumen y rol)",
           "event": [
             {
               "listen": "test",
@@ -1114,7 +1114,7 @@
           }
         },
         {
-          "name": "OK DELETE /target-roles/{roleId2} â€” elimina Software Architect (queda 1)",
+          "name": "OK DELETE /target-roles/{roleId2} — elimina Software Architect (queda 1)",
           "event": [
             {
               "listen": "test",
@@ -1145,7 +1145,7 @@
           }
         },
         {
-          "name": "ERR DELETE /target-roles/{roleId} â€” 422 ultimo rol (no se puede eliminar)",
+          "name": "ERR DELETE /target-roles/{roleId} — 422 ultimo rol (no se puede eliminar)",
           "event": [
             {
               "listen": "test",
