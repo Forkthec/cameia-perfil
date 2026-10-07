@@ -187,6 +187,19 @@ class ProfileAppServiceTest {
     }
 
     @Test
+    @DisplayName("Un resumen con solo espacios borra el resumen del perfil en Borrador (CA-2.3.4)")
+    void updateProfileInfo_shouldClearSummary_whenSummaryIsBlank() {
+        var profile = freshProfile();
+        profile.updateSummary(new ProfessionalSummary("Resumen anterior"));
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+
+        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, "   ", null, null));
+
+        assertThat(profile.getSummary()).isNull();
+        verify(repository).save(profile);
+    }
+
+    @Test
     @DisplayName("Una modalidad y una procedencia de la lista se guardan en el perfil")
     void updateProfileInfo_shouldApplyModalityAndProvenance_whenBothAreOptions() {
         var profile = freshProfile();
@@ -352,7 +365,7 @@ class ProfileAppServiceTest {
         var id = UUID.randomUUID();
         assertThatThrownBy(() -> service.loadProfile(id))
                 .isInstanceOf(ProfileNotFoundException.class)
-                .hasMessageContaining(id.toString());
+                .hasMessage("No encontramos lo que buscabas.");
     }
 
     @Test

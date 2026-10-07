@@ -10,6 +10,7 @@ public record AddEducationRequest(
         @NotBlank String level,
         @NotBlank String startDate,
         String endDate,
-        boolean inProgress,
+        /** Ausente cuenta como {@code false}: la formación no está en curso. */
+        Boolean inProgress,
         @NotBlank String provenance) {
 }

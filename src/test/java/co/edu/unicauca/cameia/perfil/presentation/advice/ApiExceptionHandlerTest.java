@@ -99,15 +99,15 @@ class ApiExceptionHandlerTest {
     static Stream<Object[]> businessExceptions() {
         var id = UUID.randomUUID();
         return Stream.of(
-                new Object[]{new ProfileNotFoundException(id), 404, "PROFILE_NOT_FOUND"},
+                new Object[]{new ProfileNotFoundException(), 404, "PROFILE_NOT_FOUND"},
                 new Object[]{new ProfileAccessDeniedException(), 403, "PROFILE_NOT_ALLOWED"},
                 new Object[]{new ProfileLimitReachedException(), 409, "PROFILE_LIMIT_REACHED"},
                 new Object[]{new ProfileAlreadyCompletedException(), 409, "PROFILE_ALREADY_COMPLETED"},
-                new Object[]{new ProfessionalRoleNotFoundException(id), 404, "PROFESSIONAL_ROLE_NOT_FOUND"},
+                new Object[]{new ProfessionalRoleNotFoundException(), 404, "PROFESSIONAL_ROLE_NOT_FOUND"},
                 new Object[]{new MaxTargetRolesExceededException(5), 422, "TARGET_ROLE_LIMIT_REACHED"},
-                new Object[]{new DuplicateTargetRoleException("Backend"), 409, "TARGET_ROLE_ALREADY_EXISTS"},
+                new Object[]{new DuplicateTargetRoleException(), 409, "TARGET_ROLE_ALREADY_EXISTS"},
                 new Object[]{new LastTargetRoleException(), 422, "TARGET_ROLE_NOT_ALLOWED"},
-                new Object[]{new DuplicateSkillException("Java"), 409, "SKILL_ALREADY_EXISTS"},
+                new Object[]{new DuplicateSkillException(), 409, "SKILL_ALREADY_EXISTS"},
                 new Object[]{new IdentityRequiredException(), 401, "IDENTITY_REQUIRED"},
                 new Object[]{new UnsupportedLanguageException(), 422, "PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE"});
     }

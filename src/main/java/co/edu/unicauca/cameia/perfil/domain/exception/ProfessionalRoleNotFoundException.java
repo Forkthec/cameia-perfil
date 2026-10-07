@@ -1,11 +1,9 @@
 package co.edu.unicauca.cameia.perfil.domain.exception;
 
-import java.util.UUID;
-
 /** Se lanza cuando el rol profesional pedido no existe en el catálogo. */
 public class ProfessionalRoleNotFoundException extends BusinessException {
-    /** @param roleId identificador del rol profesional buscado */
-    public ProfessionalRoleNotFoundException(UUID roleId) {
-        super(ErrorCode.PROFESSIONAL_ROLE_NOT_FOUND, "Rol profesional no encontrado: " + roleId);
+    /** Crea la excepción con su código y el mensaje de CA-2.11.12. */
+    public ProfessionalRoleNotFoundException() {
+        super(ErrorCode.PROFESSIONAL_ROLE_NOT_FOUND, "No encontramos ese rol en el catálogo.");
     }
 }

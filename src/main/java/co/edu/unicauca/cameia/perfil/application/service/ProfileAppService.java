@@ -58,7 +58,8 @@ public class ProfileAppService {
     public ProfessionalProfile updateProfileInfo(UpdateProfileInfoCommand cmd) {
         var p = loadForUser(cmd.profileId(), cmd.uid());
         if (cmd.name() != null) p.updateName(new ProfileName(cmd.name()));
-        if (cmd.summary() != null) p.updateSummary(new ProfessionalSummary(cmd.summary()));
+        // Un resumen en blanco lo borra (CA-2.3.4).
+        if (cmd.summary() != null) p.updateSummary(cmd.summary().isBlank() ? null : new ProfessionalSummary(cmd.summary()));
         if (cmd.preferredModality() != null) p.updatePreferredModality(
                 CommandValues.option(WorkModality.class, cmd.preferredModality(), PREFERRED_MODALITY_INVALID_VALUE,
                         "preferredModality"));
@@ -129,7 +130,7 @@ public class ProfileAppService {
     public ProfessionalProfile addTargetRole(AddTargetRoleCommand cmd) {
         var p = loadForUser(cmd.profileId(), cmd.uid());
         var role = roleRepository.findById(cmd.professionalRoleId())
-                .orElseThrow(() -> new ProfessionalRoleNotFoundException(cmd.professionalRoleId()));
+                .orElseThrow(ProfessionalRoleNotFoundException::new);
         p.addTargetRole(new TargetRole(UUID.randomUUID(), role.id(), role.nombre(), provenance(cmd.provenance())));
         repository.save(p); return p;
     }
@@ -138,7 +139,7 @@ public class ProfileAppService {
     public ProfessionalProfile updateTargetRole(UpdateTargetRoleCommand cmd) {
         var p = loadForUser(cmd.profileId(), cmd.uid());
         var role = roleRepository.findById(cmd.professionalRoleId())
-                .orElseThrow(() -> new ProfessionalRoleNotFoundException(cmd.professionalRoleId()));
+                .orElseThrow(ProfessionalRoleNotFoundException::new);
         p.updateTargetRole(cmd.roleId(), role.id(), role.nombre());
         repository.save(p); return p;
     }
@@ -174,7 +175,7 @@ public class ProfileAppService {
 
     private ProfessionalProfile load(UUID profileId) {
         return repository.findById(ProfileId.of(profileId))
-                .orElseThrow(() -> new ProfileNotFoundException(profileId));
+                .orElseThrow(ProfileNotFoundException::new);
     }
 
     private ProfessionalProfile loadForUser(UUID profileId, String uid) {

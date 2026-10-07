@@ -126,11 +126,12 @@ class ProfileController {
         return ResponseEntity.ok(ProfileResponse.from(profileAppService.getProfile(id, uid)));
     }
 
-    @Operation(summary = "Actualizar información básica del perfil")
+    @Operation(summary = "Actualizar información básica del perfil",
+            description = "Un campo ausente o nulo no cambia. Un resumen vacío o con solo espacios lo borra, salvo en un perfil activo.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Perfil actualizado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFILE_NAME_REQUIRED, PROFILE_NAME_TOO_LONG, SUMMARY_REQUIRED, SUMMARY_TOO_LONG, PREFERRED_MODALITY_INVALID_VALUE, PROVENANCE_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFILE_NAME_REQUIRED, PROFILE_NAME_TOO_LONG, SUMMARY_NOT_ALLOWED (borrar el resumen de un perfil activo), SUMMARY_TOO_LONG, PREFERRED_MODALITY_INVALID_VALUE, PROVENANCE_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -171,21 +172,21 @@ class ProfileController {
 
     @Operation(summary = "Eliminar experiencia laboral del perfil")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Experiencia laboral eliminada",
-                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "204", description = "Experiencia laboral eliminada, sin cuerpo"),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 200 con el perfil sin cambios",
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 204 sin cambios",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o WORK_EXPERIENCE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @DeleteMapping("/{id}/work-experiences/{expId}")
-    ResponseEntity<ProfileResponse> removeWorkExperience(@PathVariable UUID id, @PathVariable UUID expId,
+    ResponseEntity<Void> removeWorkExperience(@PathVariable UUID id, @PathVariable UUID expId,
             @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
-        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeWorkExperience(id, uid, expId)));
+        profileAppService.removeWorkExperience(id, uid, expId);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Agregar educación al perfil")
@@ -207,26 +208,26 @@ class ProfileController {
             @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addEducation(
                 new AddEducationCommand(id, uid, r.institution(), r.degree(), r.fieldOfStudy(),
-                        r.level(), r.startDate(), r.endDate(), r.inProgress(), r.provenance()))));
+                        r.level(), r.startDate(), r.endDate(), Boolean.TRUE.equals(r.inProgress()), r.provenance()))));
     }
 
     @Operation(summary = "Eliminar educación del perfil")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Educación eliminada",
-                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "204", description = "Educación eliminada, sin cuerpo"),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 200 con el perfil sin cambios",
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 204 sin cambios",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o EDUCATION_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @DeleteMapping("/{id}/educations/{eduId}")
-    ResponseEntity<ProfileResponse> removeEducation(@PathVariable UUID id, @PathVariable UUID eduId,
+    ResponseEntity<Void> removeEducation(@PathVariable UUID id, @PathVariable UUID eduId,
             @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
-        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeEducation(id, uid, eduId)));
+        profileAppService.removeEducation(id, uid, eduId);
+        return ResponseEntity.noContent().build();
     }
 
     /** Oculto en Swagger: queda fuera del alcance del MVP. */
@@ -251,7 +252,7 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "La habilidad ya está asociada al perfil, sin distinguir mayúsculas ni espacios (code SKILL_ALREADY_EXISTS)",
+            @ApiResponse(responseCode = "409", description = "La habilidad ya está en el perfil, sin distinguir mayúsculas ni espacios (code SKILL_ALREADY_EXISTS)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/skills")
@@ -264,21 +265,21 @@ class ProfileController {
 
     @Operation(summary = "Eliminar habilidad del perfil")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Habilidad eliminada",
-                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "204", description = "Habilidad eliminada, sin cuerpo"),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 200 con el perfil sin cambios",
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 204 sin cambios",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o SKILL_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @DeleteMapping("/{id}/skills/{skillId}")
-    ResponseEntity<ProfileResponse> removeSkill(@PathVariable UUID id, @PathVariable UUID skillId,
+    ResponseEntity<Void> removeSkill(@PathVariable UUID id, @PathVariable UUID skillId,
             @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
-        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeSkill(id, uid, skillId)));
+        profileAppService.removeSkill(id, uid, skillId);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Solicitar revisión del perfil",
@@ -351,28 +352,28 @@ class ProfileController {
 
     @Operation(summary = "Eliminar rol objetivo del perfil")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Rol objetivo eliminado",
-                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "204", description = "Rol objetivo eliminado, sin cuerpo"),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 200 con el perfil sin cambios",
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 204 sin cambios",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "No se puede eliminar el único rol objetivo de un perfil COMPLETED (code TARGET_ROLE_NOT_ALLOWED) o identificador mal escrito (PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @DeleteMapping("/{id}/target-roles/{roleId}")
-    ResponseEntity<ProfileResponse> removeTargetRole(@PathVariable UUID id, @PathVariable UUID roleId,
+    ResponseEntity<Void> removeTargetRole(@PathVariable UUID id, @PathVariable UUID roleId,
             @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
-        return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeTargetRole(id, uid, roleId)));
+        profileAppService.removeTargetRole(id, uid, roleId);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Marcar perfil como COMPLETED",
             description = "Valida que el perfil cumpla los 5 requisitos (nombre, resumen, ≥1 educación, ≥1 habilidad, ≥1 rol objetivo) " +
                     "y cambia su estado a COMPLETED. Si no los cumple devuelve 422 con la lista de campos faltantes en missingRequirements.")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Perfil marcado como COMPLETED",
+            @ApiResponse(responseCode = "200", description = "Perfil marcado como COMPLETED",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -380,7 +381,7 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "El perfil ya está en estado COMPLETED (code PROFILE_ALREADY_COMPLETED)",
+            @ApiResponse(responseCode = "409", description = "El perfil ya está activo (code PROFILE_ALREADY_COMPLETED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "El perfil no cumple los requisitos para finalizar (code PROFILE_INCOMPLETE, con missingRequirements[]) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -388,7 +389,6 @@ class ProfileController {
     @PostMapping("/{id}/completion")
     ResponseEntity<ProfileResponse> completeProfile(@PathVariable UUID id,
             @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ProfileResponse.from(profileAppService.completeProfile(id, uid)));
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.completeProfile(id, uid)));
     }
 }
