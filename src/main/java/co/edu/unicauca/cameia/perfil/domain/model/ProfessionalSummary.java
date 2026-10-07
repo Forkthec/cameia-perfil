@@ -1,5 +1,8 @@
 package co.edu.unicauca.cameia.perfil.domain.model;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+
 import java.util.Objects;
 
 /**
@@ -16,11 +19,11 @@ public record ProfessionalSummary(String value) {
     public ProfessionalSummary {
         Objects.requireNonNull(value, "ProfessionalSummary no puede ser nulo");
         if (value.isBlank()) {
-            throw new IllegalArgumentException("ProfessionalSummary no puede estar vacío");
+            throw InvalidFieldsException.of("summary", ErrorCode.SUMMARY_REQUIRED, "Ingresa el resumen profesional.");
         }
         if (value.length() > MAX_LENGTH) {
-            throw new IllegalArgumentException(
-                    "ProfessionalSummary excede el máximo de " + MAX_LENGTH + " caracteres");
+            throw InvalidFieldsException.of("summary", ErrorCode.SUMMARY_TOO_LONG,
+                    "El resumen no puede superar los " + MAX_LENGTH + " caracteres.");
         }
     }
 }

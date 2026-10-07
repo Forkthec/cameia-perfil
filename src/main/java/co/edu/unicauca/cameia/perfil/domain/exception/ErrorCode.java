@@ -53,6 +53,48 @@ public enum ErrorCode {
     TARGET_ROLE_ID_INVALID_FORMAT,
     /** Error interno no previsto. */
     INTERNAL_ERROR,
+    /** El rol objetivo no existe en el perfil. */
+    TARGET_ROLE_NOT_FOUND,
+    /** Falta el nombre del perfil o está en blanco. */
+    PROFILE_NAME_REQUIRED,
+    /** El nombre del perfil supera su largo máximo. */
+    PROFILE_NAME_TOO_LONG,
+    /** El resumen profesional está en blanco. */
+    SUMMARY_REQUIRED,
+    /** El resumen profesional supera su largo máximo. */
+    SUMMARY_TOO_LONG,
+    /** La expectativa salarial está fuera del rango permitido. */
+    SALARY_EXPECTATION_OUT_OF_RANGE,
+    /** La modalidad de trabajo preferida no es una de las opciones. */
+    PREFERRED_MODALITY_INVALID_VALUE,
+    /** La procedencia del dato no es una de las opciones. */
+    PROVENANCE_INVALID_VALUE,
+    /** El estado laboral no es una de las opciones. */
+    EMPLOYMENT_STATUS_INVALID_VALUE,
+    /** El nivel de la formación académica no es una de las opciones. */
+    EDUCATION_LEVEL_INVALID_VALUE,
+    /** El nivel de la habilidad no es una de las opciones. */
+    SKILL_LEVEL_INVALID_VALUE,
+    /** La fecha de inicio no tiene el formato AAAA-MM o no existe. */
+    START_DATE_INVALID_FORMAT,
+    /** La fecha de fin no tiene el formato AAAA-MM o no existe. */
+    END_DATE_INVALID_FORMAT,
+    /** La experiencia terminó y no tiene fecha de fin. */
+    END_DATE_REQUIRED,
+    /** Llega fecha de fin en una experiencia en curso o sin fin conocido, o en una formación en curso. */
+    END_DATE_NOT_ALLOWED,
+    /** La fecha de fin es anterior a la de inicio. */
+    END_DATE_BEFORE_START_DATE,
+    /** La empresa supera su largo máximo. */
+    COMPANY_TOO_LONG,
+    /** El cargo supera su largo máximo. */
+    POSITION_TOO_LONG,
+    /** La institución supera su largo máximo. */
+    INSTITUTION_TOO_LONG,
+    /** El título obtenido supera su largo máximo. */
+    DEGREE_TOO_LONG,
+    /** El nombre de la habilidad supera su largo máximo. */
+    SKILL_NAME_TOO_LONG,
     /** Falta la empresa de la experiencia laboral. */
     COMPANY_REQUIRED,
     /** Falta el cargo de la experiencia laboral. */
@@ -68,5 +110,13 @@ public enum ErrorCode {
     /** Falta el nivel de la habilidad. */
     SKILL_LEVEL_REQUIRED,
     /** Falta el identificador del rol profesional. */
-    PROFESSIONAL_ROLE_ID_REQUIRED
+    PROFESSIONAL_ROLE_ID_REQUIRED,
+    /** Falta la institución de la formación académica. */
+    INSTITUTION_REQUIRED,
+    /** Falta el título de la formación académica. */
+    DEGREE_REQUIRED,
+    /** Falta el nivel de la formación académica. */
+    EDUCATION_LEVEL_REQUIRED,
+    /** Falta el monto de la expectativa salarial. */
+    SALARY_EXPECTATION_REQUIRED
 }

@@ -21,16 +21,19 @@ class ErrorCatalogTest {
     private static final String DTO_PACKAGE = "co.edu.unicauca.cameia.perfil.presentation.dto";
 
     @Test
-    @DisplayName("Todo código es una respuesta o un campo rechazado, nunca los dos ni ninguno")
+    @DisplayName("Todo código es una respuesta, un campo de Bean Validation o un campo del dominio, uno solo")
     void everyErrorCode_shouldBeResponseOrField_whenCatalogLoaded() {
         var responses = ErrorCatalog.RESPONSES.keySet();
         var fields = ErrorCatalog.FIELD_MESSAGES.keySet();
+        var domainFields = ErrorCatalog.DOMAIN_FIELD_CODES;
         var all = EnumSet.noneOf(ErrorCode.class);
         all.addAll(responses);
         all.addAll(fields);
+        all.addAll(domainFields);
 
         assertThat(all).isEqualTo(EnumSet.allOf(ErrorCode.class));
-        assertThat(responses).doesNotContainAnyElementsOf(fields);
+        assertThat(responses).doesNotContainAnyElementsOf(fields).doesNotContainAnyElementsOf(domainFields);
+        assertThat(fields).doesNotContainAnyElementsOf(domainFields);
     }
 
     @Test

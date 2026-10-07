@@ -4,6 +4,7 @@ import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
+import co.edu.unicauca.cameia.perfil.application.command.CommandValues;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
@@ -33,6 +34,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.YearMonth;
 import java.util.UUID;
 
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.EDUCATION_LEVEL_INVALID_VALUE;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.EMPLOYMENT_STATUS_INVALID_VALUE;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.END_DATE_INVALID_FORMAT;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.PREFERRED_MODALITY_INVALID_VALUE;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.PROVENANCE_INVALID_VALUE;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.SKILL_LEVEL_INVALID_VALUE;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.START_DATE_INVALID_FORMAT;
+
 @Service
 @Transactional(readOnly = true)
 public class ProfileAppService {
@@ -50,8 +59,10 @@ public class ProfileAppService {
         var p = loadForUser(cmd.profileId(), cmd.uid());
         if (cmd.name() != null) p.updateName(new ProfileName(cmd.name()));
         if (cmd.summary() != null) p.updateSummary(new ProfessionalSummary(cmd.summary()));
-        if (cmd.preferredModality() != null) p.updatePreferredModality(WorkModality.valueOf(cmd.preferredModality()));
-        if (cmd.provenance() != null) p.updateProvenance(DataProvenance.valueOf(cmd.provenance()));
+        if (cmd.preferredModality() != null) p.updatePreferredModality(
+                CommandValues.option(WorkModality.class, cmd.preferredModality(), PREFERRED_MODALITY_INVALID_VALUE,
+                        "preferredModality"));
+        if (cmd.provenance() != null) p.updateProvenance(provenance(cmd.provenance()));
         repository.save(p); return p;
     }
 
@@ -59,8 +70,10 @@ public class ProfileAppService {
     public ProfessionalProfile addWorkExperience(AddWorkExperienceCommand cmd) {
         var p = loadForUser(cmd.profileId(), cmd.uid());
         p.addWorkExperience(new WorkExperience(UUID.randomUUID(), cmd.company(), cmd.position(), cmd.description(),
-                YearMonth.parse(cmd.startDate()), cmd.endDate() != null ? YearMonth.parse(cmd.endDate()) : null,
-                EmploymentStatus.valueOf(cmd.employmentStatus()), DataProvenance.valueOf(cmd.provenance())));
+                startDate(cmd.startDate(), false), endDate(cmd.endDate(), false),
+                CommandValues.option(EmploymentStatus.class, cmd.employmentStatus(), EMPLOYMENT_STATUS_INVALID_VALUE,
+                        "employmentStatus"),
+                provenance(cmd.provenance())));
         repository.save(p); return p;
     }
 
@@ -73,15 +86,10 @@ public class ProfileAppService {
     public ProfessionalProfile addEducation(AddEducationCommand cmd) {
         var p = loadForUser(cmd.profileId(), cmd.uid());
         p.addEducation(new Education(UUID.randomUUID(), cmd.institution(), cmd.degree(), cmd.fieldOfStudy(),
-                EducationLevel.valueOf(cmd.level()), YearMonth.parse(normalizeYearMonth(cmd.startDate())),
-                cmd.endDate() != null ? YearMonth.parse(normalizeYearMonth(cmd.endDate())) : null,
-                cmd.inProgress(), DataProvenance.valueOf(cmd.provenance())));
+                CommandValues.option(EducationLevel.class, cmd.level(), EDUCATION_LEVEL_INVALID_VALUE, "level"),
+                startDate(cmd.startDate(), true), endDate(cmd.endDate(), true),
+                cmd.inProgress(), provenance(cmd.provenance())));
         repository.save(p); return p;
-    }
-
-    /** Acepta "YYYY" (solo año) o "YYYY-MM" y siempre devuelve "YYYY-MM". */
-    private static String normalizeYearMonth(String value) {
-        return value != null && value.matches("\\d{4}") ? value + "-01" : value;
     }
 
     @Transactional
@@ -99,7 +107,9 @@ public class ProfileAppService {
     @Transactional
     public ProfessionalProfile addSkill(AddSkillCommand cmd) {
         var p = loadForUser(cmd.profileId(), cmd.uid());
-        p.addSkill(new ProfileSkill(UUID.randomUUID(), cmd.skillName(), SkillLevel.valueOf(cmd.level()), DataProvenance.valueOf(cmd.provenance())));
+        p.addSkill(new ProfileSkill(UUID.randomUUID(), cmd.skillName(),
+                CommandValues.option(SkillLevel.class, cmd.level(), SKILL_LEVEL_INVALID_VALUE, "level"),
+                provenance(cmd.provenance())));
         repository.save(p); return p;
     }
 
@@ -120,7 +130,7 @@ public class ProfileAppService {
         var p = loadForUser(cmd.profileId(), cmd.uid());
         var role = roleRepository.findById(cmd.professionalRoleId())
                 .orElseThrow(() -> new ProfessionalRoleNotFoundException(cmd.professionalRoleId()));
-        p.addTargetRole(new TargetRole(UUID.randomUUID(), role.id(), role.nombre(), DataProvenance.valueOf(cmd.provenance())));
+        p.addTargetRole(new TargetRole(UUID.randomUUID(), role.id(), role.nombre(), provenance(cmd.provenance())));
         repository.save(p); return p;
     }
 
@@ -147,6 +157,18 @@ public class ProfileAppService {
     }
 
     // ── Shared ────────────────────────────────────────────────────────────
+
+    private static DataProvenance provenance(String value) {
+        return CommandValues.option(DataProvenance.class, value, PROVENANCE_INVALID_VALUE, "provenance");
+    }
+
+    private static YearMonth startDate(String value, boolean yearOnly) {
+        return CommandValues.yearMonth(value, yearOnly, START_DATE_INVALID_FORMAT, "startDate");
+    }
+
+    private static YearMonth endDate(String value, boolean yearOnly) {
+        return CommandValues.yearMonth(value, yearOnly, END_DATE_INVALID_FORMAT, "endDate");
+    }
 
     public ProfessionalProfile loadProfile(UUID profileId) { return load(profileId); }
 

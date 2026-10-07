@@ -130,7 +130,7 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Perfil actualizado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), valor no válido (REQUEST_INVALID_VALUE) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFILE_NAME_REQUIRED, PROFILE_NAME_TOO_LONG, SUMMARY_REQUIRED, SUMMARY_TOO_LONG, PREFERRED_MODALITY_INVALID_VALUE, PROVENANCE_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -157,7 +157,7 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), fecha mal escrita o fechas inconsistentes, como endDate anterior a startDate (REQUEST_INVALID_VALUE), o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: COMPANY_REQUIRED, COMPANY_TOO_LONG, POSITION_REQUIRED, POSITION_TOO_LONG, START_DATE_REQUIRED, START_DATE_INVALID_FORMAT, END_DATE_INVALID_FORMAT, END_DATE_REQUIRED, END_DATE_NOT_ALLOWED, END_DATE_BEFORE_START_DATE, EMPLOYMENT_STATUS_REQUIRED, EMPLOYMENT_STATUS_INVALID_VALUE, PROVENANCE_REQUIRED, PROVENANCE_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/work-experiences")
@@ -192,7 +192,7 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Educación agregada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), valor no válido (REQUEST_INVALID_VALUE) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: INSTITUTION_REQUIRED, INSTITUTION_TOO_LONG, DEGREE_REQUIRED, DEGREE_TOO_LONG, EDUCATION_LEVEL_REQUIRED, EDUCATION_LEVEL_INVALID_VALUE, START_DATE_REQUIRED, START_DATE_INVALID_FORMAT, END_DATE_INVALID_FORMAT, END_DATE_NOT_ALLOWED, PROVENANCE_REQUIRED, PROVENANCE_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -233,7 +233,7 @@ class ProfileController {
     @Hidden
     @PatchMapping("/{id}/salary-expectation")
     ResponseEntity<ProfileResponse> updateSalaryExpectation(@PathVariable UUID id,
-            @RequestBody UpdateSalaryExpectationRequest r,
+            @Valid @RequestBody UpdateSalaryExpectationRequest r,
             @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.ok(ProfileResponse.from(profileAppService.updateSalaryExpectation(
                 new UpdateSalaryExpectationCommand(id, uid, r.amount()))));
@@ -243,7 +243,7 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Habilidad agregada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), valor no válido (REQUEST_INVALID_VALUE) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: SKILL_NAME_REQUIRED, SKILL_NAME_TOO_LONG, SKILL_LEVEL_REQUIRED, SKILL_LEVEL_INVALID_VALUE, PROVENANCE_REQUIRED, PROVENANCE_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -315,7 +315,7 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil (code TARGET_ROLE_ALREADY_EXISTS)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), máximo de roles objetivo alcanzado (TARGET_ROLE_LIMIT_REACHED) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFESSIONAL_ROLE_ID_REQUIRED, PROVENANCE_REQUIRED, PROVENANCE_INVALID_VALUE), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), máximo de roles objetivo alcanzado (TARGET_ROLE_LIMIT_REACHED) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/target-roles")
@@ -330,13 +330,13 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Rol objetivo actualizado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), rol objetivo inexistente en el perfil (REQUEST_INVALID_VALUE) o identificador mal escrito (PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFESSIONAL_ROLE_ID_REQUIRED), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador mal escrito (PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o rol profesional inexistente en el catálogo (code PROFESSIONAL_ROLE_NOT_FOUND)",
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND), rol objetivo inexistente en el perfil (code TARGET_ROLE_NOT_FOUND) o rol profesional inexistente en el catálogo (code PROFESSIONAL_ROLE_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil (code TARGET_ROLE_ALREADY_EXISTS)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))

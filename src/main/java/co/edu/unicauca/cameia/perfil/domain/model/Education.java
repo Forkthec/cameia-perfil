@@ -1,5 +1,8 @@
 package co.edu.unicauca.cameia.perfil.domain.model;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+
 import java.time.YearMonth;
 import java.util.Objects;
 import java.util.UUID;
@@ -28,23 +31,30 @@ public final class Education {
                      EducationLevel level, YearMonth startDate, YearMonth endDate,
                      boolean inProgress, DataProvenance provenance) {
         this.id = Objects.requireNonNull(id);
-        this.institution = requireNonBlankMax(institution, "institution", MAX_TEXT_LENGTH);
-        this.degree = requireNonBlankMax(degree, "degree", MAX_TEXT_LENGTH);
+        this.institution = requireNonBlankMax(institution, "institution", ErrorCode.INSTITUTION_REQUIRED,
+                "Ingresa la institución.", ErrorCode.INSTITUTION_TOO_LONG, "La institución");
+        this.degree = requireNonBlankMax(degree, "degree", ErrorCode.DEGREE_REQUIRED,
+                "Ingresa el título obtenido.", ErrorCode.DEGREE_TOO_LONG, "El título obtenido");
         this.fieldOfStudy = fieldOfStudy;
         this.level = Objects.requireNonNull(level);
         this.startDate = Objects.requireNonNull(startDate, "startDate es obligatoria");
         this.provenance = Objects.requireNonNull(provenance);
         if (inProgress && endDate != null) {
-            throw new IllegalArgumentException("endDate debe ser null cuando inProgress es true");
+            throw InvalidFieldsException.of("endDate", ErrorCode.END_DATE_NOT_ALLOWED, "La fecha de fin debe quedar vacía.");
         }
         this.inProgress = inProgress;
         this.endDate = endDate;
     }
 
-    private static String requireNonBlankMax(String value, String field, int max) {
+    private static String requireNonBlankMax(String value, String field, ErrorCode requiredCode,
+                                             String requiredMessage, ErrorCode tooLongCode, String label) {
         Objects.requireNonNull(value, field + " no puede ser nulo");
-        if (value.isBlank() || value.length() > max) {
-            throw new IllegalArgumentException(field + " debe tener entre 1 y " + max + " caracteres");
+        if (value.isBlank()) {
+            throw InvalidFieldsException.of(field, requiredCode, requiredMessage);
+        }
+        if (value.length() > MAX_TEXT_LENGTH) {
+            throw InvalidFieldsException.of(field, tooLongCode,
+                    label + " no puede superar los " + MAX_TEXT_LENGTH + " caracteres.");
         }
         return value;
     }

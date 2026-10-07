@@ -5,7 +5,10 @@ import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleExcepti
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.YearMonth;
@@ -196,6 +199,34 @@ class ProfessionalProfileTest {
         profile.requestReview();
 
         assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_REVIEW);
+    }
+
+    // ── updateTargetRole() ───────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Actualizar un rol objetivo que no está en el perfil lanza su código, sin repetir el identificador")
+    void updateTargetRole_shouldThrowTargetRoleNotFound_whenRoleIsNotInProfile() {
+        var profile = ProfessionalProfile.create(UID);
+        var missing = UUID.randomUUID();
+
+        assertThatThrownBy(() -> profile.updateTargetRole(missing, UUID.randomUUID(), "Backend Dev"))
+                .isInstanceOf(TargetRoleNotFoundException.class)
+                .hasFieldOrPropertyWithValue("code", ErrorCode.TARGET_ROLE_NOT_FOUND)
+                .hasMessage("No encontramos lo que buscabas.");
+    }
+
+    @Test
+    @DisplayName("Actualizar un rol objetivo del perfil cambia su rol profesional")
+    void updateTargetRole_shouldReplaceRole_whenRoleIsInProfile() {
+        var profile = ProfessionalProfile.create(UID);
+        profile.addTargetRole(role(UUID.randomUUID(), "Backend Dev"));
+        var roleId = profile.getTargetRoles().get(0).getId();
+        var newProfessionalRole = UUID.randomUUID();
+
+        profile.updateTargetRole(roleId, newProfessionalRole, "Frontend Dev");
+
+        assertThat(profile.getTargetRoles()).singleElement()
+                .satisfies(r -> assertThat(r.getProfessionalRoleId()).isEqualTo(newProfessionalRole));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

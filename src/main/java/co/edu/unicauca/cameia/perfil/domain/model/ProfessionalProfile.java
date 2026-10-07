@@ -6,6 +6,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -113,7 +114,7 @@ public final class ProfessionalProfile {
     public void updateTargetRole(UUID roleId, UUID professionalRoleId, String roleTitle) {
         Objects.requireNonNull(roleId);
         TargetRole existing = targetRoles.stream().filter(r -> r.getId().equals(roleId))
-                .findFirst().orElseThrow(() -> new IllegalArgumentException("Rol objetivo no encontrado: " + roleId));
+                .findFirst().orElseThrow(TargetRoleNotFoundException::new);
         DataProvenance prov = existing.getProvenance();
         targetRoles.removeIf(r -> r.getId().equals(roleId));
         targetRoles.add(new TargetRole(roleId,
