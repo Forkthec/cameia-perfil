@@ -194,14 +194,28 @@ class ProfileControllerTest {
     }
 
     @Test
-    void postSkills_returns400WhenLevelIsMissing() throws Exception {
+    void postSkills_returns422WhenLevelIsMissing() throws Exception {
         mockMvc.perform(post("/api/v1/profiles/{id}/skills", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-skill")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"skillName": "Java", "provenance": "MANUAL"}
                                 """))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors[0].field").value("level"))
+                .andExpect(jsonPath("$.errors[0].code").value("SKILL_LEVEL_REQUIRED"))
+                .andExpect(jsonPath("$.errors[0].message").value("Elige un nivel."));
+    }
+
+    @Test
+    void patchProfile_shouldReturn422_whenBodyIsMalformed() throws Exception {
+        mockMvc.perform(patch("/api/v1/profiles/{id}", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-patch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("REQUEST_BODY_INVALID_FORMAT"));
     }
 
     @Test
