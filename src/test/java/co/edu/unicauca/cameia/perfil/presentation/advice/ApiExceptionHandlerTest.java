@@ -123,6 +123,15 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("Toda respuesta de error declara application/problem+json con charset UTF-8")
+    void errorResponse_shouldDeclareUtf8_whenProblemReturned() throws Exception {
+        toThrow = ProfileAccessDeniedException::new;
+
+        mockMvc.perform(get("/boom"))
+                .andExpect(header().string("Content-Type", "application/problem+json;charset=UTF-8"));
+    }
+
+    @Test
     @DisplayName("El perfil incompleto responde 422 con su cuerpo propio y el encabezado de petición")
     void incompleteProfile_shouldReturn422WithRequestIdHeader_whenThrown() throws Exception {
         toThrow = () -> new IncompleteProfileException(List.of("nombre"));
