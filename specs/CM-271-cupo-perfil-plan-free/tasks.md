@@ -20,9 +20,9 @@ Estado: spec y plan aprobados por Paula (decisiones D1 a D5 confirmadas el 6-oct
 
 Rama `CM-271-testcontainers-perfil` desde `develop`.
 
-## [ ] T-0.1 · PostgreSQL de prueba con Testcontainers — ≤ 30 min, ≈ 120 líneas
+## [x] T-0.1 · PostgreSQL de prueba con Testcontainers — ≤ 30 min, ≈ 120 líneas
 
-- **Modificar:** `pom.xml` (dependencias de prueba `org.springframework.boot:spring-boot-testcontainers` y `org.testcontainers:postgresql`, **sin versión**: las gestiona `spring-boot-starter-parent`; si el parent no las gestiona, detenerse). **Crear:** `src/test/java/co/edu/unicauca/cameia/perfil/infrastructure/persistence/PostgresTestConfiguration.java`:
+- **Modificar:** `pom.xml` (dependencias de prueba `org.springframework.boot:spring-boot-testcontainers` y `org.testcontainers:testcontainers-postgresql` (Testcontainers 2.x renombró el artefacto), **sin versión**: las gestiona `spring-boot-starter-parent`; si el parent no las gestiona, detenerse). **Crear:** `src/test/java/co/edu/unicauca/cameia/perfil/infrastructure/persistence/PostgresTestConfiguration.java`:
   ```java
   /** Base de datos PostgreSQL real para las pruebas de integración, levantada por Testcontainers. */
   @TestConfiguration(proxyBeanMethods = false)
@@ -30,8 +30,8 @@ Rama `CM-271-testcontainers-perfil` desde `develop`.
       /** @return contenedor de PostgreSQL con la misma versión mayor que usa docker-compose */
       @Bean
       @ServiceConnection
-      PostgreSQLContainer<?> postgres() {
-          return new PostgreSQLContainer<>("postgres:<versión de docker-compose.yml>");
+      PostgreSQLContainer postgres() {
+          return new PostgreSQLContainer("postgres:<versión de docker-compose.yml>");
       }
   }
   ```
@@ -44,7 +44,7 @@ Rama `CM-271-testcontainers-perfil` desde `develop`.
 
 Rama `CM-271-formato-error-perfil` desde `develop`.
 
-## [ ] T-A.1 · Catálogo y excepción base — ≤ 30 min, ≈ 150 líneas
+## [x] T-A.1 · Catálogo y excepción base — ≤ 30 min, ≈ 150 líneas
 
 - **Cubre:** REQ-PE-01, 08. **Crear:** `domain/exception/ErrorCode.java`, `domain/exception/BusinessException.java`. **Modificar:** las 11 excepciones de `domain/exception/`.
 - **`ErrorCode`** (un valor por fila, cada uno con Javadoc de una línea que diga cuándo se usa): `VALIDATION_FAILED`, `REQUEST_BODY_INVALID_FORMAT`, `REQUEST_INVALID_VALUE`, `IDENTITY_REQUIRED`, `PROFILE_NOT_FOUND`, `PROFILE_NOT_ALLOWED`, `PROFILE_LIMIT_REACHED`, `PROFILE_ALREADY_COMPLETED`, `PROFILE_INCOMPLETE`, `PROFESSIONAL_ROLE_NOT_FOUND`, `TARGET_ROLE_LIMIT_REACHED`, `TARGET_ROLE_ALREADY_EXISTS`, `TARGET_ROLE_NOT_ALLOWED`, `SKILL_ALREADY_EXISTS`, `INTERNAL_ERROR`, y los de campo `COMPANY_REQUIRED`, `POSITION_REQUIRED`, `START_DATE_REQUIRED`, `EMPLOYMENT_STATUS_REQUIRED`, `PROVENANCE_REQUIRED`, `SKILL_NAME_REQUIRED`, `SKILL_LEVEL_REQUIRED`, `PROFESSIONAL_ROLE_ID_REQUIRED`.
