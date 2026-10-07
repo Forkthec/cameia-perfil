@@ -179,6 +179,19 @@ class ProfileControllerTest {
     }
 
     @Test
+    @DisplayName("Pedir el perfil en XML responde 406 con su código en JSON")
+    void getProfile_shouldReturn406_whenClientAcceptsOnlyXml() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-xml"));
+        when(profileAppService.getProfile(profile.getId().value(), "uid-ctrl-xml")).thenReturn(profile);
+
+        mockMvc.perform(get("/api/v1/profiles/{id}", profile.getId().value())
+                        .header("X-User-Id", "uid-ctrl-xml").accept(MediaType.APPLICATION_XML))
+                .andExpect(status().isNotAcceptable())
+                .andExpect(jsonPath("$.code").value("ACCEPT_TYPE_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.detail").value("La respuesta solo está disponible en formato JSON."));
+    }
+
+    @Test
     @DisplayName("El 405 conserva el encabezado Allow con los métodos permitidos")
     void deleteProfiles_shouldKeepAllowHeader_whenMethodNotAllowed() throws Exception {
         mockMvc.perform(delete("/api/v1/profiles"))

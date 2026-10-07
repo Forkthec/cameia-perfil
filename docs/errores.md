@@ -4,7 +4,7 @@
 
 Las respuestas de error siguen la [sección 6 del estándar](estandar-backend.md#6-errores) y el [ADR 0001](adr/0001-codigo-de-error-y-request-id.md). Toda respuesta de error es `application/problem+json;charset=UTF-8` (RFC 9457) y lleva:
 
-- `type`, `title`, `status`, `detail` e `instance`, de la norma. `instance` es la ruta de la petición y la pone Spring.
+- `type`, `title`, `status`, `detail` e `instance`, de la norma. `instance` es la ruta de la petición y la pone Spring; las rutas de Perfil solo llevan identificadores UUID, así que no expone datos personales, y el cuerpo es JSON, que el navegador no interpreta como página.
 - `code`: código estable. El cliente decide qué mostrar a partir de él, no del texto.
 - `requestId`: identificador de la petición. Si llega un `X-Request-Id` válido (`[A-Za-z0-9._-]{1,64}`) se devuelve igual; si no, se genera un UUID. Va también en el encabezado `X-Request-Id` de la respuesta.
 - `errors[]` (solo en `VALIDATION_FAILED`): un elemento por campo, con `field`, `code` y `message`.
@@ -22,7 +22,7 @@ Cada rechazo se registra en nivel `WARN` con `code`, `requestId` y `firebaseUid`
 |---|---|---|---|---|---|---|
 | `VALIDATION_FAILED` | 422 | `PATCH …`, `POST …/work-experiences`, `POST …/educations`, `POST …/skills`, `POST …/target-roles`, `PATCH …/target-roles/{roleId}` | — | «Revisa los campos marcados.» | `ApiExceptionHandler` (Bean Validation) | `ProfileControllerTest.addToProfile_shouldReturnFieldCode_whenRequiredFieldIsMissingOrBlank` |
 | `REQUEST_BODY_INVALID_FORMAT` | 422 | Los mismos endpoints con cuerpo | — | «Revisa el formato de los datos enviados.» | `ApiExceptionHandler` (`HttpMessageNotReadableException`) | `ProfileControllerTest.patchProfile_shouldReturn422_whenBodyIsMalformed` |
-| `REQUEST_INVALID_VALUE` | 422 | Los mismos endpoints con cuerpo; cualquier endpoint al que le falte un encabezado obligatorio distinto de `X-User-Id` | — | «Revisa los datos enviados.» | `ApiExceptionHandler` (`IllegalArgumentException`, `DateTimeException`, `MissingRequestHeaderException`) | `ProfileControllerTest.addWorkExperience_shouldReturn422_whenStartDateIsMalformed`, `ApiExceptionHandlerTest.illegalArgument_shouldHideMessage_whenThrown` |
+| `REQUEST_INVALID_VALUE` | 422 | Los mismos endpoints con cuerpo; cualquier endpoint al que le falte un encabezado obligatorio distinto de `X-User-Id` | — | «Revisa los datos enviados.» | `ApiExceptionHandler` (`IllegalArgumentException`, `DateTimeException`, `MissingRequestHeaderException` y respaldo de los demás rechazos del framework) | `ProfileControllerTest.addWorkExperience_shouldReturn422_whenStartDateIsMalformed`, `ApiExceptionHandlerTest.illegalArgument_shouldHideMessage_whenThrown` |
 | `IDENTITY_REQUIRED` | 401 | Todo endpoint de `/api/v1/profiles` salvo el catálogo de roles | — | «Identidad del usuario requerida» | `IdentityRequiredException` (identidad ausente, en blanco o de más de 128 caracteres); `ApiExceptionHandler` (falta `X-User-Id`) | `ProfileControllerTest.postProfiles_shouldReturn401_whenXUserIdHeaderIsMissing`, `ProfileAppServiceTest.getProfile_shouldThrowIdentityRequired_whenUidIsTooLong` |
 | `PROFILE_NOT_FOUND` | 404 | Todo endpoint con `{id}` | — | «No se encontró el perfil con id …» | `ProfileNotFoundException` | `ApiExceptionHandlerTest.businessException_shouldReturnItsStatusAndCode_whenThrown` |
 | `PROFILE_NOT_ALLOWED` | 403 | Todo endpoint con `{id}` | — | «No tienes permiso para acceder a este perfil» | `ProfileAccessDeniedException` | `ProfileControllerTest.getProfile_returns403WhenProfileIsOwnedByAnotherUser` |
@@ -43,7 +43,8 @@ Cada rechazo se registra en nivel `WARN` con `code`, `requestId` y `firebaseUid`
 | `EDUCATION_ID_INVALID_FORMAT` | 422 | `DELETE …/educations/{eduId}` | — | «El identificador de la formación no es válido.» | `ApiExceptionHandler` (`eduId`) | `ErrorCatalogTest.everyErrorCode_shouldBeResponseOrField_whenCatalogLoaded` |
 | `SKILL_ID_INVALID_FORMAT` | 422 | `DELETE …/skills/{skillId}` | — | «El identificador de la habilidad no es válido.» | `ApiExceptionHandler` (`skillId`) | `ProfileControllerTest.frameworkError_shouldReturnCommonShape_whenRequestIsRejected` |
 | `TARGET_ROLE_ID_INVALID_FORMAT` | 422 | `PATCH` y `DELETE …/target-roles/{roleId}` | — | «El identificador del rol objetivo no es válido.» | `ApiExceptionHandler` (`roleId`) | `ErrorCatalogTest.everyErrorCode_shouldBeResponseOrField_whenCatalogLoaded` |
-| `INTERNAL_ERROR` | 500 | Cualquiera | — | «Ocurrió un error. Inténtalo de nuevo.» | `ApiExceptionHandler` | `ApiExceptionHandlerTest.unexpectedException_shouldReturnGeneric500_whenThrown` |
+| `ACCEPT_TYPE_NOT_ALLOWED` | 406 | Cualquier endpoint, con un `Accept` que no admite JSON | — | «La respuesta solo está disponible en formato JSON.» | `ApiExceptionHandler` (`HttpMediaTypeNotAcceptableException`) | `ProfileControllerTest.getProfile_shouldReturn406_whenClientAcceptsOnlyXml` |
+| `INTERNAL_ERROR` | 500 | Cualquiera | — | «Ocurrió un error. Inténtalo de nuevo.» | `ApiExceptionHandler` (fallo no controlado y fallos del framework del lado del servidor) | `ApiExceptionHandlerTest.unexpectedException_shouldReturnGeneric500_whenThrown`, `ApiExceptionHandlerTest.frameworkServerError_shouldReturnGeneric500_whenThrown` |
 
 Un identificador de la ruta mal escrito tiene su propio código por parámetro y responde 422, no 404: así se distingue «mal escrito» de «no existe».
 
@@ -78,9 +79,9 @@ Este catálogo usa dos causas que el vocabulario común de códigos no tenía:
 - `ALREADY_COMPLETED`: la operación pide pasar a un estado final en el que el recurso ya está (`PROFILE_ALREADY_COMPLETED`).
 - `INCOMPLETE`: el recurso no cumple los requisitos para pasar al estado pedido (`PROFILE_INCOMPLETE`).
 
-## Respuestas sin código
+## Respaldo para los errores del framework
 
-Las excepciones estándar de Spring MVC que no tienen fila en el catálogo (por ejemplo, un parámetro obligatorio ausente o un error de enlace, 400; un `Accept` que el servicio no puede producir, 406; un cuerpo demasiado grande, 413) conservan el estado y el `title` y el `detail` de Spring, sin `code`. Llevan `requestId`, el encabezado `X-Request-Id` y `charset=UTF-8`, y se registran con `requestId` y `firebaseUid`. Hoy ningún endpoint de Perfil produce estas respuestas en su uso normal.
+Toda respuesta de error lleva `code`. Las excepciones de Spring MVC sin fila propia en el catálogo (por ejemplo, un parámetro obligatorio ausente o un error de enlace) responden 422 `REQUEST_INVALID_VALUE`; las del lado del servidor (por ejemplo, un cuerpo que no se pudo escribir), 500 `INTERNAL_ERROR`. Ninguna devuelve el texto de Spring. El registro guarda la clase y el método donde se originó el rechazo, con `requestId` y `firebaseUid`, para poder darle un código propio si aparece en el uso real.
 
 ## Cómo se agrega un código
 

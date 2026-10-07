@@ -39,6 +39,8 @@ public enum ErrorCode {
     METHOD_NOT_ALLOWED,
     /** El cuerpo llega en un formato distinto de JSON. */
     CONTENT_TYPE_NOT_ALLOWED,
+    /** El cliente pide la respuesta en un formato distinto de JSON. */
+    ACCEPT_TYPE_NOT_ALLOWED,
     /** El identificador del perfil en la ruta no es un UUID. */
     PROFILE_ID_INVALID_FORMAT,
     /** El identificador de la experiencia laboral en la ruta no es un UUID. */

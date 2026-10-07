@@ -28,12 +28,15 @@ import org.springframework.beans.TypeMismatchException;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.ServletRequestBindingException;
@@ -260,16 +263,43 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("Un error del framework sin código propio conserva su estado y gana requestId y charset")
-    void bindingError_shouldKeepFrameworkStatusAndAddRequestId_whenNotTheIdentityHeader() throws Exception {
+    @DisplayName("Un rechazo del framework sin código propio responde 422 con valor no válido, sin el texto de Spring")
+    void bindingError_shouldReturn422InvalidValue_whenNotTheIdentityHeader() throws Exception {
         toThrow = () -> new ServletRequestBindingException("enlace fallido");
 
-        mockMvc.perform(get("/boom").header("X-Request-Id", "req-fw-1"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").doesNotExist())
+        var result = mockMvc.perform(get("/boom").header("X-Request-Id", "req-fw-1"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("REQUEST_INVALID_VALUE"))
                 .andExpect(jsonPath("$.requestId").value("req-fw-1"))
                 .andExpect(header().string("X-Request-Id", "req-fw-1"))
-                .andExpect(header().string("Content-Type", "application/problem+json;charset=UTF-8"));
+                .andExpect(header().string("Content-Type", "application/problem+json;charset=UTF-8"))
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).doesNotContain("enlace fallido");
+        assertThat(logs.list).anySatisfy(event -> assertThat(event.getFormattedMessage()).contains("origen="));
+    }
+
+    @Test
+    @DisplayName("Un fallo del framework del lado del servidor responde el 500 genérico")
+    void frameworkServerError_shouldReturnGeneric500_whenThrown() throws Exception {
+        toThrow = () -> new HttpMessageNotWritableException("no se pudo escribir");
+
+        var result = mockMvc.perform(get("/boom"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).doesNotContain("escribir");
+    }
+
+    @Test
+    @DisplayName("Pedir la respuesta en un formato distinto de JSON responde 406 con su código")
+    void notAcceptable_shouldReturn406_whenThrown() throws Exception {
+        toThrow = () -> new HttpMediaTypeNotAcceptableException(List.of(MediaType.APPLICATION_JSON));
+
+        mockMvc.perform(get("/boom"))
+                .andExpect(status().isNotAcceptable())
+                .andExpect(jsonPath("$.code").value("ACCEPT_TYPE_NOT_ALLOWED"));
     }
 
     @Test
@@ -290,20 +320,6 @@ class ApiExceptionHandlerTest {
         mockMvc.perform(get("/boom"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("REQUEST_INVALID_VALUE"));
-    }
-
-    @Test
-    @DisplayName("Una respuesta del framework sin cuerpo de problema se devuelve sin cambios")
-    void exceptionInternal_shouldReturnAsIs_whenBodyIsNotProblem() {
-        var response = new ApiExceptionHandler() {
-            ResponseEntity<Object> call() {
-                return handleExceptionInternal(new IllegalStateException(), "texto", new HttpHeaders(),
-                        HttpStatus.BAD_REQUEST, new ServletWebRequest(new MockHttpServletRequest()));
-            }
-        }.call();
-
-        assertThat(response.getBody()).isEqualTo("texto");
-        assertThat(response.getHeaders().get("X-Request-Id")).isNull();
     }
 
     @Test

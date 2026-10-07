@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -61,7 +62,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     /** Un valor que rechaza un objeto de valor, un enum o el formato de una fecha, sin campo asociado. */
     @ExceptionHandler({IllegalArgumentException.class, DateTimeException.class})
-    ResponseEntity<Object> handleInvalidValue(RuntimeException ex, WebRequest request) {
+    ResponseEntity<Object> handleInvalidValue(Exception ex, WebRequest request) {
         var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
         log.warn("Valor rechazado sin campo: code={} requestId={} firebaseUid={} origen={}",
                 ErrorCode.REQUEST_INVALID_VALUE, requestId, firebaseUid(request), origin(ex));
@@ -136,21 +137,25 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return reject(ErrorCatalog.pathIdCode(name), null, request);
     }
 
+    @Override
+    protected ResponseEntity<Object> handleHttpMediaTypeNotAcceptable(HttpMediaTypeNotAcceptableException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        return reject(ErrorCode.ACCEPT_TYPE_NOT_ALLOWED, null, request);
+    }
+
     /**
-     * Respuestas del framework sin código propio: conservan su estado y su texto, y ganan el
-     * identificador de la petición y el charset, como el resto de los errores.
+     * Respaldo para las demás excepciones del framework: un fallo del servidor responde el 500
+     * genérico y cualquier otro rechazo, el valor no válido. Nunca devuelve el texto de Spring.
      */
     @Override
     protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers,
             HttpStatusCode statusCode, WebRequest request) {
         var response = super.handleExceptionInternal(ex, body, headers, statusCode, request);
-        if (response == null || !(response.getBody() instanceof ProblemDetail problem)) {
-            return response;
+        if (response == null) {
+            return null; // La respuesta ya se envió: no queda nada que responder.
         }
-        var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-        log.warn("Petición rechazada por el framework: status={} requestId={} firebaseUid={}",
-                statusCode.value(), requestId, firebaseUid(request));
-        return withHeaders(respond(problem, requestId), response.getHeaders());
+        var answer = statusCode.is5xxServerError() ? handleUnexpected(ex, request) : handleInvalidValue(ex, request);
+        return withHeaders(answer, response.getHeaders());
     }
 
     /** Responde el problema del código, con el mensaje dado o el del catálogo. */
