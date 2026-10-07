@@ -39,6 +39,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
+    private static final String IDENTITY_HEADER = "X-User-Id";
     private static final MediaType PROBLEM_JSON_UTF8 = new MediaType("application", "problem+json", StandardCharsets.UTF_8);
     private static final Pattern REQUEST_ID_FORMAT = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
 
@@ -66,7 +67,6 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             Map.entry(ErrorCode.TARGET_ROLE_NOT_ALLOWED, "No se puede eliminar el último rol objetivo"),
             Map.entry(ErrorCode.SKILL_ALREADY_EXISTS, "Habilidad duplicada"),
             Map.entry(ErrorCode.IDENTITY_REQUIRED, "Identidad requerida"));
-
     private static final String SELECT_OPTION = "Selecciona una opción.";
     static final Map<String, ErrorCode> FIELD_CODES = Map.ofEntries(
             Map.entry("AddWorkExperienceRequest.company.NotBlank", ErrorCode.COMPANY_REQUIRED),
@@ -148,7 +148,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleServletRequestBindingException(
             ServletRequestBindingException ex, HttpHeaders headers,
             HttpStatusCode status, WebRequest request) {
-        if (ex instanceof MissingRequestHeaderException) {
+        if (ex instanceof MissingRequestHeaderException missing && IDENTITY_HEADER.equalsIgnoreCase(missing.getHeaderName())) {
             return reject(HttpStatus.BAD_REQUEST, ErrorCode.IDENTITY_REQUIRED,
                     TITLES.get(ErrorCode.IDENTITY_REQUIRED), "Identidad del usuario requerida", request);
         }

@@ -34,6 +34,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.test.web.servlet.MockMvc;
@@ -240,6 +241,17 @@ class ApiExceptionHandlerTest {
     @DisplayName("Un error de enlace que no es el encabezado de identidad conserva la respuesta del framework")
     void bindingError_shouldKeepFrameworkResponse_whenNotTheIdentityHeader() throws Exception {
         toThrow = () -> new ServletRequestBindingException("enlace fallido");
+
+        mockMvc.perform(get("/boom"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Un encabezado ausente que no es el de identidad conserva la respuesta del framework")
+    void missingHeader_shouldKeepFrameworkResponse_whenNotTheIdentityHeader() throws Exception {
+        var parameter = new MethodParameter(ApiExceptionHandlerTest.class.getDeclaredMethod("setUp"), -1);
+        toThrow = () -> new MissingRequestHeaderException("X-Otro", parameter);
 
         mockMvc.perform(get("/boom"))
                 .andExpect(status().isBadRequest())
