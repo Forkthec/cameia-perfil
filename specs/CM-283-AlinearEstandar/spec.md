@@ -247,6 +247,7 @@ Cada hallazgo se comprobó contra `origin/develop` y tiene un destino. «P1» es
 | H-P9 | Cobertura global por debajo de la meta de 70 % de la rúbrica y lejos del 90 % | P2-08 (más de 70 %); 90 % en PD-07 |
 | H-P10 | La API y el consumidor de RabbitMQ comparten proceso | P2-04, y el pedido 10 a DevOps para el despliegue |
 | H-P11 | La prueba de arquitectura se llama `ArquitecturaTest` (identificador en español) | P2-12 (se renombra a `LayeredArchitectureTest`) |
+| H-P12 | `ProfessionalRoleController` arma su propio `ProblemDetail` y refleja el parámetro `lang` en el `detail` (frontera única de errores; RT-05) | P2-12: pasa por `ApiExceptionHandler` con un código propio (`PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE`, 422) y sin repetir la entrada (decisión de Paula, 6-oct-2026) |
 
 ## 7. Parte 2 en cameia-perfil
 
