@@ -2,42 +2,26 @@
 
 Índice de lo que hay en esta carpeta y para qué sirve cada archivo.
 
-## Para escribir código en este repositorio
+## Normas del repositorio
 
 | Archivo | Qué es |
 |---|---|
-| [`../AGENTS.md`](../AGENTS.md) | **La norma de este repositorio.** Estructura, nombres por capa, el patrón de persistencia de tres piezas, Clean Code, prácticas de Spring Boot (§6.1), los 12 antipatrones que bloquean un PR y las decisiones abiertas (§9). Se lee completo antes de escribir la primera línea |
-| [`03092026_v1_reglas-codigo-backend-cameia.md`](03092026_v1_reglas-codigo-backend-cameia.md) | La norma **del equipo**, común a los seis microservicios. `AGENTS.md` deriva de ella y se queda con lo que aplica a Perfil |
-| [`05092026_v1_handoff-implementacion-hu.md`](05092026_v1_handoff-implementacion-hu.md) | Estado del repositorio, lo que hay que resolver antes de CM-16 y las cinco Historias de Usuario con sus reglas duras |
+| [`../CLAUDE.md`](../CLAUDE.md) | La norma de este repositorio: estructura, rutas, datos, seguridad y pendientes propios de Perfil. Se lee completo antes de escribir la primera línea |
+| [`estandar-backend.md`](estandar-backend.md) | El estándar común de Backend, idéntico en los cuatro servicios: código, validación, errores, base de datos, seguridad, pruebas, documentación y flujo con spec |
+| [`constitution.md`](constitution.md) | Los principios no negociables que toda spec y todo PR cumplen |
+| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Rama, commit, tipos, título del PR, revisión y merge |
 
-> **Cuál manda si se contradicen.** Manda el documento del equipo. Además, cada afirmación suya
-> está marcada `CONFIRMADO`, `PROPUESTO` o `TBD`: cuando dos secciones chocan, gana la marcada
-> `CONFIRMADO`, y un `PROPUESTO` nunca cierra un `TBD`.
->
-> `03092026_v1_reglas-codigo-backend-cameia.md` es una **copia** del documento del equipo
-> (md5 idéntico al original en el momento de copiarlo). La fuente sigue siendo la del equipo: si
-> ellos publican una versión nueva, hay que traerla, no editarla aquí.
+## Errores y decisiones
+
+| Archivo | Qué es |
+|---|---|
+| [`errores.md`](errores.md) | Lo que el servicio responde cuando falla y cómo se agrega un código |
+| [`adr/`](adr/0001-codigo-de-error-y-request-id.md) | Decisiones de arquitectura y de contrato, una por archivo |
+| [`bitacora-ia/`](bitacora-ia/README.md) | La entrada de cada decisión en la que una persona cambió el rumbo de una propuesta de la IA |
 
 ## Entorno y operación
 
 | Archivo | Qué es |
 |---|---|
 | [`DOCKER.md`](DOCKER.md) | Convenciones de contenedores de este repositorio, puertos y decisiones abiertas |
-
-## Respuestas al equipo — están en otra rama
-
-Los entregables que este microservicio devuelve al equipo **no viven en esta rama**, para que
-cada Pull Request tenga un solo propósito. Están en `CM-102-entregables-insumos`, bajo
-`docs/insumos/`:
-
-- respuesta a `DEV-IN-01..10` (`04092026_v1_respuesta-insumos-cameia-perfil.md`);
-- propuesta de convenciones de contenedores para los ocho repositorios
-  (`04092026_v1_convenciones-docker-cameia.md`).
-
-## Lo que NO está aquí, a propósito
-
-- **Los diagramas C1–C4, el diagrama de paquetes, el backlog y el glosario.** Son del proyecto
-  entero, no de este microservicio, y viven en el paquete de arquitectura del equipo. Copiarlos
-  aquí crearía una segunda versión que se desincroniza en cuanto arquitectura actualice la suya.
-- **La bitácora de uso de IA.** Es un entregable de la asignatura hacia el docente. El uso de IA
-  en este repositorio se declara en la plantilla de Pull Request, que tiene una sección para ello.
+| [`CAMEIA_Perfil_Sprint1.postman_collection.json`](CAMEIA_Perfil_Sprint1.postman_collection.json) | Colección de Postman con los endpoints del servicio |
