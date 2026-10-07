@@ -9,6 +9,7 @@ import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoComman
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
+import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddEducationRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.ApiErrorResponse;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddSkillRequest;
@@ -77,7 +78,12 @@ class ProfileController {
             }""";
 
     private final ProfileAppService profileAppService;
-    ProfileController(ProfileAppService profileAppService) { this.profileAppService = profileAppService; }
+    private final ProfileCreationAppService profileCreationAppService;
+
+    ProfileController(ProfileAppService profileAppService, ProfileCreationAppService profileCreationAppService) {
+        this.profileAppService = profileAppService;
+        this.profileCreationAppService = profileCreationAppService;
+    }
 
     @Operation(summary = "Crear perfil profesional")
     @ApiResponses({
@@ -98,7 +104,7 @@ class ProfileController {
             @Parameter(description = "Firebase UID del usuario autenticado", required = true)
             @RequestHeader("X-User-Id") String uid) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ProfileResponse.from(profileAppService.createProfile(new CreateProfileCommand(uid))));
+                .body(ProfileResponse.from(profileCreationAppService.createProfile(new CreateProfileCommand(uid))));
     }
 
     @Operation(summary = "Obtener perfil profesional por ID")

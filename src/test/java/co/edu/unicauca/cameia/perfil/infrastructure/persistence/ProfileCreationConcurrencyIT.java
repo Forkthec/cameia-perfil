@@ -1,7 +1,7 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
-import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
+import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
@@ -49,7 +49,7 @@ class ProfileCreationConcurrencyIT {
     private static final int REQUESTS = 5;
 
     @Autowired
-    ProfileAppService profileAppService;
+    ProfileCreationAppService profileCreationAppService;
 
     @Autowired
     ProfessionalProfileRepository repository;
@@ -107,7 +107,7 @@ class ProfileCreationConcurrencyIT {
         }));
         assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
 
-        var waiting = executor.submit(() -> profileAppService.createProfile(new CreateProfileCommand(uid)));
+        var waiting = executor.submit(() -> profileCreationAppService.createProfile(new CreateProfileCommand(uid)));
 
         assertThat(waiting.get(10, TimeUnit.SECONDS)).isNotNull();
         assertThat(failed).failsWithin(10, TimeUnit.SECONDS);
@@ -122,7 +122,7 @@ class ProfileCreationConcurrencyIT {
             var uid = uidOf.apply(i);
             Callable<ProfessionalProfile> create = () -> {
                 start.await();
-                return profileAppService.createProfile(new CreateProfileCommand(uid));
+                return profileCreationAppService.createProfile(new CreateProfileCommand(uid));
             };
             futures.add(executor.submit(create));
         }

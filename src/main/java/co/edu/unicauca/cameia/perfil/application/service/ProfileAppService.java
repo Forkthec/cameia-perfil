@@ -4,13 +4,10 @@ import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
-import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
-import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
-import co.edu.unicauca.cameia.perfil.domain.exception.ProfileLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
@@ -30,8 +27,6 @@ import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,48 +37,12 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class ProfileAppService {
 
-    /** Cantidad máxima de Perfiles Profesionales del Plan Free. */
-    static final int FREE_PLAN_MAX_PROFILES = 1;
-
-    private static final Logger log = LoggerFactory.getLogger(ProfileAppService.class);
     private final ProfessionalProfileRepository repository;
     private final ProfessionalRoleRepository roleRepository;
 
     ProfileAppService(ProfessionalProfileRepository repository, ProfessionalRoleRepository roleRepository) {
         this.repository = repository;
         this.roleRepository = roleRepository;
-    }
-
-    /**
-     * Crea el Perfil Profesional vacío del Usuario.
-     *
-     * <p>Si llega otra petición del mismo Usuario mientras una creación está en proceso, espera a que
-     * termine y devuelve el perfil que esa creó, en vez de crear otro o rechazarla. Si el Usuario ya
-     * tenía el máximo de perfiles antes de pedir, rechaza la creación.</p>
-     *
-     * @param command identidad del Usuario
-     * @return el perfil creado, o el que creó la petición que estaba en proceso
-     * @throws IdentityRequiredException    si la identidad falta o no es válida
-     * @throws ProfileLimitReachedException si el Usuario ya tenía el máximo de perfiles de su plan
-     */
-    @Transactional
-    public ProfessionalProfile createProfile(CreateProfileCommand command) {
-        var uid = requireIdentity(command.firebaseUid());
-        long before = repository.countByFirebaseUid(uid);
-        // Serializa las creaciones del mismo Usuario: el segundo conteo ve lo que confirmó la anterior.
-        repository.lockCreationFor(uid);
-        long after = repository.countByFirebaseUid(uid);
-        if (after < FREE_PLAN_MAX_PROFILES) return createEmpty(uid);
-        // Solo falla si la base se contradice (cuenta un perfil y no lo encuentra): cae en el 500 genérico.
-        if (before < FREE_PLAN_MAX_PROFILES) return repository.findLatestByFirebaseUid(uid).orElseThrow();
-        throw new ProfileLimitReachedException();
-    }
-
-    private ProfessionalProfile createEmpty(FirebaseUid uid) {
-        var profile = ProfessionalProfile.create(uid);
-        repository.save(profile);
-        log.info("perfil creado id={}", profile.getId().value());
-        return profile;
     }
 
     @Transactional
@@ -197,15 +156,9 @@ public class ProfileAppService {
     }
 
     private ProfessionalProfile loadForUser(UUID profileId, String uid) {
-        var owner = requireIdentity(uid);
+        var owner = FirebaseUid.required(uid);
         var p = load(profileId);
         if (!p.getFirebaseUid().equals(owner)) throw new ProfileAccessDeniedException();
         return p;
-    }
-
-    /** Devuelve la identidad del Usuario, o rechaza la petición si falta o no es válida. */
-    private static FirebaseUid requireIdentity(String raw) {
-        if (raw == null || raw.isBlank() || raw.length() > FirebaseUid.MAX_LENGTH) throw new IdentityRequiredException();
-        return new FirebaseUid(raw);
     }
 }

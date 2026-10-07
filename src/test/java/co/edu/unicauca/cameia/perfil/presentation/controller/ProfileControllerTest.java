@@ -3,6 +3,7 @@ package co.edu.unicauca.cameia.perfil.presentation.controller;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
+import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
@@ -55,12 +56,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ProfileControllerTest {
 
     @Mock ProfileAppService profileAppService;
+    @Mock ProfileCreationAppService profileCreationAppService;
     MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new ProfileController(profileAppService))
+                .standaloneSetup(new ProfileController(profileAppService, profileCreationAppService))
                 .setControllerAdvice(new ApiExceptionHandler())
                 .build();
     }
@@ -68,7 +70,7 @@ class ProfileControllerTest {
     @Test
     void postProfiles_returns201WithProfileBody() throws Exception {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-001"));
-        when(profileAppService.createProfile(any(CreateProfileCommand.class))).thenReturn(profile);
+        when(profileCreationAppService.createProfile(any(CreateProfileCommand.class))).thenReturn(profile);
 
         mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-ctrl-001"))
                 .andExpect(status().isCreated())
@@ -81,7 +83,7 @@ class ProfileControllerTest {
     @Test
     @DisplayName("Un Usuario que ya tiene su perfil recibe 409 con el mensaje del Plan Free y sin datos internos")
     void postProfiles_shouldReturn409WithPlanMessage_whenUserAlreadyHasProfile() throws Exception {
-        when(profileAppService.createProfile(any())).thenThrow(new ProfileLimitReachedException());
+        when(profileCreationAppService.createProfile(any())).thenThrow(new ProfileLimitReachedException());
 
         var result = mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-ana-001"))
                 .andExpect(status().isConflict())
@@ -115,7 +117,7 @@ class ProfileControllerTest {
     @Test
     @DisplayName("Crear un perfil ignora el cuerpo: la identidad sale solo del encabezado")
     void postProfiles_shouldIgnoreBody_whenBodySent() throws Exception {
-        when(profileAppService.createProfile(new CreateProfileCommand("uid-ana-001")))
+        when(profileCreationAppService.createProfile(new CreateProfileCommand("uid-ana-001")))
                 .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ana-001")));
 
         mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-ana-001")
@@ -124,13 +126,13 @@ class ProfileControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
 
-        verify(profileAppService).createProfile(new CreateProfileCommand("uid-ana-001"));
+        verify(profileCreationAppService).createProfile(new CreateProfileCommand("uid-ana-001"));
     }
 
     @Test
     @DisplayName("Si la base de datos falla, crear un perfil responde el 500 genérico sin detalle")
     void postProfiles_shouldReturnGeneric500_whenDatabaseFails() throws Exception {
-        when(profileAppService.createProfile(any())).thenThrow(new DataAccessResourceFailureException("conexión"));
+        when(profileCreationAppService.createProfile(any())).thenThrow(new DataAccessResourceFailureException("conexión"));
 
         var result = mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-ana-001"))
                 .andExpect(status().isInternalServerError())
@@ -153,7 +155,7 @@ class ProfileControllerTest {
     @ValueSource(strings = {"", "   ", "\t"})
     @DisplayName("Una identidad en blanco responde 401 aunque el encabezado llegue")
     void postProfiles_shouldReturn401_whenXUserIdIsBlank(String uid) throws Exception {
-        when(profileAppService.createProfile(new CreateProfileCommand(uid))).thenThrow(new IdentityRequiredException());
+        when(profileCreationAppService.createProfile(new CreateProfileCommand(uid))).thenThrow(new IdentityRequiredException());
 
         mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", uid))
                 .andExpect(status().isUnauthorized())
@@ -164,7 +166,7 @@ class ProfileControllerTest {
     @DisplayName("Una identidad de 128 caracteres crea el perfil")
     void postProfiles_shouldReturn201_whenXUserIdHasMaxLength() throws Exception {
         var uid = "a".repeat(128);
-        when(profileAppService.createProfile(new CreateProfileCommand(uid)))
+        when(profileCreationAppService.createProfile(new CreateProfileCommand(uid)))
                 .thenReturn(ProfessionalProfile.create(new FirebaseUid(uid)));
 
         mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", uid))
@@ -175,7 +177,7 @@ class ProfileControllerTest {
     @DisplayName("Una identidad de 129 caracteres responde 401 sin repetir el valor")
     void postProfiles_shouldReturn401WithoutEcho_whenXUserIdIsTooLong() throws Exception {
         var uid = "a".repeat(129);
-        when(profileAppService.createProfile(new CreateProfileCommand(uid))).thenThrow(new IdentityRequiredException());
+        when(profileCreationAppService.createProfile(new CreateProfileCommand(uid))).thenThrow(new IdentityRequiredException());
 
         var result = mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", uid))
                 .andExpect(status().isUnauthorized())
