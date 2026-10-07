@@ -2384,6 +2384,881 @@
           }
         }
       ]
+    },
+    {
+      "name": "CM-271 — Validación de formación y perfil, contrato del backlog y perfil activo",
+      "item": [
+        {
+          "name": "ERR POST /educations — 422 con dos campos a la vez",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('marca institution y degree', () => pm.expect(pm.response.json().errors.map(e => e.code)).to.have.members(['INSTITUTION_REQUIRED', 'DEGREE_REQUIRED']));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/educations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "educations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"level\": \"UNDERGRADUATE\",\n  \"startDate\": \"2018-01\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
+          "name": "OK POST /educations — 201 sin inProgress (cuenta como false)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('no en curso', () => pm.expect(pm.response.json().educations[0].inProgress).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/educations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "educations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"institution\": \"Universidad del Cauca\",\n  \"degree\": \"Ingeniería de Sistemas\",\n  \"level\": \"UNDERGRADUATE\",\n  \"startDate\": \"2018-01\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ERR PATCH /profiles/{id} — 422 nombre de 256 caracteres (CA-2.3.10)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('name_256', 'n'.repeat(256));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca name', () => pm.expect(pm.response.json().errors[0].field).to.eql('name'));",
+                  "pm.test('errors[0].code PROFILE_NAME_TOO_LONG', () => pm.expect(pm.response.json().errors[0].code).to.eql('PROFILE_NAME_TOO_LONG'));",
+                  "pm.test('errors[0].message del backlog', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"El nombre no puede superar los 255 caracteres.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{name_256}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ERR POST /skills — 422 nivel fuera de la lista (CA-2.5.10)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca level', () => pm.expect(pm.response.json().errors[0].field).to.eql('level'));",
+                  "pm.test('errors[0].code SKILL_LEVEL_INVALID_VALUE', () => pm.expect(pm.response.json().errors[0].code).to.eql('SKILL_LEVEL_INVALID_VALUE'));",
+                  "pm.test('errors[0].message del backlog', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"Selecciona una opción.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/skills",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "skills"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skillName\": \"Java\",\n  \"level\": \"EXPERT\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
+          "name": "OK PATCH /profiles/{id} — nombre y resumen",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('resumen guardado', () => pm.expect(pm.response.json().summary).to.eql('Resumen de prueba.'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Perfil de revisión\",\n  \"summary\": \"Resumen de prueba.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "OK PATCH /profiles/{id} — resumen vacío lo borra en Borrador (CA-2.3.4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('resumen borrado', () => pm.expect(pm.response.json().summary).to.eql(null));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"summary\": \"   \"\n}"
+            }
+          }
+        },
+        {
+          "name": "ERR DELETE /work-experiences/{ajena} — 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code WORK_EXPERIENCE_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('WORK_EXPERIENCE_NOT_FOUND'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"No encontramos lo que buscabas.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/work-experiences/11111111-2222-4333-8444-555555555555",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "work-experiences",
+                "11111111-2222-4333-8444-555555555555"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR DELETE /educations/{ajena} — 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code EDUCATION_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('EDUCATION_NOT_FOUND'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"No encontramos lo que buscabas.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/educations/11111111-2222-4333-8444-555555555555",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "educations",
+                "11111111-2222-4333-8444-555555555555"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR DELETE /skills/{ajena} — 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code SKILL_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('SKILL_NOT_FOUND'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"No encontramos lo que buscabas.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/skills/11111111-2222-4333-8444-555555555555",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "skills",
+                "11111111-2222-4333-8444-555555555555"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR POST /target-roles — 404 rol que no está en el catálogo (CA-2.11.12)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code PROFESSIONAL_ROLE_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('PROFESSIONAL_ROLE_NOT_FOUND'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"No encontramos ese rol en el catálogo.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/target-roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "target-roles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"professionalRoleId\": \"a0000099-0000-0000-0000-000000000099\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
+          "name": "OK POST /target-roles — agrega Desarrollador Backend (guarda role_b)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('role_b', pm.response.json().targetRoles[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/target-roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "target-roles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"professionalRoleId\": \"a0000001-0000-0000-0000-000000000002\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
+          "name": "OK POST /target-roles — agrega Arquitecto de Software",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/target-roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "target-roles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"professionalRoleId\": \"a0000001-0000-0000-0000-000000000007\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ERR PATCH /target-roles/{roleId} — 409 sustituir por un rol que ya está (CA-2.11.8)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code TARGET_ROLE_ALREADY_EXISTS', () => pm.expect(pm.response.json().code).to.eql('TARGET_ROLE_ALREADY_EXISTS'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"Ese rol objetivo ya está en tu perfil.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/target-roles/{{role_b}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "target-roles",
+                "{{role_b}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"professionalRoleId\": \"a0000001-0000-0000-0000-000000000007\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ERR PATCH /target-roles/{roleId} — 422 sin professionalRoleId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca professionalRoleId', () => pm.expect(pm.response.json().errors[0].field).to.eql('professionalRoleId'));",
+                  "pm.test('errors[0].code PROFESSIONAL_ROLE_ID_REQUIRED', () => pm.expect(pm.response.json().errors[0].code).to.eql('PROFESSIONAL_ROLE_ID_REQUIRED'));",
+                  "pm.test('errors[0].message del backlog', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"Selecciona una opción.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/target-roles/{{role_b}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "target-roles",
+                "{{role_b}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        },
+        {
+          "name": "OK PATCH /profiles/{id} — vuelve a poner el resumen",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"summary\": \"Resumen de prueba.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "OK POST /skills — agrega una habilidad",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/skills",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "skills"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skillName\": \"Java\",\n  \"level\": \"ADVANCED\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
+          "name": "OK POST /completion — 200 y el perfil queda activo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status COMPLETED', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/completion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "completion"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR POST /completion — 409 perfil ya activo (CA-2.5.11)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code PROFILE_ALREADY_COMPLETED', () => pm.expect(pm.response.json().code).to.eql('PROFILE_ALREADY_COMPLETED'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"Este perfil ya está activo.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/completion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "completion"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR PATCH /profiles/{id} — 422 borrar el resumen de un perfil activo (CA-2.3.12)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca summary', () => pm.expect(pm.response.json().errors[0].field).to.eql('summary'));",
+                  "pm.test('errors[0].code SUMMARY_NOT_ALLOWED', () => pm.expect(pm.response.json().errors[0].code).to.eql('SUMMARY_NOT_ALLOWED'));",
+                  "pm.test('errors[0].message del backlog', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"No puedes quedarte sin resumen profesional con el perfil activo.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"summary\": \"\"\n}"
+            }
+          }
+        },
+        {
+          "name": "OK GET /v3/api-docs — no publica review-requests ni salary-expectation (I-024)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('sin review-requests', () => pm.expect(pm.response.text()).to.not.include('/review-requests'));",
+                  "pm.test('sin salary-expectation', () => pm.expect(pm.response.text()).to.not.include('/salary-expectation'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v3/api-docs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }
