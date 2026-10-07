@@ -51,9 +51,9 @@ class ProfileController {
     private static final String PROFILE_LIMIT_REACHED_EXAMPLE = """
             {
               "type": "about:blank",
-              "title": "Perfil ya existe",
+              "title": "Cupo del plan alcanzado",
               "status": 409,
-              "detail": "El usuario ya tiene un perfil profesional creado. El plan gratuito permite solo uno.",
+              "detail": "Tu Plan Free permite 1 Perfil Profesional.",
               "code": "PROFILE_LIMIT_REACHED",
               "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
             }""";

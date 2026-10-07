@@ -10,7 +10,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
-import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
@@ -78,7 +78,7 @@ class ProfileAppServiceTest {
     void createProfile_throwsAlreadyExistsWhenUidAlreadyRegistered() {
         when(repository.existsByFirebaseUid(any())).thenReturn(true);
         assertThatThrownBy(() -> service.createProfile(new CreateProfileCommand("uid-dup")))
-                .isInstanceOf(ProfileAlreadyExistsException.class);
+                .isInstanceOf(ProfileLimitReachedException.class);
         verify(repository, never()).save(any());
     }
 

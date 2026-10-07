@@ -13,7 +13,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededExce
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
-import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.UnsupportedLanguageException;
 import org.junit.jupiter.api.AfterEach;
@@ -100,7 +100,7 @@ class ApiExceptionHandlerTest {
         return Stream.of(
                 new Object[]{new ProfileNotFoundException(id), 404, "PROFILE_NOT_FOUND"},
                 new Object[]{new ProfileAccessDeniedException(), 403, "PROFILE_NOT_ALLOWED"},
-                new Object[]{new ProfileAlreadyExistsException(), 409, "PROFILE_LIMIT_REACHED"},
+                new Object[]{new ProfileLimitReachedException(), 409, "PROFILE_LIMIT_REACHED"},
                 new Object[]{new ProfileAlreadyCompletedException(), 409, "PROFILE_ALREADY_COMPLETED"},
                 new Object[]{new ProfessionalRoleNotFoundException(id), 404, "PROFESSIONAL_ROLE_NOT_FOUND"},
                 new Object[]{new MaxTargetRolesExceededException(5), 422, "TARGET_ROLE_LIMIT_REACHED"},
@@ -150,7 +150,7 @@ class ApiExceptionHandlerTest {
     @Test
     @DisplayName("El rechazo registra código, requestId y la identidad del Usuario")
     void rejection_shouldLogCodeRequestIdAndUid_whenIdentityPresent() throws Exception {
-        toThrow = ProfileAlreadyExistsException::new;
+        toThrow = ProfileLimitReachedException::new;
 
         mockMvc.perform(get("/boom").header("X-User-Id", "uid-ana-001").header("X-Request-Id", "req-log-1"))
                 .andExpect(status().isConflict());
@@ -164,7 +164,7 @@ class ApiExceptionHandlerTest {
     @ValueSource(strings = {"", "   ", "uid\nINFO falso", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"})
     @DisplayName("Una identidad en blanco, con saltos de línea o de más de 128 caracteres se registra como guion")
     void rejection_shouldLogDashUid_whenIdentityIsNotLoggable(String uid) throws Exception {
-        toThrow = ProfileAlreadyExistsException::new;
+        toThrow = ProfileLimitReachedException::new;
 
         mockMvc.perform(get("/boom").header("X-User-Id", uid)).andExpect(status().isConflict());
 
@@ -175,7 +175,7 @@ class ApiExceptionHandlerTest {
     @Test
     @DisplayName("Sin la identidad, el rechazo registra la identidad como guion")
     void rejection_shouldLogDashUid_whenIdentityMissing() throws Exception {
-        toThrow = ProfileAlreadyExistsException::new;
+        toThrow = ProfileLimitReachedException::new;
 
         mockMvc.perform(get("/boom")).andExpect(status().isConflict());
 

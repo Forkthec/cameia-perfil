@@ -9,7 +9,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
-import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
@@ -78,11 +78,11 @@ class ProfileControllerTest {
 
     @Test
     void postProfiles_returns409WhenProfileAlreadyExists() throws Exception {
-        when(profileAppService.createProfile(any())).thenThrow(new ProfileAlreadyExistsException());
+        when(profileAppService.createProfile(any())).thenThrow(new ProfileLimitReachedException());
 
         mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-dup"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.title").value("Perfil ya existe"));
+                .andExpect(jsonPath("$.title").value("Cupo del plan alcanzado"));
     }
 
     @Test

@@ -10,7 +10,7 @@ import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectation
 import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
-import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
@@ -54,7 +54,7 @@ public class ProfileAppService {
     @Transactional
     public ProfessionalProfile createProfile(CreateProfileCommand command) {
         var uid = requireIdentity(command.firebaseUid());
-        if (repository.existsByFirebaseUid(uid)) throw new ProfileAlreadyExistsException();
+        if (repository.existsByFirebaseUid(uid)) throw new ProfileLimitReachedException();
         var profile = ProfessionalProfile.create(uid);
         repository.save(profile);
         log.info("perfil creado id={}", profile.getId().value());
