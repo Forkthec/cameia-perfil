@@ -15,9 +15,6 @@ import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedExcepti
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,10 +39,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.File;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -63,7 +56,6 @@ class ApiExceptionHandlerTest {
 
     private static final String UUID_V4 =
             "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
-    private static final String DTO_PACKAGE = "co.edu.unicauca.cameia.perfil.presentation.dto";
 
     /** Lo que lanzará el controlador de prueba en la siguiente petición. */
     static Supplier<Exception> toThrow;
@@ -141,21 +133,6 @@ class ApiExceptionHandlerTest {
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.missingRequirements").isArray())
                 .andExpect(header().exists("X-Request-Id"));
-    }
-
-    @Test
-    @DisplayName("Todo código tiene estado o se maneja en otro lugar, y solo los previstos")
-    void everyErrorCode_shouldHaveStatusOrBeHandledElsewhere() {
-        var handledElsewhere = EnumSet.of(ErrorCode.VALIDATION_FAILED,
-                ErrorCode.REQUEST_BODY_INVALID_FORMAT, ErrorCode.REQUEST_INVALID_VALUE,
-                ErrorCode.INTERNAL_ERROR, ErrorCode.COMPANY_REQUIRED, ErrorCode.POSITION_REQUIRED,
-                ErrorCode.START_DATE_REQUIRED, ErrorCode.EMPLOYMENT_STATUS_REQUIRED,
-                ErrorCode.PROVENANCE_REQUIRED, ErrorCode.SKILL_NAME_REQUIRED,
-                ErrorCode.SKILL_LEVEL_REQUIRED, ErrorCode.PROFESSIONAL_ROLE_ID_REQUIRED);
-        var withoutStatus = EnumSet.allOf(ErrorCode.class);
-        withoutStatus.removeAll(ApiExceptionHandler.STATUS.keySet());
-
-        assertThat(withoutStatus).isEqualTo(handledElsewhere);
     }
 
     @Test
@@ -276,47 +253,5 @@ class ApiExceptionHandlerTest {
         assertThat(body.getProperties()).containsEntry("code", ErrorCode.VALIDATION_FAILED);
         assertThat(body.getProperties().get("errors").toString())
                 .contains("VALIDATION_FAILED").contains("Revisa este campo.").doesNotContain("librería");
-    }
-
-    @Test
-    @DisplayName("Toda restricción de los DTO tiene su código de campo")
-    void everyFieldConstraint_shouldHaveCode() throws Exception {
-        var missing = new ArrayList<String>();
-        for (Class<?> dto : dtoClasses()) {
-            for (Field field : dto.getDeclaredFields()) {
-                for (String constraint : constraintNames(field)) {
-                    var key = dto.getSimpleName() + "." + field.getName() + "." + constraint;
-                    if (!ApiExceptionHandler.FIELD_CODES.containsKey(key)) {
-                        missing.add(key);
-                    }
-                }
-            }
-        }
-        assertThat(missing).isEmpty();
-    }
-
-    private static List<String> constraintNames(Field field) {
-        var names = new ArrayList<String>();
-        if (field.isAnnotationPresent(NotBlank.class)) {
-            names.add("NotBlank");
-        }
-        if (field.isAnnotationPresent(NotNull.class)) {
-            names.add("NotNull");
-        }
-        if (field.isAnnotationPresent(Size.class)) {
-            names.add("Size");
-        }
-        return names;
-    }
-
-    private static List<Class<?>> dtoClasses() throws Exception {
-        var directory = new File(Class.forName(DTO_PACKAGE + ".ProfileResponse")
-                .getProtectionDomain().getCodeSource().getLocation().toURI())
-                .toPath().resolve(DTO_PACKAGE.replace('.', '/')).toFile();
-        var classes = new ArrayList<Class<?>>();
-        for (String name : directory.list((dir, file) -> file.endsWith(".class") && !file.contains("$"))) {
-            classes.add(Class.forName(DTO_PACKAGE + "." + name.substring(0, name.length() - 6)));
-        }
-        return classes;
     }
 }

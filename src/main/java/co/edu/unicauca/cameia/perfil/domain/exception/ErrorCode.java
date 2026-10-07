@@ -9,7 +9,7 @@ public enum ErrorCode {
     REQUEST_BODY_INVALID_FORMAT,
     /** Un valor rechazado por un objeto de valor, sin campo asociado. */
     REQUEST_INVALID_VALUE,
-    /** Falta el encabezado de identidad del usuario. */
+    /** Falta la identidad del usuario, o no es válida. */
     IDENTITY_REQUIRED,
     /** El perfil solicitado no existe. */
     PROFILE_NOT_FOUND,
@@ -31,6 +31,24 @@ public enum ErrorCode {
     TARGET_ROLE_NOT_ALLOWED,
     /** La habilidad ya está asociada al perfil. */
     SKILL_ALREADY_EXISTS,
+    /** El idioma pedido al catálogo de roles profesionales no está disponible. */
+    PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE,
+    /** La ruta solicitada no existe. */
+    ROUTE_NOT_FOUND,
+    /** El método HTTP no está permitido en la ruta. */
+    METHOD_NOT_ALLOWED,
+    /** El cuerpo llega en un formato distinto de JSON. */
+    CONTENT_TYPE_NOT_ALLOWED,
+    /** El identificador del perfil en la ruta no es un UUID. */
+    PROFILE_ID_INVALID_FORMAT,
+    /** El identificador de la experiencia laboral en la ruta no es un UUID. */
+    WORK_EXPERIENCE_ID_INVALID_FORMAT,
+    /** El identificador de la formación académica en la ruta no es un UUID. */
+    EDUCATION_ID_INVALID_FORMAT,
+    /** El identificador de la habilidad en la ruta no es un UUID. */
+    SKILL_ID_INVALID_FORMAT,
+    /** El identificador del rol objetivo en la ruta no es un UUID. */
+    TARGET_ROLE_ID_INVALID_FORMAT,
     /** Error interno no previsto. */
     INTERNAL_ERROR,
     /** Falta la empresa de la experiencia laboral. */
