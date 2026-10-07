@@ -133,11 +133,11 @@ Los textos de esta tabla son los literales de los CA cuando existen; los demás 
 
 | # | Decisión | Porqué | Alternativas descartadas | Decisión humana |
 |---|---|---|---|---|
-| D1 | Formato de error igual al de Cuentas (CM-36, PR 1A): `ErrorCode` en `domain/exception`, `BusinessException` base, tabla `campo + restricción → código` en el manejador | Un solo formato en los servicios Spring (estándar §A); el modelo menor copia el patrón | Formato propio de Perfil | PENDIENTE (Paula) |
-| D2 | Bloqueo asesor de transacción por `firebase_uid` para la creación | Serializa solo las creaciones del mismo Usuario, sin columna nueva y compatible con el cupo Premium; el `UNIQUE` no sirve porque Premium admite 5 | `UNIQUE (firebase_uid)` (rompe Premium); aislamiento `SERIALIZABLE` (reintentos en toda la transacción); confiar en el botón deshabilitado (RT-06-CA02 pide que el backend no duplique) | PENDIENTE (Paula) |
+| D1 | Formato de error igual al de Cuentas (CM-36, PR 1A): `ErrorCode` en `domain/exception`, `BusinessException` base, tabla `campo + restricción → código` en el manejador | Un solo formato en los servicios Spring (estándar §A); el modelo menor copia el patrón | Formato propio de Perfil | Confirmada por Paula (6-oct-2026) |
+| D2 | Bloqueo asesor de transacción por `firebase_uid` para la creación | Serializa solo las creaciones del mismo Usuario, sin columna nueva y compatible con el cupo Premium; el `UNIQUE` no sirve porque Premium admite 5 | `UNIQUE (firebase_uid)` (rompe Premium); aislamiento `SERIALIZABLE` (reintentos en toda la transacción); confiar en el botón deshabilitado (RT-06-CA02 pide que el backend no duplique) | Confirmada por Paula (6-oct-2026) |
 | D3 | `requestId` desde esta tarea, sin filtro ni `MDC` (los agrega CM-283, P2-05) | Misma decisión que PD-08 en Cuentas (Paula, 6-oct-2026) | Esperar a P2-05 | Confirmada por Paula (6-oct-2026), pregunta 3 |
-| D4 | `ProfileAlreadyExistsException` pasa a `ProfileLimitReachedException` | El nombre dice la regla real (cupo del plan), no «ya existe» | Conservar el nombre | PENDIENTE (Paula) |
-| D5 | El respaldo `REQUEST_INVALID_VALUE` para `IllegalArgumentException` | Corta hoy la fuga de mensajes de librería sin reescribir todos los objetos de valor en esta tarea | Reescribir todos los objetos de valor aquí (es el trabajo de CM-274 y CM-66) | PENDIENTE (Paula) |
+| D4 | `ProfileAlreadyExistsException` pasa a `ProfileLimitReachedException` | El nombre dice la regla real (cupo del plan), no «ya existe» | Conservar el nombre | Confirmada por Paula (6-oct-2026) |
+| D5 | El respaldo `REQUEST_INVALID_VALUE` para `IllegalArgumentException` | Corta hoy la fuga de mensajes de librería sin reescribir todos los objetos de valor en esta tarea | Reescribir todos los objetos de valor aquí (es el trabajo de CM-274 y CM-66) | Confirmada por Paula (6-oct-2026) |
 
 ## 11. Fuera de alcance
 
