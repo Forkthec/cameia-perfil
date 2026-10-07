@@ -69,7 +69,7 @@ Rama `CM-271-formato-error-perfil` desde `develop`.
 - **Prueba** (`domain/exception/ErrorCodeTest`, sin Spring): todo valor cumple `^[A-Z]+(_[A-Z]+)+$`; no hay dos valores iguales (trivial, pero fija la forma).
 - **Verificación:** `./mvnw.cmd -B test` en verde (ninguna prueba existente debería cambiar).
 
-## [ ] T-A.2 · Manejador: negocio, validación, cuerpo ilegible y 500 — ≤ 30 min, ≈ 150 líneas
+## [x] T-A.2 · Manejador: negocio, validación, cuerpo ilegible y 500 — ≤ 30 min, ≈ 150 líneas
 
 - **Cubre:** REQ-PE-01, 03 a 07, 09. **Modificar:** `presentation/advice/ApiExceptionHandler.java`.
 - **Estructura:**
@@ -85,7 +85,7 @@ Rama `CM-271-formato-error-perfil` desde `develop`.
 - **Log:** negocio y validación `WARN` «Petición rechazada: code={} requestId={}», sin traza; 500 `ERROR` «Fallo no controlado: requestId={}» con la excepción.
 - **Verificación:** `./mvnw.cmd -q -B -Dtest=ProfileControllerTest test`. Fallarán las afirmaciones de 400 por validación: es lo esperado; T-A.4 las ajusta.
 
-## [ ] T-A.3 · `requestId` en el cuerpo y en el encabezado — ≤ 30 min, ≈ 60 líneas
+## [x] T-A.3 · `requestId` en el cuerpo y en el encabezado — ≤ 30 min, ≈ 60 líneas
 
 - **Cubre:** REQ-PE-02. **Modificar:** `ApiExceptionHandler`.
 - **Código:** cada método del manejador recibe `HttpServletRequest` (o `WebRequest` en los sobrescritos) y llama a:
@@ -99,7 +99,7 @@ Rama `CM-271-formato-error-perfil` desde `develop`.
   Se pone en la propiedad `requestId` del `ProblemDetail` y en el encabezado `X-Request-Id` de la respuesta (los métodos que hoy devuelven `ProblemDetail` pasan a `ResponseEntity<ProblemDetail>` para poder fijar el encabezado). La constante del patrón va como `private static final Pattern`.
 - **Verificación:** `./mvnw.cmd -q -B -Dtest=ProfileControllerTest test`.
 
-## [ ] T-A.4 · Pruebas del manejador y ajuste del controlador — ≤ 30 min, ≈ 150 líneas
+## [x] T-A.4 · Pruebas del manejador y ajuste del controlador — ≤ 30 min, ≈ 150 líneas
 
 - **Crear** `presentation/advice/ApiExceptionHandlerTest.java`: `MockMvc` `standaloneSetup` con un `@RestController` de prueba interno que lanza lo que cada prueba necesita, y el manejador real.
   1. `businessException_shouldReturnItsStatusAndCode_whenThrown` (`@ParameterizedTest` sobre `ErrorCode` presentes en `STATUS`): cada una de las 11 excepciones → su estado y su `$.code`.
