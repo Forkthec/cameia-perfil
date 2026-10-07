@@ -16,7 +16,7 @@ Casi todas las produce `ApiExceptionHandler` como `ProblemDetail` con `Content-T
 |---|---|---|
 | 400 | Solicitud inválida | Un campo del cuerpo incumple Bean Validation; el `detail` lista cada campo con su mensaje |
 | 400 | Parámetro inválido | El parámetro `lang` del catálogo de roles no es `es` ni `en` (lo arma `ProfessionalRoleController`, no el manejador) |
-| 401 | Identidad requerida | La petición llega sin `X-User-Id` o con él en blanco |
+| 401 | Identidad requerida | La petición llega sin `X-User-Id` o con él en blanco (todas las rutas con identidad salvo `POST /api/v1/profiles`, que sin el encabezado responde 400 por la validación de Spring MVC) |
 | 403 | Acceso denegado | El perfil pertenece a otro usuario |
 | 404 | Perfil no encontrado | El usuario no tiene perfil |
 | 404 | Rol profesional no encontrado | El rol indicado no existe en el catálogo |
