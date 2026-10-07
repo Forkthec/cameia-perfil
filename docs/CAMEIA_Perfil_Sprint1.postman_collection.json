@@ -44,6 +44,18 @@
       "key": "role_id_2",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "user_b",
+      "value": "firebase-uid-revisor-cm271"
+    },
+    {
+      "key": "profile_b",
+      "value": ""
+    },
+    {
+      "key": "role_b",
+      "value": ""
     }
   ],
   "item": [
@@ -1414,6 +1426,857 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "CM-271 — Identidad, formato de error y validación de experiencia",
+      "item": [
+        {
+          "name": "OK POST /profiles — Usuario B crea su perfil (guarda profile_b)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('profile_b', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR POST /completion — 422 con los cinco requisitos en códigos (CA-2.5.4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code PROFILE_INCOMPLETE', () => pm.expect(pm.response.json().code).to.eql('PROFILE_INCOMPLETE'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"Todavía no cumples estos requisitos:\"));",
+                  "pm.test('requisitos con los códigos del backlog', () => pm.expect(pm.response.json().missingRequirements).to.eql(['NAME', 'SUMMARY', 'EDUCATION', 'SKILLS', 'TARGET_ROLES']));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/completion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "completion"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR GET /profiles/{idAjeno} — 403 con el texto de RT-03",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code PROFILE_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('PROFILE_NOT_ALLOWED'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"No encontramos lo que buscabas.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR GET /profiles/{id} — 401 con X-User-Id en blanco",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('code IDENTITY_REQUIRED', () => pm.expect(pm.response.json().code).to.eql('IDENTITY_REQUIRED'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"Tu sesión expiró. Inicia sesión de nuevo.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "   "
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR GET /profiles/{id} — 401 con X-User-Id de 129 caracteres",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('uid_129', 'u'.repeat(129));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('code IDENTITY_REQUIRED', () => pm.expect(pm.response.json().code).to.eql('IDENTITY_REQUIRED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{uid_129}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR GET /profiles/{inexistente} — 404 devuelve el X-Request-Id recibido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code PROFILE_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('PROFILE_NOT_FOUND'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"No encontramos lo que buscabas.\"));",
+                  "pm.test('requestId en el cuerpo', () => pm.expect(pm.response.json().requestId).to.eql('revision-cm271'));",
+                  "pm.test('X-Request-Id en el encabezado', () => pm.expect(pm.response.headers.get('X-Request-Id')).to.eql('revision-cm271'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "revision-cm271"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/11111111-2222-4333-8444-555555555555",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "11111111-2222-4333-8444-555555555555"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR GET /profiles/{inexistente} — X-Request-Id inválido se reemplaza por un UUID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('UUID nuevo', () => pm.expect(pm.response.headers.get('X-Request-Id')).to.match(/^[0-9a-f-]{36}$/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "<script>"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/11111111-2222-4333-8444-555555555555",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "11111111-2222-4333-8444-555555555555"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OK GET /profiles/{id} — 200 declara charset UTF-8",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('charset UTF-8', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('charset=UTF-8'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR GET /api/v1/no-existe — 404 ruta inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ROUTE_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('ROUTE_NOT_FOUND'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/no-existe",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "no-existe"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR DELETE /profiles — 405 conserva Allow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 405', () => pm.response.to.have.status(405));",
+                  "pm.test('code METHOD_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('METHOD_NOT_ALLOWED'));",
+                  "pm.test('Allow incluye POST', () => pm.expect(pm.response.headers.get('Allow')).to.include('POST'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR POST /skills — 415 cuerpo que no es JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 415', () => pm.response.to.have.status(415));",
+                  "pm.test('code CONTENT_TYPE_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('CONTENT_TYPE_NOT_ALLOWED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/skills",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "skills"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "Java"
+            }
+          }
+        },
+        {
+          "name": "ERR GET /profiles/{id} — 406 si solo acepta XML",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 406', () => pm.response.to.have.status(406));",
+                  "pm.test('code ACCEPT_TYPE_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('ACCEPT_TYPE_NOT_ALLOWED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/xml"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR GET /profiles/no-es-uuid — 422 identificador mal escrito",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code PROFILE_ID_INVALID_FORMAT', () => pm.expect(pm.response.json().code).to.eql('PROFILE_ID_INVALID_FORMAT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/no-es-uuid",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "no-es-uuid"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR PATCH /profiles/{id} — 422 JSON mal formado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code REQUEST_BODY_INVALID_FORMAT', () => pm.expect(pm.response.json().code).to.eql('REQUEST_BODY_INVALID_FORMAT'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"Revisa el formato de los datos enviados.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": "
+            }
+          }
+        },
+        {
+          "name": "ERR POST /work-experiences — 422 sin empresa (CA-2.4.3)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca company', () => pm.expect(pm.response.json().errors[0].field).to.eql('company'));",
+                  "pm.test('errors[0].code COMPANY_REQUIRED', () => pm.expect(pm.response.json().errors[0].code).to.eql('COMPANY_REQUIRED'));",
+                  "pm.test('errors[0].message del backlog', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"Ingresa la empresa.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/work-experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "work-experiences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"position\": \"Dev\",\n  \"startDate\": \"2022-01\",\n  \"employmentStatus\": \"CURRENT\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ERR POST /work-experiences — 422 empresa de 501 caracteres",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('company_501', 'a'.repeat(501));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca company', () => pm.expect(pm.response.json().errors[0].field).to.eql('company'));",
+                  "pm.test('errors[0].code COMPANY_TOO_LONG', () => pm.expect(pm.response.json().errors[0].code).to.eql('COMPANY_TOO_LONG'));",
+                  "pm.test('errors[0].message del backlog', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"La empresa no puede superar los 500 caracteres.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/work-experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "work-experiences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"{{company_501}}\",\n  \"position\": \"Dev\",\n  \"startDate\": \"2022-01\",\n  \"employmentStatus\": \"CURRENT\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ERR POST /work-experiences — 422 fecha que no existe (CA-2.4.43)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca startDate', () => pm.expect(pm.response.json().errors[0].field).to.eql('startDate'));",
+                  "pm.test('errors[0].code START_DATE_INVALID_FORMAT', () => pm.expect(pm.response.json().errors[0].code).to.eql('START_DATE_INVALID_FORMAT'));",
+                  "pm.test('errors[0].message del backlog', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"Ingresa una fecha válida con el formato mm/aaaa.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/work-experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "work-experiences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"ACME\",\n  \"position\": \"Dev\",\n  \"startDate\": \"2020-13\",\n  \"employmentStatus\": \"CURRENT\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ERR POST /work-experiences — 422 fin antes del inicio (CA-2.4.13)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca endDate', () => pm.expect(pm.response.json().errors[0].field).to.eql('endDate'));",
+                  "pm.test('errors[0].code END_DATE_BEFORE_START_DATE', () => pm.expect(pm.response.json().errors[0].code).to.eql('END_DATE_BEFORE_START_DATE'));",
+                  "pm.test('errors[0].message del backlog', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"La fecha de fin no puede ser anterior a la de inicio.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/work-experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "work-experiences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"ACME\",\n  \"position\": \"Dev\",\n  \"startDate\": \"2022-05\",\n  \"employmentStatus\": \"ENDED\",\n  \"provenance\": \"MANUAL\",\n  \"endDate\": \"2021-01\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ERR POST /work-experiences — 422 fecha de fin con experiencia actual (CA-2.4.16)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca endDate', () => pm.expect(pm.response.json().errors[0].field).to.eql('endDate'));",
+                  "pm.test('errors[0].code END_DATE_NOT_ALLOWED', () => pm.expect(pm.response.json().errors[0].code).to.eql('END_DATE_NOT_ALLOWED'));",
+                  "pm.test('errors[0].message del backlog', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"La fecha de fin debe quedar vacía.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/work-experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "work-experiences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"ACME\",\n  \"position\": \"Dev\",\n  \"startDate\": \"2022-01\",\n  \"employmentStatus\": \"CURRENT\",\n  \"provenance\": \"MANUAL\",\n  \"endDate\": \"2023-01\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ERR POST /work-experiences — 422 estado fuera de la lista (CA-2.4.57)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca employmentStatus', () => pm.expect(pm.response.json().errors[0].field).to.eql('employmentStatus'));",
+                  "pm.test('errors[0].code EMPLOYMENT_STATUS_INVALID_VALUE', () => pm.expect(pm.response.json().errors[0].code).to.eql('EMPLOYMENT_STATUS_INVALID_VALUE'));",
+                  "pm.test('errors[0].message del backlog', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"Selecciona una opción.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/work-experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "work-experiences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"ACME\",\n  \"position\": \"Dev\",\n  \"startDate\": \"2022-01\",\n  \"employmentStatus\": \"FREELANCE\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
         }
       ]
     }
