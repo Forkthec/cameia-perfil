@@ -86,14 +86,53 @@
           }
         },
         {
-          "name": "ERR POST /profiles â€” 409 UID ya registrado",
+          "name": "OK GET /profiles/{id} — perfil recién creado vacío",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));",
+                  "pm.test('Sin nombre ni resumen', () => { pm.expect(pm.response.json().name).to.eql(null); pm.expect(pm.response.json().summary).to.eql(null); });",
+                  "pm.test('Listas vacías', () => ['targetRoles', 'workExperiences', 'educations', 'profileSkills'].forEach(k => pm.expect(pm.response.json()[k]).to.eql([])));",
+                  "pm.test('Sin método de creación', () => pm.expect(pm.response.json()).to.not.have.property('method'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "firebase-uid-ana-sofia-001"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR POST /profiles — 409 cupo del Plan Free alcanzado",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status 409', () => pm.response.to.have.status(409));",
-                  "pm.test('title Perfil ya existe', () => pm.expect(pm.response.json().title).to.eql('Perfil ya existe'));"
+                  "pm.test('code PROFILE_LIMIT_REACHED', () => pm.expect(pm.response.json().code).to.eql('PROFILE_LIMIT_REACHED'));",
+                  "pm.test('detail del Plan Free', () => pm.expect(pm.response.json().detail).to.eql('Tu Plan Free permite 1 Perfil Profesional.'));"
                 ]
               }
             }
@@ -120,13 +159,14 @@
           }
         },
         {
-          "name": "ERR POST /profiles â€” 400 sin header X-User-Id",
+          "name": "ERR POST /profiles — 401 sin header X-User-Id",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('code IDENTITY_REQUIRED', () => pm.expect(pm.response.json().code).to.eql('IDENTITY_REQUIRED'));"
                 ]
               }
             }

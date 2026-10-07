@@ -48,6 +48,24 @@ import java.util.UUID;
 @RequestMapping("/api/v1/profiles")
 class ProfileController {
 
+    private static final String EMPTY_PROFILE_EXAMPLE = """
+            {
+              "id": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+              "status": "IN_PROGRESS",
+              "reviewStatus": "PENDING_REVIEW",
+              "provenance": "MANUAL",
+              "name": null,
+              "summary": null,
+              "salaryExpectation": null,
+              "preferredModality": null,
+              "createdAt": "2026-10-07T15:04:05Z",
+              "updatedAt": "2026-10-07T15:04:05Z",
+              "targetRoles": [],
+              "workExperiences": [],
+              "educations": [],
+              "profileSkills": []
+            }""";
+
     private static final String PROFILE_LIMIT_REACHED_EXAMPLE = """
             {
               "type": "about:blank",
@@ -63,11 +81,13 @@ class ProfileController {
 
     @Operation(summary = "Crear perfil profesional")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Perfil creado exitosamente",
-                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "201", description = "Perfil vacío creado, en estado IN_PROGRESS. "
+                    + "Una petición repetida mientras la creación está en proceso devuelve el mismo perfil.",
+                    content = @Content(schema = @Schema(implementation = ProfileResponse.class),
+                            examples = @ExampleObject(value = EMPTY_PROFILE_EXAMPLE))),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "El usuario alcanzó el cupo de perfiles de su plan (code PROFILE_LIMIT_REACHED)",
+            @ApiResponse(responseCode = "409", description = "El Usuario ya tenía el máximo de perfiles de su plan; el Plan Free permite uno (code PROFILE_LIMIT_REACHED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
                             examples = @ExampleObject(value = PROFILE_LIMIT_REACHED_EXAMPLE))),
             @ApiResponse(responseCode = "500", description = "Error interno (code INTERNAL_ERROR); el detalle nunca incluye el mensaje de la excepción",

@@ -24,6 +24,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -40,6 +41,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -77,12 +79,65 @@ class ProfileControllerTest {
     }
 
     @Test
-    void postProfiles_returns409WhenProfileAlreadyExists() throws Exception {
+    @DisplayName("Un Usuario que ya tiene su perfil recibe 409 con el mensaje del Plan Free y sin datos internos")
+    void postProfiles_shouldReturn409WithPlanMessage_whenUserAlreadyHasProfile() throws Exception {
         when(profileAppService.createProfile(any())).thenThrow(new ProfileLimitReachedException());
 
-        mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-dup"))
+        var result = mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-ana-001"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.title").value("Cupo del plan alcanzado"));
+                .andExpect(jsonPath("$.code").value("PROFILE_LIMIT_REACHED"))
+                .andExpect(jsonPath("$.title").value("Cupo del plan alcanzado"))
+                .andExpect(jsonPath("$.detail").value("Tu Plan Free permite 1 Perfil Profesional."))
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString())
+                .doesNotContain("TODO").doesNotContain("CM-").doesNotContain("Exception").doesNotContain("co.edu");
+    }
+
+    @Test
+    @DisplayName("El perfil recién creado es un borrador vacío, sin método de creación")
+    void getProfile_shouldReturnEmptyDraft_whenJustCreated() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ana-001"));
+        when(profileAppService.getProfile(profile.getId().value(), "uid-ana-001")).thenReturn(profile);
+
+        mockMvc.perform(get("/api/v1/profiles/{id}", profile.getId().value()).header("X-User-Id", "uid-ana-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$.name").doesNotExist())
+                .andExpect(jsonPath("$.summary").doesNotExist())
+                .andExpect(jsonPath("$.targetRoles").isEmpty())
+                .andExpect(jsonPath("$.workExperiences").isEmpty())
+                .andExpect(jsonPath("$.educations").isEmpty())
+                .andExpect(jsonPath("$.profileSkills").isEmpty())
+                .andExpect(jsonPath("$.method").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Crear un perfil ignora el cuerpo: la identidad sale solo del encabezado")
+    void postProfiles_shouldIgnoreBody_whenBodySent() throws Exception {
+        when(profileAppService.createProfile(new CreateProfileCommand("uid-ana-001")))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ana-001")));
+
+        mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-ana-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"ACTIVE\",\"firebaseUid\":\"otro\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+
+        verify(profileAppService).createProfile(new CreateProfileCommand("uid-ana-001"));
+    }
+
+    @Test
+    @DisplayName("Si la base de datos falla, crear un perfil responde el 500 genérico sin detalle")
+    void postProfiles_shouldReturnGeneric500_whenDatabaseFails() throws Exception {
+        when(profileAppService.createProfile(any())).thenThrow(new DataAccessResourceFailureException("conexión"));
+
+        var result = mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-ana-001"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).doesNotContain("conexión");
     }
 
     @Test
