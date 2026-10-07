@@ -27,8 +27,8 @@ Tamaños estimados en líneas agregadas más eliminadas; se miden con `git diff 
 |---|---|---|
 | A | `specs/CM-283-AlinearEstandar/spec.md`, `plan.md`, `tasks.md` | 850 |
 | B | Copiar `docs/estandar-backend.md` (≈ 400); crear `docs/errores.md`, `docs/adr/0001-codigo-de-error-y-request-id.md`, `docs/bitacora-ia/README.md` y `01_alinear-estandar-backend_prompt.md` | 580 |
-| C1a | Crear `CLAUDE.md` (≈ 330); reescribir `docs/README.md`; modificar `README.md` y `CONTRIBUTING.md`; eliminar `docs/insumos/` (≈ 495) | 920 |
-| C1b | Reducir `AGENTS.md` a una línea (−866, +1) y crear `docs/constitution.md` (≈ 60, enlaza `CLAUDE.md`, que ya existe tras C1a) | 930 |
+| C1a | Crear `CLAUDE.md` (≈ 200) y `docs/constitution.md` (≈ 25); reescribir `docs/README.md`; modificar `README.md` y `CONTRIBUTING.md`; eliminar `docs/insumos/` (≈ 495) | 920 |
+| C1b | Reducir `AGENTS.md` a una línea (−866, +1) | 870 |
 | C2a | Eliminar `docs/03092026_v1_reglas-codigo-backend-cameia.md` (≈ 960) | 960 |
 | C2b | Eliminar `docs/05092026_v1_handoff-implementacion-hu.md` (≈ 520) y `docs/sdd.md` (≈ 330); modificar `docs/DOCKER.md` solo si contradice | 860 |
 
@@ -80,7 +80,7 @@ No se crea ninguna herramienta ni script nuevo en el repositorio: la verificaci�
 2. **Orden de fusión: A, B, C1, C2.** La spec se fusiona primero (la bitácora de B la enlaza). C1 enlaza lo que crea B (`docs/estandar-backend.md`, `docs/errores.md`, `docs/bitacora-ia/`), y C2 retira lo que C1 ya dejó de enlazar. Una pieza posterior se prepara en local sobre la rama de la anterior y se abre cuando esa se fusiona, después de rebasarla sobre `develop`.
 3. Las piezas A de los cuatro repositorios se abren el mismo día. Dentro de un repositorio el orden de apertura sigue al de fusión; entre repositorios, las piezas B y siguientes avanzan en paralelo.
 4. En `cameia-cuentas` se redacta el estándar común una sola vez (pieza B); los otros tres lo copian de la rama `CM-283-estandar-comun` de Cuentas y su suma debe coincidir.
-5. En Perfil, `docs/constitution.md` va en la pieza C1b y no en B, porque enlaza `CLAUDE.md`, que Perfil no tiene hasta C1a.
+5. En Perfil, `docs/constitution.md` va en la pieza C1a y no en B, porque enlaza `CLAUDE.md`, que Perfil no tiene hasta C1a.
 
 ## 9. Parte 2: calendario, horas y dependencias
 

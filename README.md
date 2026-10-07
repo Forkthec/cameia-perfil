@@ -44,10 +44,10 @@ flowchart LR
 | Build | Maven, con wrapper (`mvnw`) incluido en el repositorio |
 | Persistencia | PostgreSQL 16, base/rol propios |
 | Migraciones | Flyway |
-| Documentación de API | springdoc-openapi 3.1.0 |
+| Documentación de API | springdoc-openapi 3.1.1 |
 | Pruebas | JUnit 5, AssertJ, Mockito y ArchUnit |
 | Contenedores | Docker y Docker Compose — ver [`docs/DOCKER.md`](docs/DOCKER.md) |
-| Documentación | Índice completo en [`docs/README.md`](docs/README.md); la norma de código de este repositorio es [`AGENTS.md`](AGENTS.md) |
+| Documentación | Índice completo en [`docs/README.md`](docs/README.md); la norma de código de este repositorio es [`CLAUDE.md`](CLAUDE.md) |
 | Mensajería | RabbitMQ cuando existan contratos aprobados |
 | Ejecución objetivo | Servicio HTTP y consumidor dentro del mismo repositorio/imagen |
 
@@ -103,7 +103,7 @@ Requiere JDK 21 y un PostgreSQL 16 con la base `cameia_perfil` y su rol ya cread
 ./mvnw -B clean verify
 
 # Build:
-./mvnw -B clean package
+./mvnw.cmd clean verify
 
 # Inicio:
 ./mvnw spring-boot:run
@@ -138,7 +138,7 @@ Los valores sensibles están vacíos y el `.env` real no se versiona.
 | Prueba | Tipo | Qué verifica |
 |---|---|---|
 | `PerfilApplicationTest` | Integración | Que el contexto de Spring levanta con la configuración del repositorio |
-| `ArquitecturaTest` | Arquitectura | Las siete reglas de dependencia entre capas (ArchUnit) |
+| `ArquitecturaTest` | Arquitectura | Las reglas de dependencia entre capas (ArchUnit) |
 | `ProfessionalProfileTest` | Unitaria | Invariantes del agregado: create(), isComplete(), addTargetRole, removeTargetRole, requestReview |
 | `WorkExperienceTest` | Unitaria | Reglas de negocio de EmploymentStatus y fechas |
 | `ProfileAppServiceTest` | Unitaria | Casos de uso CM-16 a CM-20 con mocks de repositorio |
@@ -152,7 +152,7 @@ Los valores sensibles están vacíos y el `.env` real no se versiona.
 ### Convención de nombres
 
 - Clase: `<ClaseBajoPrueba>Test` para unitarias, `<ClaseBajoPrueba>IT` para integración.
-- Método: `<metodo>_deberia<Resultado>_cuando<Condicion>`.
+- Método: `<metodo>_should<Resultado>_when<Condicion>`.
 - `@DisplayName` en español legible.
 - Las pruebas de `domain` **no** levantan contexto de Spring. Si lo necesitan, no son de dominio.
 - Cada Historia de Usuario llega con prueba positiva y negativa de cada regla de negocio que toca.
@@ -161,7 +161,7 @@ Los valores sensibles están vacíos y el `.env` real no se versiona.
 ```java
 @Test
 @DisplayName("Un perfil no pasa a COMPLETED si le faltan los datos mínimos")
-void finalizar_deberiaLanzarPerfilIncompletoException_cuandoFaltanDatosObligatorios() { }
+void finalize_shouldThrowIncompleteProfileException_whenRequiredFieldsAreMissing() { }
 ```
 
 ## Configuración, seguridad y calidad
@@ -171,15 +171,11 @@ void finalizar_deberiaLanzarPerfilIncompletoException_cuandoFaltanDatosObligator
 - Probar completitud, edición, versionamiento y autorización por propietario.
 - Verificar procedencia/revisión cuando se incorpore IA.
 - Activar CI únicamente con comandos comprobados por el responsable.
-- El formato común de error es RFC 9457 (`application/problem+json`), la norma que dejó obsoleta a la RFC 7807, activado con `spring.mvc.problemdetails.enabled`. Responde a `API-TBD-14`, que sigue abierto.
+- El formato común de error es `ProblemDetail` (RFC 9457, `application/problem+json`), activado con `spring.mvc.problemdetails.enabled`.
 
 ## Contribución
 
-- `main` es estable y solo recibe promociones `develop → main` mediante Merge commit.
-- `develop` integra ramas `CM-<numero>-<descripcion-kebab-case>` mediante Squash.
-- Todo cambio ordinario entra mediante PR y revisión distinta del autor; la rama `CM-*` se elimina después.
-
-> **Resuelto el 5 de septiembre de 2026.** La convención de nombre de rama estaba en disputa: la estrategia de branching y las reglas de código decían `CA-<numero>-<descripcion>`, mientras el `CONTRIBUTING.md` y la plantilla de PR decían `CM-NNN`. El equipo lo unificó en **`CM`** ([PR #2](https://github.com/Forkthec/cameia-perfil/pull/2), *Update branch naming conventions in README*). Queda pendiente que arquitectura actualice la estrategia de branching y las reglas de código, que todavía dicen `CA`.
+La rama, el commit, los tipos, el título del PR y la revisión están en [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Cuándo actualizar este README
 
