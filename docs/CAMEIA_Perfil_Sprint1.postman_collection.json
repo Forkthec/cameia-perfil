@@ -12,6 +12,10 @@
       "type": "string"
     },
     {
+      "key": "user_id",
+      "value": "firebase-uid-ana-sofia-001"
+    },
+    {
       "key": "profile_id",
       "value": "",
       "type": "string"
@@ -69,7 +73,7 @@
             "header": [
               {
                 "key": "X-User-Id",
-                "value": "firebase-uid-ana-sofia-001"
+                "value": "{{user_id}}"
               }
             ],
             "url": {
@@ -106,7 +110,7 @@
             "header": [
               {
                 "key": "X-User-Id",
-                "value": "firebase-uid-ana-sofia-001"
+                "value": "{{user_id}}"
               }
             ],
             "url": {
@@ -142,7 +146,7 @@
             "header": [
               {
                 "key": "X-User-Id",
-                "value": "firebase-uid-ana-sofia-001"
+                "value": "{{user_id}}"
               }
             ],
             "url": {
@@ -210,6 +214,10 @@
             "method": "PATCH",
             "header": [
               {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -250,6 +258,10 @@
             "method": "PATCH",
             "header": [
               {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -289,6 +301,10 @@
             "method": "PATCH",
             "header": [
               {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -327,6 +343,10 @@
           "request": {
             "method": "PATCH",
             "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -374,6 +394,10 @@
             "method": "POST",
             "header": [
               {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -414,6 +438,10 @@
             "method": "POST",
             "header": [
               {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -452,6 +480,10 @@
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -504,7 +536,13 @@
                 "work-experiences",
                 "{{exp_id}}"
               ]
-            }
+            },
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              }
+            ]
           }
         },
         {
@@ -525,6 +563,10 @@
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -565,6 +607,10 @@
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -617,7 +663,13 @@
                 "educations",
                 "{{edu_id}}"
               ]
-            }
+            },
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              }
+            ]
           }
         }
       ]
@@ -641,6 +693,10 @@
           "request": {
             "method": "PATCH",
             "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -671,11 +727,11 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 201', () => pm.response.to.have.status(201));",
-                  "pm.test('skills tiene 1 entrada', () => pm.expect(pm.response.json().skills.length).to.eql(1));",
-                  "pm.collectionVariables.set('skill_id', pm.response.json().skills[0].id);",
-                  "console.log('skillId guardado:', pm.response.json().skills[0].id);"
+                  "pm.test('profileSkills tiene 1 entrada', () => pm.expect(pm.response.json().profileSkills.length).to.eql(1));",
+                  "pm.collectionVariables.set('skill_id', pm.response.json().profileSkills[0].id);"
                 ]
               }
             }
@@ -683,6 +739,10 @@
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -713,9 +773,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 201', () => pm.response.to.have.status(201));",
-                  "pm.test('skills tiene 2 entradas', () => pm.expect(pm.response.json().skills.length).to.eql(2));"
+                  "pm.test('profileSkills tiene 2 entradas', () => pm.expect(pm.response.json().profileSkills.length).to.eql(2));"
                 ]
               }
             }
@@ -723,6 +784,10 @@
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -775,37 +840,13 @@
                 "skills",
                 "{{skill_id}}"
               ]
-            }
-          }
-        },
-        {
-          "name": "ERR POST /review-requests — 422 perfil incompleto (sin rol objetivo)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
-                  "pm.test('title Perfil incompleto', () => pm.expect(pm.response.json().title).to.eql('Perfil incompleto'));"
-                ]
+            },
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
               }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "url": {
-              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/review-requests",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "profiles",
-                "{{profile_id}}",
-                "review-requests"
-              ]
-            }
+            ]
           }
         }
       ]
@@ -814,16 +855,16 @@
       "name": "CM-20 — Roles objetivo",
       "item": [
         {
-          "name": "OK POST /profiles/{id}/target-roles — agrega rol Backend Developer (guarda role_id)",
+          "name": "OK POST /profiles/{id}/target-roles — agrega Desarrollador Backend del catálogo (guarda role_id)",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 201', () => pm.response.to.have.status(201));",
                   "pm.test('targetRoles tiene 1 entrada', () => pm.expect(pm.response.json().targetRoles.length).to.eql(1));",
-                  "pm.collectionVariables.set('role_id', pm.response.json().targetRoles[0].id);",
-                  "console.log('roleId guardado:', pm.response.json().targetRoles[0].id);"
+                  "pm.collectionVariables.set('role_id', pm.response.json().targetRoles[0].id);"
                 ]
               }
             }
@@ -832,13 +873,22 @@
             "method": "POST",
             "header": [
               {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Backend Developer\",\n  \"seniority\": \"SEMI_SENIOR\",\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"professionalRoleId\": \"a0000001-0000-0000-0000-000000000002\",\n  \"provenance\": \"MANUAL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles",
@@ -856,18 +906,17 @@
           }
         },
         {
-          "name": "OK POST /profiles/{id}/target-roles — agrega rol Software Architect (guarda role_id_2)",
+          "name": "OK POST /profiles/{id}/target-roles — agrega Arquitecto de Software del catálogo (guarda role_id_2)",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 201', () => pm.response.to.have.status(201));",
                   "pm.test('targetRoles tiene 2 entradas', () => pm.expect(pm.response.json().targetRoles.length).to.eql(2));",
-                  "const roles = pm.response.json().targetRoles;",
-                  "const architect = roles.find(r => r.title === 'Software Architect');",
-                  "pm.collectionVariables.set('role_id_2', architect.id);",
-                  "console.log('roleId2 guardado:', architect.id);"
+                  "const architect = pm.response.json().targetRoles.find(r => r.professionalRoleId === 'a0000001-0000-0000-0000-000000000007');",
+                  "pm.collectionVariables.set('role_id_2', architect.id);"
                 ]
               }
             }
@@ -876,13 +925,22 @@
             "method": "POST",
             "header": [
               {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Software Architect\",\n  \"seniority\": \"SENIOR\",\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"professionalRoleId\": \"a0000001-0000-0000-0000-000000000007\",\n  \"provenance\": \"MANUAL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles",
@@ -900,14 +958,16 @@
           }
         },
         {
-          "name": "ERR POST /target-roles — 409 rol duplicado (mismo title+seniority)",
+          "name": "ERR POST /target-roles — 409 rol del catálogo ya agregado (CA-2.11.4)",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 409', () => pm.response.to.have.status(409));",
-                  "pm.test('title Rol objetivo duplicado', () => pm.expect(pm.response.json().title).to.eql('Rol objetivo duplicado'));"
+                  "pm.test('code TARGET_ROLE_ALREADY_EXISTS', () => pm.expect(pm.response.json().code).to.eql('TARGET_ROLE_ALREADY_EXISTS'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql('Ese rol objetivo ya está en tu perfil.'));"
                 ]
               }
             }
@@ -916,13 +976,22 @@
             "method": "POST",
             "header": [
               {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Backend Developer\",\n  \"seniority\": \"SEMI_SENIOR\",\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"professionalRoleId\": \"a0000001-0000-0000-0000-000000000002\",\n  \"provenance\": \"MANUAL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles",
@@ -967,7 +1036,13 @@
                 "profiles",
                 "{{profile_id}}"
               ]
-            }
+            },
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              }
+            ]
           }
         },
         {
@@ -996,21 +1071,27 @@
                 "profiles",
                 "00000000-0000-0000-0000-000000000000"
               ]
-            }
+            },
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              }
+            ]
           }
         },
         {
-          "name": "OK PATCH /profiles/{id}/target-roles/{roleId} — actualiza titulo y seniority",
+          "name": "OK PATCH /profiles/{id}/target-roles/{roleId} — sustituye por Desarrollador Full Stack (CA-2.11.1)",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const roles = pm.response.json().targetRoles;",
-                  "const updated = roles.find(r => r.id === pm.collectionVariables.get('role_id'));",
-                  "pm.test('titulo actualizado', () => pm.expect(updated.title).to.eql('Lead Backend Developer'));",
-                  "pm.test('seniority actualizada', () => pm.expect(updated.seniority).to.eql('SENIOR'));"
+                  "const updated = pm.response.json().targetRoles.find(r => r.id === pm.collectionVariables.get('role_id'));",
+                  "pm.test('rol sustituido', () => pm.expect(updated.professionalRoleId).to.eql('a0000001-0000-0000-0000-000000000003'));",
+                  "pm.test('targetRoles sigue con 2 entradas', () => pm.expect(pm.response.json().targetRoles.length).to.eql(2));"
                 ]
               }
             }
@@ -1019,13 +1100,22 @@
             "method": "PATCH",
             "header": [
               {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Lead Backend Developer\",\n  \"seniority\": \"SENIOR\"\n}"
+              "raw": "{\n  \"professionalRoleId\": \"a0000001-0000-0000-0000-000000000003\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/{{role_id}}",
@@ -1060,13 +1150,22 @@
             "method": "PATCH",
             "header": [
               {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"No existe\"\n}"
+              "raw": "{\n  \"professionalRoleId\": \"a0000001-0000-0000-0000-000000000003\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/target-roles/00000000-0000-0000-0000-000000000000",
@@ -1080,36 +1179,6 @@
                 "{{profile_id}}",
                 "target-roles",
                 "00000000-0000-0000-0000-000000000000"
-              ]
-            }
-          }
-        },
-        {
-          "name": "OK POST /review-requests — 201 perfil completo (con nombre, resumen y rol)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
-                  "pm.test('status IN_REVIEW', () => pm.expect(pm.response.json().status).to.eql('IN_REVIEW'));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "url": {
-              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/review-requests",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "profiles",
-                "{{profile_id}}",
-                "review-requests"
               ]
             }
           }
@@ -1142,18 +1211,63 @@
                 "target-roles",
                 "{{role_id_2}}"
               ]
-            }
+            },
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              }
+            ]
           }
         },
         {
-          "name": "ERR DELETE /target-roles/{roleId} — 422 ultimo rol (no se puede eliminar)",
+          "name": "OK POST /profiles/{id}/completion — 200 perfil activo (requisito del último rol)",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status COMPLETED', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/completion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_id}}",
+                "completion"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR DELETE /target-roles/{roleId} — 422 último rol de un perfil activo (CA-2.11.3)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 422', () => pm.response.to.have.status(422));",
-                  "pm.test('title Ultimo rol objetivo', () => pm.expect(pm.response.json().title).to.include('ltimo'));"
+                  "pm.test('code TARGET_ROLE_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('TARGET_ROLE_NOT_ALLOWED'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql('No puedes quedarte sin roles objetivo con el perfil activo.'));"
                 ]
               }
             }
@@ -1173,7 +1287,13 @@
                 "target-roles",
                 "{{role_id}}"
               ]
-            }
+            },
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              }
+            ]
           }
         }
       ]
@@ -1257,7 +1377,7 @@
           "response": []
         },
         {
-          "name": "ERR GET /professional-roles?lang=fr — 400 idioma no soportado",
+          "name": "ERR GET /professional-roles?lang=fr — 422 idioma no disponible",
           "request": {
             "method": "GET",
             "header": [],
@@ -1281,7 +1401,19 @@
             },
             "description": "Idioma no soportado → 400 ProblemDetail con title=\"Parámetro inválido\"."
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE', () => pm.expect(pm.response.json().code).to.eql('PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE'));"
+                ]
+              }
+            }
+          ]
         }
       ]
     }

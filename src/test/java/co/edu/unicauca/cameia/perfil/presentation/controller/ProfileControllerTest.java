@@ -14,6 +14,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileLimitReachedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
@@ -543,6 +544,20 @@ class ProfileControllerTest {
                         .content("{\"name\":"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("REQUEST_BODY_INVALID_FORMAT"));
+    }
+
+    @Test
+    @DisplayName("Eliminar una experiencia que no es del perfil responde 404 con su código y el texto de CA-2.4.59")
+    void removeWorkExperience_shouldReturn404_whenExperienceIsNotInProfile() throws Exception {
+        when(profileAppService.removeWorkExperience(any(), any(), any()))
+                .thenThrow(new WorkExperienceNotFoundException());
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/work-experiences/{expId}",
+                        UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-delexp"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("WORK_EXPERIENCE_NOT_FOUND"))
+                .andExpect(jsonPath("$.detail").value("No encontramos lo que buscabas."));
     }
 
     @Test

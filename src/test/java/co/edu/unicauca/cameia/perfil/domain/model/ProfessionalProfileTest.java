@@ -2,13 +2,16 @@ package co.edu.unicauca.cameia.perfil.domain.model;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
+import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.SkillNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -245,6 +248,46 @@ class ProfessionalProfileTest {
                 .hasMessage("Ese rol objetivo ya está en tu perfil.");
         assertThat(profile.getTargetRoles()).extracting(TargetRole::getProfessionalRoleId)
                 .containsExactlyInAnyOrder(analyst, scientist);
+    }
+
+    // ── remove*() de un elemento que no es del perfil ────────────────────
+
+    @Test
+    @DisplayName("Eliminar un elemento que no es del perfil lanza su «no encontrado» y no cambia nada (CA-2.4.58, 2.4.59, 2.5.23)")
+    void remove_shouldThrowNotFound_whenElementIsNotInProfile() {
+        var profile = buildCompleteProfile();
+        var other = UUID.randomUUID();
+
+        assertThatThrownBy(() -> profile.removeWorkExperience(other)).isInstanceOf(WorkExperienceNotFoundException.class);
+        assertThatThrownBy(() -> profile.removeEducation(other)).isInstanceOf(EducationNotFoundException.class)
+                .hasMessage("No encontramos lo que buscabas.");
+        assertThatThrownBy(() -> profile.removeSkill(other)).isInstanceOf(SkillNotFoundException.class);
+        assertThatThrownBy(() -> profile.removeTargetRole(other)).isInstanceOf(TargetRoleNotFoundException.class);
+        assertThat(profile.getEducations()).hasSize(1);
+        assertThat(profile.getProfileSkills()).hasSize(1);
+        assertThat(profile.getTargetRoles()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Eliminar un elemento del perfil lo quita")
+    void remove_shouldRemove_whenElementIsInProfile() {
+        var profile = buildCompleteProfile();
+
+        profile.removeEducation(profile.getEducations().get(0).getId());
+        profile.removeSkill(profile.getProfileSkills().get(0).getId());
+
+        assertThat(profile.getEducations()).isEmpty();
+        assertThat(profile.getProfileSkills()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Un rol objetivo que no es del perfil responde «no encontrado» antes que la regla del último rol")
+    void removeTargetRole_shouldThrowNotFound_whenCompletedProfileHasOneOtherRole() {
+        var profile = buildCompleteProfile();
+        profile.complete();
+
+        assertThatThrownBy(() -> profile.removeTargetRole(UUID.randomUUID()))
+                .isInstanceOf(TargetRoleNotFoundException.class);
     }
 
     // ── updateSummary() ──────────────────────────────────────────────────

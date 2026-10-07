@@ -33,7 +33,7 @@ class OpenApiDocumentIT {
     int port;
 
     @Test
-    @DisplayName("El OpenAPI publica el error común con code, requestId y errors, y nombra los códigos")
+    @DisplayName("El OpenAPI publica el error común y sus códigos, y no publica los endpoints sin HU del MVP")
     void apiDocs_shouldDescribeCommonErrorAndCodes_whenRequested() throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
 
@@ -42,6 +42,9 @@ class OpenApiDocumentIT {
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body())
                 .contains("\"ApiError\"", "\"ApiFieldError\"", "\"requestId\"", "\"missingRequirements\"")
-                .contains("IDENTITY_REQUIRED", "PROFILE_ID_INVALID_FORMAT", "PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE");
+                .contains("IDENTITY_REQUIRED", "PROFILE_ID_INVALID_FORMAT", "PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE")
+                .contains("WORK_EXPERIENCE_NOT_FOUND", "TARGET_ROLE_NOT_FOUND", "END_DATE_BEFORE_START_DATE")
+                // Sin HU en el MVP (hallazgo I-024): no se publica para que Frontend no lo integre.
+                .doesNotContain("/review-requests", "/salary-expectation");
     }
 }

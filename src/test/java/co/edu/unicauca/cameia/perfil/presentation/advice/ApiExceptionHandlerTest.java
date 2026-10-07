@@ -6,6 +6,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
+import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
@@ -17,7 +18,10 @@ import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedExcepti
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.exception.SkillNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.UnsupportedLanguageException;
+import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -128,6 +132,10 @@ class ApiExceptionHandlerTest {
                 new Object[]{new DuplicateTargetRoleException(), 409, "TARGET_ROLE_ALREADY_EXISTS"},
                 new Object[]{new LastTargetRoleException(), 422, "TARGET_ROLE_NOT_ALLOWED"},
                 new Object[]{new DuplicateSkillException(), 409, "SKILL_ALREADY_EXISTS"},
+                new Object[]{new WorkExperienceNotFoundException(), 404, "WORK_EXPERIENCE_NOT_FOUND"},
+                new Object[]{new EducationNotFoundException(), 404, "EDUCATION_NOT_FOUND"},
+                new Object[]{new SkillNotFoundException(), 404, "SKILL_NOT_FOUND"},
+                new Object[]{new TargetRoleNotFoundException(), 404, "TARGET_ROLE_NOT_FOUND"},
                 new Object[]{new IdentityRequiredException(), 401, "IDENTITY_REQUIRED"},
                 new Object[]{new UnsupportedLanguageException(), 422, "PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE"});
     }

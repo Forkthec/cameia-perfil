@@ -77,7 +77,10 @@ final class ErrorCatalog {
             entry(TARGET_ROLE_ALREADY_EXISTS, CONFLICT, "Rol objetivo duplicado", null),
             entry(TARGET_ROLE_NOT_ALLOWED, UNPROCESSABLE_ENTITY, "No se puede eliminar el último rol objetivo", null),
             entry(SKILL_ALREADY_EXISTS, CONFLICT, "Habilidad duplicada", null),
-            entry(TARGET_ROLE_NOT_FOUND, NOT_FOUND, "Rol objetivo no encontrado", null));
+            entry(TARGET_ROLE_NOT_FOUND, NOT_FOUND, "Rol objetivo no encontrado", null),
+            entry(WORK_EXPERIENCE_NOT_FOUND, NOT_FOUND, "Experiencia no encontrada", null),
+            entry(EDUCATION_NOT_FOUND, NOT_FOUND, "Formación no encontrada", null),
+            entry(SKILL_NOT_FOUND, NOT_FOUND, "Habilidad no encontrada", null));
 
     /** Clave {@code ClaseDelDto.campo.Restricción} → código del campo rechazado. */
     static final Map<String, ErrorCode> FIELD_CODES = Map.ofEntries(
