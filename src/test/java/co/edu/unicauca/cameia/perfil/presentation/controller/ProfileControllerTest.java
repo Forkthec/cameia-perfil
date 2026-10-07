@@ -423,13 +423,17 @@ class ProfileControllerTest {
     }
 
     @Test
-    void postCompletion_returns422WhenIncomplete() throws Exception {
+    @DisplayName("Finalizar sin resumen ni habilidades responde la forma común con los dos requisitos")
+    void postCompletion_shouldReturn422WithCommonShape_whenSummaryAndSkillsAreMissing() throws Exception {
         when(profileAppService.completeProfile(any(), any()))
-                .thenThrow(new IncompleteProfileException(List.of("nombre", "resumen", "educacion")));
+                .thenThrow(new IncompleteProfileException(List.of("summary", "al menos 1 habilidad")));
 
         mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-comp"))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.missingRequirements").isArray());
+                .andExpect(jsonPath("$.code").value("PROFILE_INCOMPLETE"))
+                .andExpect(jsonPath("$.detail").value("Todavía no cumples estos requisitos:"))
+                .andExpect(jsonPath("$.missingRequirements.length()").value(2))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
     }
 }

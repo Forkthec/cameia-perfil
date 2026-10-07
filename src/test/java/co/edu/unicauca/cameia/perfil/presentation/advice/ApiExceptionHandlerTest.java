@@ -15,6 +15,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedExcepti
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.exception.UnsupportedLanguageException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -102,7 +103,8 @@ class ApiExceptionHandlerTest {
                 new Object[]{new DuplicateTargetRoleException("Backend"), 409, "TARGET_ROLE_ALREADY_EXISTS"},
                 new Object[]{new LastTargetRoleException(), 422, "TARGET_ROLE_NOT_ALLOWED"},
                 new Object[]{new DuplicateSkillException("Java"), 409, "SKILL_ALREADY_EXISTS"},
-                new Object[]{new IdentityRequiredException(), 401, "IDENTITY_REQUIRED"});
+                new Object[]{new IdentityRequiredException(), 401, "IDENTITY_REQUIRED"},
+                new Object[]{new UnsupportedLanguageException(), 422, "PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE"});
     }
 
     @ParameterizedTest
@@ -128,13 +130,16 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("El perfil incompleto responde 422 con su cuerpo propio y el encabezado de petición")
-    void incompleteProfile_shouldReturn422WithRequestIdHeader_whenThrown() throws Exception {
-        toThrow = () -> new IncompleteProfileException(List.of("nombre"));
+    @DisplayName("El perfil incompleto responde la forma común con los requisitos que faltan")
+    void incompleteProfile_shouldReturnCommonShapeWithMissingRequirements_whenThrown() throws Exception {
+        toThrow = () -> new IncompleteProfileException(List.of("resumen", "habilidades"));
 
         mockMvc.perform(get("/boom"))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.missingRequirements").isArray())
+                .andExpect(jsonPath("$.code").value("PROFILE_INCOMPLETE"))
+                .andExpect(jsonPath("$.detail").value("Todavía no cumples estos requisitos:"))
+                .andExpect(jsonPath("$.missingRequirements.length()").value(2))
+                .andExpect(jsonPath("$.requestId").isNotEmpty())
                 .andExpect(header().exists("X-Request-Id"));
     }
 

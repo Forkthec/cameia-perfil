@@ -3,12 +3,10 @@ package co.edu.unicauca.cameia.perfil.presentation.advice;
 import co.edu.unicauca.cameia.perfil.domain.exception.BusinessException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
-import co.edu.unicauca.cameia.perfil.presentation.dto.CompletionErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -53,17 +51,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<Object> handleBusiness(BusinessException ex, WebRequest request) {
-        return reject(ex.getCode(), ex.getMessage(), request);
-    }
-
-    @ExceptionHandler(IncompleteProfileException.class)
-    ResponseEntity<CompletionErrorResponse> handleIncompleteProfile(
-            IncompleteProfileException ex, WebRequest request) {
-        var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-        log.warn("Petición rechazada: code={} requestId={}", ex.getCode(), requestId);
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .header(REQUEST_ID_HEADER, requestId)
-                .body(new CompletionErrorResponse(ex.getMissingRequirements()));
+        var response = reject(ex.getCode(), ex.getMessage(), request);
+        addMissingRequirements(ex, response);
+        return response;
     }
 
     /** Un valor que rechaza un objeto de valor, un enum o el formato de una fecha, sin campo asociado. */
@@ -166,6 +156,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
         log.warn("Petición rechazada: code={} requestId={}", code, requestId);
         return respond(problem(code, detail), requestId);
+    }
+
+    /** La finalización incompleta lista, además, los requisitos que faltan. */
+    private static void addMissingRequirements(BusinessException ex, ResponseEntity<Object> response) {
+        if (ex instanceof IncompleteProfileException incomplete && response.getBody() instanceof ProblemDetail problem) {
+            problem.setProperty("missingRequirements", incomplete.getMissingRequirements());
+        }
     }
 
     private static List<FieldProblem> fieldProblems(MethodArgumentNotValidException ex) {
