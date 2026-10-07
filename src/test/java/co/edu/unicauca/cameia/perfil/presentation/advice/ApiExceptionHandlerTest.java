@@ -26,6 +26,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.ServletRequestBindingException;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,6 +51,8 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -198,6 +210,51 @@ class ApiExceptionHandlerTest {
                 .andReturn();
 
         assertThat(result.getResponse().getContentAsString()).doesNotContain("secreto");
+    }
+
+    @Test
+    @DisplayName("Un valor rechazado sin traza registra el origen como desconocido")
+    void illegalArgument_shouldLogUnknownOrigin_whenStackTraceIsEmpty() throws Exception {
+        toThrow = () -> {
+            var ex = new IllegalArgumentException("x");
+            ex.setStackTrace(new StackTraceElement[0]);
+            return ex;
+        };
+
+        mockMvc.perform(get("/boom")).andExpect(status().isUnprocessableEntity());
+
+        assertThat(logs.list).anySatisfy(event ->
+                assertThat(event.getFormattedMessage()).contains("origen=desconocido"));
+    }
+
+    @Test
+    @DisplayName("Un error de enlace que no es el encabezado de identidad conserva la respuesta del framework")
+    void bindingError_shouldKeepFrameworkResponse_whenNotTheIdentityHeader() throws Exception {
+        toThrow = () -> new ServletRequestBindingException("enlace fallido");
+
+        mockMvc.perform(get("/boom"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("La validación sin objeto destino usa el nombre del objeto y el código genérico")
+    void validation_shouldFallBackToGenericCode_whenTargetIsNull() throws Exception {
+        var bindingResult = mock(BindingResult.class);
+        when(bindingResult.getTarget()).thenReturn(null);
+        when(bindingResult.getObjectName()).thenReturn("unknown");
+        when(bindingResult.getFieldErrors())
+                .thenReturn(List.of(new FieldError("unknown", "extra", null, false, null, null, "msg de librería")));
+        var ex = new MethodArgumentNotValidException(
+                new MethodParameter(ApiExceptionHandlerTest.class.getDeclaredMethod("setUp"), -1), bindingResult);
+
+        var response = new ApiExceptionHandler().handleMethodArgumentNotValid(ex, new HttpHeaders(),
+                HttpStatus.UNPROCESSABLE_ENTITY, new ServletWebRequest(new MockHttpServletRequest()));
+
+        var body = (ProblemDetail) response.getBody();
+        assertThat(body.getProperties()).containsEntry("code", ErrorCode.VALIDATION_FAILED);
+        assertThat(body.getProperties().get("errors").toString())
+                .contains("VALIDATION_FAILED").contains("Revisa este campo.").doesNotContain("librería");
     }
 
     @Test
