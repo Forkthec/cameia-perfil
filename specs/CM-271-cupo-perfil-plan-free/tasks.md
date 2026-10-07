@@ -15,11 +15,11 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Se marca `
 
 ---
 
-## PR 0 (solo si Paula aprueba la pregunta 1) — Testcontainers en Perfil
+## PR 0 (aprobado por Paula el 6-oct-2026, pregunta 1) — Testcontainers en Perfil
 
 Rama `CM-271-testcontainers-perfil` desde `develop`.
 
-## [ ] T-0.1 · PostgreSQL de prueba con Testcontainers — ≤ 30 min, ≈ 120 líneas — **BLOQUEADA por la pregunta 1**
+## [ ] T-0.1 · PostgreSQL de prueba con Testcontainers — ≤ 30 min, ≈ 120 líneas
 
 - **Modificar:** `pom.xml` (dependencias de prueba `org.springframework.boot:spring-boot-testcontainers` y `org.testcontainers:postgresql`, **sin versión**: las gestiona `spring-boot-starter-parent`; si el parent no las gestiona, detenerse). **Crear:** `src/test/java/co/edu/unicauca/cameia/perfil/infrastructure/persistence/PostgresTestConfiguration.java`:
   ```java
