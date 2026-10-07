@@ -1,6 +1,6 @@
 # Tareas — CM-271 (cameia-perfil)
 
-Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Se marca `[x]` en el momento en que cada tarjeta termina, con la salida real de las pruebas (regla del repositorio).
+Estado: spec y plan aprobados por Paula (decisiones D1 a D5 confirmadas el 6-oct-2026). Se marca `[x]` en el momento en que cada tarjeta termina, con la salida real de las pruebas (regla del repositorio).
 
 ## Reglas para todas las tarjetas (el modelo que ejecuta no lee la spec ni el plan)
 
