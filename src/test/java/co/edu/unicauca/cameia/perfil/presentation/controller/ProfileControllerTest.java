@@ -25,6 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
@@ -119,6 +120,26 @@ class ProfileControllerTest {
                 .andReturn();
 
         assertThat(result.getResponse().getContentAsString()).doesNotContain("aaaa");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2020-13", "31/02/2020"})
+    @DisplayName("Una fecha mal escrita responde 422 sin el mensaje del analizador de fechas")
+    void addWorkExperience_shouldReturn422_whenStartDateIsMalformed(String startDate) throws Exception {
+        when(profileAppService.addWorkExperience(any()))
+                .thenAnswer(invocation -> YearMonth.parse(startDate));
+        var body = """
+                {"company":"ACME","position":"Dev","startDate":"%s","employmentStatus":"CURRENT","provenance":"MANUAL"}
+                """.formatted(startDate);
+
+        var result = mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + "/work-experiences")
+                        .header("X-User-Id", "uid-ctrl-date")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("REQUEST_INVALID_VALUE"))
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).doesNotContain("Text").doesNotContain("parse");
     }
 
     // ── CM-17 ─────────────────────────────────────────────────────────────

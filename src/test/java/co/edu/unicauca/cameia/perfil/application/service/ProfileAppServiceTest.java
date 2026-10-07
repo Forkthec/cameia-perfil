@@ -37,6 +37,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.DateTimeException;
 import java.time.YearMonth;
 import java.util.Optional;
 import java.util.UUID;
@@ -180,6 +181,16 @@ class ProfileAppServiceTest {
         assertThat(profile.getWorkExperiences()).hasSize(1);
         assertThat(profile.getWorkExperiences().get(0).getCompany()).isEqualTo("ACME");
         verify(repository).save(profile);
+    }
+
+    @Test
+    @DisplayName("Una fecha de inicio con mes 13 no guarda la experiencia")
+    void addWorkExperience_shouldThrowDateTimeException_whenStartDateIsMalformed() {
+        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2020-13", null, "CURRENT", "MANUAL")))
+                .isInstanceOf(DateTimeException.class);
+        verify(repository, never()).save(any());
     }
 
     @Test

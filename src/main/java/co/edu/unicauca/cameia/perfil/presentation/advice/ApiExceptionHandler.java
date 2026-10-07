@@ -22,6 +22,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.nio.charset.StandardCharsets;
+import java.time.DateTimeException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
@@ -60,8 +61,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(new CompletionErrorResponse(ex.getMissingRequirements()));
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    ResponseEntity<Object> handleIllegalArgument(IllegalArgumentException ex, WebRequest request) {
+    /** Un valor que rechaza un objeto de valor, un enum o el formato de una fecha, sin campo asociado. */
+    @ExceptionHandler({IllegalArgumentException.class, DateTimeException.class})
+    ResponseEntity<Object> handleInvalidValue(RuntimeException ex, WebRequest request) {
         var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
         log.warn("Valor rechazado sin campo: code={} requestId={} origen={}",
                 ErrorCode.REQUEST_INVALID_VALUE, requestId, origin(ex));
