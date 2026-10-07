@@ -36,7 +36,7 @@ import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses
 import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.withHeaders;
 
 /**
- * Única frontera donde las excepciones se traducen a HTTP (reglas de código, sección 7, regla 5).
+ * Única frontera donde las excepciones se traducen a HTTP: decide el código de cada excepción.
  *
  * <p>Usa ProblemDetail de RFC 9457. Toda respuesta de error lleva {@code code} y {@code requestId},
  * y el encabezado {@code X-Request-Id}. Un fallo no controlado responde un mensaje genérico.</p>

@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Set;
 
-/** Catálogo de roles profesionales TI (CM-82). Solo lectura, sin autenticación. */
+/** Catálogo de roles profesionales TI. Solo lectura, sin autenticación. */
 @Tag(name = "Roles Profesionales", description = "Catálogo de roles TI disponibles para usar como rol objetivo")
 @RestController
 @RequestMapping("/api/v1/profiles/professional-roles")

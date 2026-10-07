@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-/** Endpoints del perfil profesional (CM-16 a CM-174). */
+/** Endpoints del perfil profesional del Usuario. */
 @Tag(name = "Perfiles", description = "Gestión del perfil profesional del candidato")
 @RestController
 @RequestMapping("/api/v1/profiles")
@@ -197,7 +197,7 @@ class ProfileController {
         return ResponseEntity.ok(ProfileResponse.from(profileAppService.removeEducation(id, uid, eduId)));
     }
 
-    /** CM-24: oculto en Swagger (fuera del MVP). */
+    /** Oculto en Swagger: queda fuera del alcance del MVP. */
     @Hidden
     @PatchMapping("/{id}/salary-expectation")
     ResponseEntity<ProfileResponse> updateSalaryExpectation(@PathVariable UUID id,

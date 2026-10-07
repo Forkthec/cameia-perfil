@@ -7,7 +7,6 @@ import java.util.Objects;
  *
  * <p>Firebase UIDs tienen hasta 128 caracteres alfanuméricos. Validamos el contrato aquí
  * para que ninguna capa externa pase un string vacío o demasiado largo sin que el dominio se entere.
- * TODO CM-DEV-IN: confirmar con el equipo que el header se llama X-User-Id (Gateway no configurado aún).
  */
 public record FirebaseUid(String value) {
 
