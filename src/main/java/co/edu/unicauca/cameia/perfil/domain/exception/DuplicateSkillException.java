@@ -1,7 +1,7 @@
 package co.edu.unicauca.cameia.perfil.domain.exception;
 
-public class DuplicateSkillException extends RuntimeException {
+public class DuplicateSkillException extends BusinessException {
     public DuplicateSkillException(String skillName) {
-        super("La habilidad '" + skillName + "' ya está asociada al perfil");
+        super(ErrorCode.SKILL_ALREADY_EXISTS, "La habilidad '" + skillName + "' ya está asociada al perfil");
     }
 }
