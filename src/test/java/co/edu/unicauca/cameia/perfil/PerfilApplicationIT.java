@@ -22,7 +22,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
  */
 @SpringBootTest
 @Testcontainers
-class PerfilApplicationTest {
+class PerfilApplicationIT {
 
     /** PostgreSQL real, con la misma imagen que el servicio de base de datos de docker-compose. */
     @Container

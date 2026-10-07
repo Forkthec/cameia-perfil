@@ -89,7 +89,7 @@ class ErrorCatalogTest {
 
     @Test
     @DisplayName("Toda restricción de los DTO tiene su código de campo")
-    void everyFieldConstraint_shouldHaveCode() throws Exception {
+    void everyFieldConstraint_shouldHaveCode_whenDtosAreScanned() throws Exception {
         var missing = new ArrayList<String>();
         for (Class<?> dto : dtoClasses()) {
             for (Field field : dto.getDeclaredFields()) {

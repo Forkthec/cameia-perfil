@@ -137,7 +137,7 @@ Los valores sensibles están vacíos y el `.env` real no se versiona.
 
 | Prueba | Tipo | Qué verifica |
 |---|---|---|
-| `PerfilApplicationTest` | Integración | Que el contexto de Spring levanta con la configuración del repositorio |
+| `PerfilApplicationIT` | Integración | Que el contexto de Spring levanta con la configuración del repositorio |
 | `ArquitecturaTest` | Arquitectura | Las reglas de dependencia entre capas (ArchUnit) |
 | `ProfessionalProfileTest` | Unitaria | Invariantes del agregado: create(), isComplete(), addTargetRole, removeTargetRole, requestReview |
 | `WorkExperienceTest` | Unitaria | Reglas de negocio de EmploymentStatus y fechas |
@@ -147,7 +147,7 @@ Los valores sensibles están vacíos y el `.env` real no se versiona.
 
 `ArquitecturaTest` verifica que el dominio no dependa de otras capas, que no importe Spring, JPA ni RabbitMQ, que presentación no dependa de infraestructura, que no haya dependencias circulares, y que los sufijos `Controller`, `AppService` y `Entity` se respeten.
 
-Las pruebas que necesitan base de datos (`PerfilApplicationTest` y las `*IT`) levantan su propio PostgreSQL 16 con Testcontainers, así que `./mvnw -B clean verify` solo requiere Docker encendido. Surefire ejecuta las `*Test` y Failsafe las `*IT`, ambas dentro de `verify`. `docker compose run --rm verify` hace lo mismo dentro de un contenedor, usando el Docker del equipo.
+Las pruebas que necesitan base de datos (las `*IT`) levantan su propio PostgreSQL 16 con Testcontainers, así que `./mvnw -B clean verify` solo requiere Docker encendido. Surefire ejecuta las `*Test` y Failsafe las `*IT`, ambas dentro de `verify`. `docker compose run --rm verify` hace lo mismo dentro de un contenedor, usando el Docker del equipo.
 
 ### Convención de nombres
 

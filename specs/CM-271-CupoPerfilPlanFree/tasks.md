@@ -413,3 +413,17 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
   - cobertura de lo nuevo o modificado de 90 % o más;
   - `git diff --shortstat CM-271-formato-error-perfil...HEAD`.
   - Reportar a Paula. Título previsto: `CM-271 | fix(perfil): un solo perfil por doble envío y cupo del Plan Free con su mensaje [IA-ASISTIDO]`.
+
+## [x] T-C.1 · Revisión final: errores de negocio explícitos y hallazgos sin alternativa
+
+> Hecha encima del stack, en dos ramas nuevas para quedar bajo 1.000 líneas por PR: `CM-271-errores-negocio-explicitos` (errores de negocio y obligatorios que respondían 500) y `CM-271-hallazgos-revision-final` (el resto). Decisión de Paula (7-oct): no se reescriben las ramas ya publicadas.
+
+- **Errores de negocio (D18).** `InvalidFieldsException` (diseño de T-1.1 de CM-274) reemplaza las `IllegalArgumentException` de `WorkExperience`, `Education`, `ProfileName`, `ProfessionalSummary`, `SalaryExpectation` y `ProfileSkill`; `CommandValues` lee opciones y fechas con su código de campo; `TargetRoleNotFoundException` responde 404 al editar un rol objetivo que no está en el perfil. El manejador ya no atrapa `IllegalArgumentException` ni `DateTimeException`: responden 500.
+- **Hallazgos de la revisión sin otra alternativa:**
+  - `UpdateTargetRoleRequest.professionalRoleId` lleva `@NotNull` (el cuerpo vacío respondía 500);
+  - `UpdateSalaryExpectationRequest.amount` lleva `@NotNull` y el controlador valida el cuerpo (el monto ausente respondía 500);
+  - `AddEducationRequest` valida sus obligatorios con Bean Validation (sin `level` o `provenance` respondía 500);
+  - `lockCreationFor` exige una transacción abierta (`Propagation.MANDATORY`);
+  - `PerfilApplicationTest` pasa a `PerfilApplicationIT` (levanta PostgreSQL y lo corre Failsafe);
+  - dos pruebas renombradas a `metodo_shouldResultado_whenCondicion`.
+- **Documentación.** `docs/errores.md`, ADR 0002, OpenAPI del controlador y `README`.
