@@ -23,10 +23,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -34,6 +36,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.context.request.ServletWebRequest;
+import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -215,13 +218,50 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("Un error de enlace que no es el encabezado de identidad conserva la respuesta del framework")
-    void bindingError_shouldKeepFrameworkResponse_whenNotTheIdentityHeader() throws Exception {
+    @DisplayName("Un error del framework sin código propio conserva su estado y gana requestId y charset")
+    void bindingError_shouldKeepFrameworkStatusAndAddRequestId_whenNotTheIdentityHeader() throws Exception {
         toThrow = () -> new ServletRequestBindingException("enlace fallido");
 
-        mockMvc.perform(get("/boom"))
+        mockMvc.perform(get("/boom").header("X-Request-Id", "req-fw-1"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").doesNotExist());
+                .andExpect(jsonPath("$.code").doesNotExist())
+                .andExpect(jsonPath("$.requestId").value("req-fw-1"))
+                .andExpect(header().string("X-Request-Id", "req-fw-1"))
+                .andExpect(header().string("Content-Type", "application/problem+json;charset=UTF-8"));
+    }
+
+    @Test
+    @DisplayName("Una ruta sin controlador responde 404 con el código de ruta inexistente")
+    void noHandler_shouldReturnRouteNotFound_whenThrown() throws Exception {
+        toThrow = () -> new NoHandlerFoundException("GET", "/otra", new HttpHeaders());
+
+        mockMvc.perform(get("/boom"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ROUTE_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("Un tipo incorrecto fuera de la ruta responde 422 con valor no válido")
+    void typeMismatch_shouldReturnInvalidValue_whenNotAPathVariable() throws Exception {
+        toThrow = () -> new TypeMismatchException("x", UUID.class);
+
+        mockMvc.perform(get("/boom"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("REQUEST_INVALID_VALUE"));
+    }
+
+    @Test
+    @DisplayName("Una respuesta del framework sin cuerpo de problema se devuelve sin cambios")
+    void exceptionInternal_shouldReturnAsIs_whenBodyIsNotProblem() {
+        var response = new ApiExceptionHandler() {
+            ResponseEntity<Object> call() {
+                return handleExceptionInternal(new IllegalStateException(), "texto", new HttpHeaders(),
+                        HttpStatus.BAD_REQUEST, new ServletWebRequest(new MockHttpServletRequest()));
+            }
+        }.call();
+
+        assertThat(response.getBody()).isEqualTo("texto");
+        assertThat(response.getHeaders().get("X-Request-Id")).isNull();
     }
 
     @Test

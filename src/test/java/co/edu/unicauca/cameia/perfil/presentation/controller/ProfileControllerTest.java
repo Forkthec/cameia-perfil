@@ -18,24 +18,30 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -140,6 +146,42 @@ class ProfileControllerTest {
                 .andReturn();
 
         assertThat(result.getResponse().getContentAsString()).doesNotContain("Text").doesNotContain("parse");
+    }
+
+    static Stream<Arguments> frameworkErrors() {
+        var profileId = UUID.randomUUID();
+        return Stream.of(
+                Arguments.of(get("/api/v1/no-existe"), 404, "ROUTE_NOT_FOUND", "La ruta solicitada no existe."),
+                Arguments.of(delete("/api/v1/profiles"), 405, "METHOD_NOT_ALLOWED",
+                        "La operación no está permitida en esta ruta."),
+                Arguments.of(patch("/api/v1/profiles/" + profileId).header("X-User-Id", "uid-ctrl-415")
+                                .contentType(MediaType.TEXT_PLAIN).content("x"),
+                        415, "CONTENT_TYPE_NOT_ALLOWED", "Envía los datos en formato JSON."),
+                Arguments.of(get("/api/v1/profiles/no-es-uuid").header("X-User-Id", "uid-ctrl-id"),
+                        422, "PROFILE_ID_INVALID_FORMAT", "El identificador del perfil no es válido."),
+                Arguments.of(delete("/api/v1/profiles/" + profileId + "/skills/xyz").header("X-User-Id", "uid-ctrl-id"),
+                        422, "SKILL_ID_INVALID_FORMAT", "El identificador de la habilidad no es válido."));
+    }
+
+    @ParameterizedTest
+    @MethodSource("frameworkErrors")
+    @DisplayName("Los errores del framework responden la forma común con su código, sin repetir la entrada")
+    void frameworkError_shouldReturnCommonShape_whenRequestIsRejected(
+            MockHttpServletRequestBuilder request, int status, String code, String detail) throws Exception {
+        // El detail es el texto fijo del catálogo, así que no puede llevar el valor ni el mensaje de Spring.
+        mockMvc.perform(request)
+                .andExpect(status().is(status))
+                .andExpect(jsonPath("$.code").value(code))
+                .andExpect(jsonPath("$.detail").value(detail))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("El 405 conserva el encabezado Allow con los métodos permitidos")
+    void deleteProfiles_shouldKeepAllowHeader_whenMethodNotAllowed() throws Exception {
+        mockMvc.perform(delete("/api/v1/profiles"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(header().string("Allow", containsString("POST")));
     }
 
     // ── CM-17 ─────────────────────────────────────────────────────────────
