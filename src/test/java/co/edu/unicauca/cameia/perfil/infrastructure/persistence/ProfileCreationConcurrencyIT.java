@@ -2,6 +2,7 @@ package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
@@ -21,8 +22,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -30,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Creación de perfiles con peticiones simultáneas contra PostgreSQL real.
@@ -47,6 +49,7 @@ class ProfileCreationConcurrencyIT {
     static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine");
 
     private static final int REQUESTS = 5;
+    private static final long TIMEOUT_SECONDS = 30;
 
     @Autowired
     ProfileCreationAppService profileCreationAppService;
@@ -69,14 +72,64 @@ class ProfileCreationConcurrencyIT {
     }
 
     @Test
-    @DisplayName("Cinco peticiones simultáneas del mismo Usuario reciben el mismo perfil y queda uno solo")
-    void createProfile_shouldReturnSameProfileToAll_whenFiveRequestsArriveTogether() throws Exception {
+    @DisplayName("Cinco peticiones simultáneas del mismo Usuario dejan un solo perfil y cada una recibe ese perfil o el cupo")
+    void createProfile_shouldLeaveOneProfile_whenFiveRequestsArriveTogether() throws Exception {
         var uid = "uid-it-" + UUID.randomUUID();
 
-        var profiles = runTogether(i -> uid);
+        var outcomes = runTogether(i -> uid);
 
-        assertThat(profiles).hasSize(REQUESTS);
-        assertThat(profiles.stream().map(p -> p.getId().value()).distinct()).hasSize(1);
+        var profileId = jdbcTemplate.queryForObject(
+                "select id from perfil_profesional where firebase_uid = ?", UUID.class, uid);
+        // Una petición que llega cuando la creación ya terminó recibe el cupo alcanzado (409), nunca otro perfil.
+        assertThat(outcomes).allSatisfy(outcome -> {
+            if (outcome instanceof ProfessionalProfile profile) {
+                assertThat(profile.getId().value()).isEqualTo(profileId);
+            } else {
+                assertThat(outcome).isInstanceOf(ProfileLimitReachedException.class);
+            }
+        });
+        assertThat(countProfiles(uid)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Las peticiones que llegan mientras otra crea el perfil reciben ese mismo perfil, sin 409")
+    void createProfile_shouldReturnSameProfile_whenRequestsArriveWhileCreating() throws Exception {
+        var uid = "uid-it-" + UUID.randomUUID();
+        var locked = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        // Una creación en proceso: toma el bloqueo del Usuario y lo retiene hasta que las demás esperan.
+        var creating = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+            repository.lockCreationFor(new FirebaseUid(uid));
+            locked.countDown();
+            await(release);
+            var profile = ProfessionalProfile.create(new FirebaseUid(uid));
+            repository.save(profile);
+            return profile;
+        }));
+        assertThat(locked.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
+        var waiting = new ArrayList<Future<ProfessionalProfile>>();
+        for (int i = 1; i < REQUESTS; i++) {
+            waiting.add(executor.submit(() -> profileCreationAppService.createProfile(new CreateProfileCommand(uid))));
+        }
+
+        awaitWaitingLocks(REQUESTS - 1);
+        release.countDown();
+
+        var createdId = creating.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).getId();
+        for (var future : waiting) {
+            assertThat(future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).getId()).isEqualTo(createdId);
+        }
+        assertThat(countProfiles(uid)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Una petición que llega cuando el Usuario ya tenía su perfil recibe el cupo alcanzado")
+    void createProfile_shouldThrowLimitReached_whenRequestArrivesAfterCreationFinished() {
+        var uid = "uid-it-" + UUID.randomUUID();
+        profileCreationAppService.createProfile(new CreateProfileCommand(uid));
+
+        assertThatThrownBy(() -> profileCreationAppService.createProfile(new CreateProfileCommand(uid)))
+                .isInstanceOf(ProfileLimitReachedException.class);
         assertThat(countProfiles(uid)).isEqualTo(1);
     }
 
@@ -85,9 +138,9 @@ class ProfileCreationConcurrencyIT {
     void createProfile_shouldNotBlockOtherUsers_whenFiveUsersCreateTogether() throws Exception {
         var prefix = "uid-it-" + UUID.randomUUID() + "-";
 
-        var profiles = runTogether(i -> prefix + i);
+        var outcomes = runTogether(i -> prefix + i);
 
-        assertThat(profiles.stream().map(p -> p.getId().value()).distinct()).hasSize(REQUESTS);
+        assertThat(outcomes).allSatisfy(outcome -> assertThat(outcome).isInstanceOf(ProfessionalProfile.class));
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from perfil_profesional where firebase_uid like ?", Integer.class, prefix + "%"))
                 .isEqualTo(REQUESTS);
@@ -98,40 +151,66 @@ class ProfileCreationConcurrencyIT {
     void createProfile_shouldCreate_whenPreviousCreationRolledBack() throws Exception {
         var uid = "uid-it-" + UUID.randomUUID();
         var locked = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
         var failed = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
             repository.lockCreationFor(new FirebaseUid(uid));
             locked.countDown();
-            // Da tiempo a que la otra petición llegue al bloqueo y quede esperando.
-            sleep(300);
+            await(release);
             throw new IllegalStateException("creación deshecha a propósito");
         }));
-        assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
-
+        assertThat(locked.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
         var waiting = executor.submit(() -> profileCreationAppService.createProfile(new CreateProfileCommand(uid)));
 
-        assertThat(waiting.get(10, TimeUnit.SECONDS)).isNotNull();
-        assertThat(failed).failsWithin(10, TimeUnit.SECONDS);
+        awaitWaitingLocks(1);
+        release.countDown();
+
+        assertThat(waiting.get(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isNotNull();
+        assertThat(failed).failsWithin(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         assertThat(countProfiles(uid)).isEqualTo(1);
     }
 
-    /** Lanza una creación por hilo y las suelta a la vez con un mismo pistoletazo de salida. */
-    private List<ProfessionalProfile> runTogether(IntFunction<String> uidOf) throws Exception {
+    /**
+     * Lanza una creación por hilo y las suelta a la vez. Cada resultado es el perfil devuelto o la
+     * excepción de negocio que lanzó la creación.
+     */
+    private List<Object> runTogether(IntFunction<String> uidOf) throws Exception {
         var start = new CountDownLatch(1);
         var futures = new ArrayList<Future<ProfessionalProfile>>();
         for (int i = 0; i < REQUESTS; i++) {
             var uid = uidOf.apply(i);
-            Callable<ProfessionalProfile> create = () -> {
+            futures.add(executor.submit(() -> {
                 start.await();
                 return profileCreationAppService.createProfile(new CreateProfileCommand(uid));
-            };
-            futures.add(executor.submit(create));
+            }));
         }
         start.countDown();
-        var profiles = new ArrayList<ProfessionalProfile>();
+        var outcomes = new ArrayList<Object>();
         for (var future : futures) {
-            profiles.add(future.get(30, TimeUnit.SECONDS));
+            outcomes.add(outcomeOf(future));
         }
-        return profiles;
+        return outcomes;
+    }
+
+    private static Object outcomeOf(Future<ProfessionalProfile> future) throws Exception {
+        try {
+            return future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (ExecutionException e) {
+            return e.getCause();
+        }
+    }
+
+    /** Espera a que la cantidad dada de transacciones esté detenida en un bloqueo por Usuario. */
+    private void awaitWaitingLocks(int expected) throws InterruptedException {
+        var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(TIMEOUT_SECONDS);
+        while (waitingLocks() < expected) {
+            assertThat(System.nanoTime()).as("transacciones esperando el bloqueo").isLessThan(deadline);
+            TimeUnit.MILLISECONDS.sleep(20);
+        }
+    }
+
+    private int waitingLocks() {
+        return jdbcTemplate.queryForObject(
+                "select count(*) from pg_locks where locktype = 'advisory' and not granted", Integer.class);
     }
 
     private int countProfiles(String uid) {
@@ -139,9 +218,9 @@ class ProfileCreationConcurrencyIT {
                 "select count(*) from perfil_profesional where firebase_uid = ?", Integer.class, uid);
     }
 
-    private static void sleep(long millis) {
+    private static void await(CountDownLatch latch) {
         try {
-            Thread.sleep(millis);
+            assertThat(latch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(e);
