@@ -12,7 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Container;
@@ -167,6 +169,38 @@ class ProfileCreationConcurrencyIT {
         assertThat(waiting.get(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isNotNull();
         assertThat(failed).failsWithin(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         assertThat(countProfiles(uid)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Si la creación en proceso no termina, la que espera se corta a los 5 s sin crear nada")
+    void createProfile_shouldFailFast_whenLockIsHeldLongerThanTimeout() throws Exception {
+        var uid = "uid-it-" + UUID.randomUUID();
+        var locked = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var holder = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+            repository.lockCreationFor(new FirebaseUid(uid));
+            locked.countDown();
+            await(release);
+            status.setRollbackOnly();
+            return null;
+        }));
+        assertThat(locked.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+        var started = System.nanoTime();
+        var waiting = executor.submit(() -> profileCreationAppService.createProfile(new CreateProfileCommand(uid)));
+
+        assertThat(outcomeOf(waiting)).isInstanceOf(CannotAcquireLockException.class);
+        assertThat(TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - started)).isBetween(4L, 15L);
+        release.countDown();
+        assertThat(holder).succeedsWithin(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        assertThat(countProfiles(uid)).isZero();
+    }
+
+    @Test
+    @DisplayName("Tomar el bloqueo de creación sin una transacción abierta falla, en lugar de soltarlo en silencio")
+    void lockCreationFor_shouldFail_whenNoTransactionIsOpen() {
+        assertThatThrownBy(() -> repository.lockCreationFor(new FirebaseUid("uid-it-" + UUID.randomUUID())))
+                .isInstanceOf(IllegalTransactionStateException.class);
     }
 
     /**

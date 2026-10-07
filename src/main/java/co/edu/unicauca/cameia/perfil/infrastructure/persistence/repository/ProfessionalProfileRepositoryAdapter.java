@@ -21,6 +21,9 @@ import java.util.Optional;
 @Repository
 class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileRepository {
 
+    /** Espera máxima por el bloqueo de creación de un Usuario; es una constante, nunca un dato recibido. */
+    static final String CREATION_LOCK_TIMEOUT = "5s";
+
     private final ProfessionalProfileJpaRepository jpa;
 
     @PersistenceContext
@@ -56,6 +59,9 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public void lockCreationFor(FirebaseUid firebaseUid) {
+        // Una creación atascada no retiene la conexión de las que esperan: a los 5 s PostgreSQL corta
+        // la espera (55P03) y la petición responde el 500 genérico. Rige solo en esta transacción.
+        em.createNativeQuery("set local lock_timeout = '" + CREATION_LOCK_TIMEOUT + "'").executeUpdate();
         em.createNativeQuery("select pg_advisory_xact_lock(hashtextextended(:uid, 0))")
                 .setParameter("uid", firebaseUid.value())
                 .getSingleResult();

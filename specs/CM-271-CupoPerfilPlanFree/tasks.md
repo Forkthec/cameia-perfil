@@ -435,3 +435,11 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 - **Textos (D19).** Las excepciones existentes responden el literal del backlog y dejan de recibir el valor que repetían (`ProfileNotFoundException`, `ProfessionalRoleNotFoundException`, `DuplicateSkillException` y `DuplicateTargetRoleException` ya no tienen parámetro).
 - **Contrato (D20).** `DELETE` de experiencia, formación, habilidad y rol objetivo → 204 sin cuerpo; `POST …/completion` → 200. OpenAPI y Postman al día.
 - **CA pendientes (D21).** Resumen vacío lo borra y `SUMMARY_NOT_ALLOWED` en un perfil activo; requisitos con los códigos del backlog; `PATCH` del rol objetivo responde 409 si el rol nuevo ya está; `inProgress` ausente es `false`.
+
+## [x] T-C.3 · Robustez del bloqueo, del respaldo del framework y del registro
+
+> Hecha en `CM-271-robustez-errores-y-registro`, encima de `CM-271-textos-y-contrato-backlog`.
+
+- **Bloqueo (D22).** `lock_timeout` de 5 s antes de `pg_advisory_xact_lock`; prueba de integración que retiene el bloqueo y comprueba el corte sin crear nada, y otra que comprueba el fallo sin transacción.
+- **Respaldo (D23).** 400 → 422 `REQUEST_INVALID_VALUE`; 5xx → 500; otro estado → 500 y `ERROR`. Prueba con la lista de excepciones de `ResponseEntityExceptionHandler`.
+- **Registro (D24).** `RedactedException` copia la cadena sin mensajes; el registro del 500 lleva `sqlState`.

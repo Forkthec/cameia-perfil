@@ -12,7 +12,7 @@ Las respuestas de error siguen la [sección 6 del estándar](estandar-backend.md
 
 Los mensajes para la persona son los literales del backlog vigente (`05102026_01_Backlog.xlsx`), que es la única fuente de los textos; cada fila cita el CA o la regla de donde sale. Los pocos que el backlog no fija (los errores del framework, el idioma del catálogo y «La fecha de fin debe quedar vacía.») están pedidos al Product Owner para que entren al backlog. El `detail` nunca repite el valor recibido ni el mensaje de una excepción de librería. Un fallo no controlado responde siempre el mensaje genérico de `INTERNAL_ERROR`; el detalle queda solo en el registro del servidor.
 
-Cada rechazo se registra en nivel `WARN` con `code`, `requestId` y `firebaseUid`. `firebaseUid` es el valor de `X-User-Id`, o `-` si falta, está en blanco, mide más de 128 caracteres o trae caracteres de control. El registro nunca lleva nombres, resúmenes, correos ni el valor rechazado.
+Cada rechazo se registra en nivel `WARN` con `code`, `requestId` y `firebaseUid`. `firebaseUid` es el valor de `X-User-Id`, o `-` si falta, está en blanco, mide más de 128 caracteres o trae caracteres de control. El registro nunca lleva nombres, resúmenes, correos ni el valor rechazado. Un fallo no controlado se registra en `ERROR` con `requestId`, `firebaseUid`, el `SQLState` si lo hay, y la clase y la traza de cada excepción de la cadena, sin sus mensajes (`RedactedException`): el de una excepción de persistencia puede traer los valores de las columnas.
 
 ## Códigos que el servicio emite
 
@@ -115,7 +115,13 @@ Este catálogo usa dos causas que el vocabulario común de códigos no tenía:
 
 ## Respaldo para los errores del framework
 
-Toda respuesta de error lleva `code`. Las excepciones de Spring MVC sin fila propia en el catálogo (por ejemplo, un parámetro obligatorio ausente o un error de enlace) responden 422 `REQUEST_INVALID_VALUE`; las del lado del servidor (por ejemplo, un cuerpo que no se pudo escribir), 500 `INTERNAL_ERROR`. Ninguna devuelve el texto de Spring. El registro guarda la clase y el método donde se originó el rechazo, con `requestId` y `firebaseUid`, para poder darle un código propio si aparece en el uso real.
+Toda respuesta de error lleva `code` y ninguna devuelve el texto de Spring. Las excepciones de Spring MVC sin fila propia en el catálogo se resuelven por su estado:
+
+- **400** (parámetro obligatorio ausente, error de enlace, validación de un parámetro del método): es un dato del cliente y responde 422 `REQUEST_INVALID_VALUE`, con el origen en `WARN`.
+- **5xx** (cuerpo que no se pudo escribir, conversión no soportada): 500 `INTERNAL_ERROR`.
+- **Cualquier otro estado** (por ejemplo, un 409 o un 413 que ningún endpoint produce hoy): no se disfraza de error del cliente. Responde 500 `INTERNAL_ERROR` y se registra en `ERROR` con el estado y el origen, para darle su código en el catálogo.
+
+`ApiExceptionHandlerTest.springExceptions_shouldAllBeKnown_whenFrameworkIsUpgraded` lista cada excepción que resuelve Spring MVC con la respuesta decidida; si una versión nueva de Spring agrega otra, la prueba falla antes de que llegue a producción.
 
 ## Cómo se agrega un código
 
