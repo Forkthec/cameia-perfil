@@ -51,9 +51,12 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<Object> handleBusiness(BusinessException ex, WebRequest request) {
-        var response = reject(ex.getCode(), ex.getMessage(), request);
-        addMissingRequirements(ex, response);
-        return response;
+        var problem = problem(ex.getCode(), ex.getMessage());
+        if (ex instanceof IncompleteProfileException incomplete) {
+            // La finalización incompleta lista, además, los requisitos que faltan.
+            problem.setProperty("missingRequirements", incomplete.getMissingRequirements());
+        }
+        return reject(problem, request);
     }
 
     /** Un valor que rechaza un objeto de valor, un enum o el formato de una fecha, sin campo asociado. */
@@ -76,12 +79,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException ex, HttpHeaders headers,
             HttpStatusCode status, WebRequest request) {
-        var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-        log.warn("Petición rechazada: code={} requestId={} firebaseUid={}",
-                ErrorCode.VALIDATION_FAILED, requestId, firebaseUid(request));
         var problem = problem(ErrorCode.VALIDATION_FAILED, null);
         problem.setProperty("errors", fieldProblems(ex));
-        return respond(problem, requestId);
+        return reject(problem, request);
     }
 
     @Override
@@ -153,18 +153,17 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return withHeaders(respond(problem, requestId), response.getHeaders());
     }
 
-    /** Registra el rechazo y responde el problema del código, con el mensaje dado o el del catálogo. */
+    /** Responde el problema del código, con el mensaje dado o el del catálogo. */
     private ResponseEntity<Object> reject(ErrorCode code, String detail, WebRequest request) {
-        var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-        log.warn("Petición rechazada: code={} requestId={} firebaseUid={}", code, requestId, firebaseUid(request));
-        return respond(problem(code, detail), requestId);
+        return reject(problem(code, detail), request);
     }
 
-    /** La finalización incompleta lista, además, los requisitos que faltan. */
-    private static void addMissingRequirements(BusinessException ex, ResponseEntity<Object> response) {
-        if (ex instanceof IncompleteProfileException incomplete && response.getBody() instanceof ProblemDetail problem) {
-            problem.setProperty("missingRequirements", incomplete.getMissingRequirements());
-        }
+    /** Registra el rechazo con su código, el identificador de la petición y la identidad, y lo responde. */
+    private ResponseEntity<Object> reject(ProblemDetail problem, WebRequest request) {
+        var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
+        log.warn("Petición rechazada: code={} requestId={} firebaseUid={}",
+                problem.getProperties().get("code"), requestId, firebaseUid(request));
+        return respond(problem, requestId);
     }
 
     private static List<FieldProblem> fieldProblems(MethodArgumentNotValidException ex) {

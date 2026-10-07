@@ -10,6 +10,7 @@ import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectation
 import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddEducationRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.ApiErrorResponse;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddSkillRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddTargetRoleRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateTargetRoleRequest;
@@ -28,7 +29,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -65,13 +65,13 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Perfil creado exitosamente",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Falta el encabezado X-User-Id (code IDENTITY_REQUIRED)",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "409", description = "El usuario alcanzó el cupo de perfiles de su plan (code PROFILE_LIMIT_REACHED)",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class),
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
                             examples = @ExampleObject(value = PROFILE_LIMIT_REACHED_EXAMPLE))),
             @ApiResponse(responseCode = "500", description = "Error interno (code INTERNAL_ERROR); el detalle nunca incluye el mensaje de la excepción",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping
     ResponseEntity<ProfileResponse> createProfile(
@@ -85,12 +85,14 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Perfil encontrado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @GetMapping("/{id}")
     ResponseEntity<ProfileResponse> getProfile(@PathVariable UUID id,
@@ -102,14 +104,14 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Perfil actualizado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]) o cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT)",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), valor no válido (REQUEST_INVALID_VALUE) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PatchMapping("/{id}")
     ResponseEntity<ProfileResponse> updateProfileInfo(@PathVariable UUID id,
@@ -123,14 +125,14 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Experiencia laboral agregada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]) o Datos de fechas inconsistentes (ej: endDate anterior a startDate)",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), fecha mal escrita o fechas inconsistentes, como endDate anterior a startDate (REQUEST_INVALID_VALUE), o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/work-experiences")
     ResponseEntity<ProfileResponse> addWorkExperience(@PathVariable UUID id,
@@ -145,12 +147,14 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Experiencia laboral eliminada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil o experiencia no encontrados",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 200 con el perfil sin cambios",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o WORK_EXPERIENCE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @DeleteMapping("/{id}/work-experiences/{expId}")
     ResponseEntity<ProfileResponse> removeWorkExperience(@PathVariable UUID id, @PathVariable UUID expId,
@@ -162,14 +166,14 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Educación agregada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]) o cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT)",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), valor no válido (REQUEST_INVALID_VALUE) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/educations")
     ResponseEntity<ProfileResponse> addEducation(@PathVariable UUID id,
@@ -184,12 +188,14 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Educación eliminada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil o educación no encontrados",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 200 con el perfil sin cambios",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o EDUCATION_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @DeleteMapping("/{id}/educations/{eduId}")
     ResponseEntity<ProfileResponse> removeEducation(@PathVariable UUID id, @PathVariable UUID eduId,
@@ -211,16 +217,16 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Habilidad agregada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]) o cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT)",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "409", description = "La habilidad ya está asociada al perfil (comparación sin distinción de mayúsculas ni espacios)",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), valor no válido (REQUEST_INVALID_VALUE) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "La habilidad ya está asociada al perfil, sin distinguir mayúsculas ni espacios (code SKILL_ALREADY_EXISTS)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/skills")
     ResponseEntity<ProfileResponse> addSkill(@PathVariable UUID id,
@@ -234,12 +240,14 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Habilidad eliminada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil o habilidad no encontrados",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 200 con el perfil sin cambios",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o SKILL_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @DeleteMapping("/{id}/skills/{skillId}")
     ResponseEntity<ProfileResponse> removeSkill(@PathVariable UUID id, @PathVariable UUID skillId,
@@ -253,14 +261,14 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Revisión solicitada; estado cambia a IN_REVIEW",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "422", description = "Perfil incompleto; el cuerpo contiene la lista de requisitos faltantes",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Perfil incompleto (code PROFILE_INCOMPLETE, con missingRequirements[]) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/review-requests")
     ResponseEntity<ProfileResponse> requestReview(@PathVariable UUID id,
@@ -273,16 +281,16 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Rol objetivo agregado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil o rol profesional no encontrados",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]) o Se alcanzó el máximo de roles objetivo permitidos",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o rol profesional inexistente en el catálogo (code PROFESSIONAL_ROLE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil (code TARGET_ROLE_ALREADY_EXISTS)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), máximo de roles objetivo alcanzado (TARGET_ROLE_LIMIT_REACHED) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/target-roles")
     ResponseEntity<ProfileResponse> addTargetRole(@PathVariable UUID id,
@@ -296,16 +304,16 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Rol objetivo actualizado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]) o cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT)",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil, rol objetivo o rol profesional no encontrados",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), rol objetivo inexistente en el perfil (REQUEST_INVALID_VALUE) o identificador mal escrito (PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o rol profesional inexistente en el catálogo (code PROFESSIONAL_ROLE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil (code TARGET_ROLE_ALREADY_EXISTS)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PatchMapping("/{id}/target-roles/{roleId}")
     ResponseEntity<ProfileResponse> updateTargetRole(@PathVariable UUID id, @PathVariable UUID roleId,
@@ -319,14 +327,14 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Rol objetivo eliminado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil o rol objetivo no encontrados",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "422", description = "No se puede eliminar el único rol objetivo de un perfil COMPLETED",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 200 con el perfil sin cambios",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "No se puede eliminar el único rol objetivo de un perfil COMPLETED (code TARGET_ROLE_NOT_ALLOWED) o identificador mal escrito (PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @DeleteMapping("/{id}/target-roles/{roleId}")
     ResponseEntity<ProfileResponse> removeTargetRole(@PathVariable UUID id, @PathVariable UUID roleId,
@@ -340,16 +348,16 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Perfil marcado como COMPLETED",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "409", description = "El perfil ya está en estado COMPLETED",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "422", description = "El perfil no cumple los 5 requisitos; el cuerpo contiene la lista de campos faltantes",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "El perfil ya está en estado COMPLETED (code PROFILE_ALREADY_COMPLETED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "El perfil no cumple los requisitos para finalizar (code PROFILE_INCOMPLETE, con missingRequirements[]) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/completion")
     ResponseEntity<ProfileResponse> completeProfile(@PathVariable UUID id,

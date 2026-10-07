@@ -9,6 +9,7 @@ import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectation
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
@@ -302,7 +303,13 @@ class ProfileAppServiceTest {
                 .hasMessageContaining(id.toString());
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
+    @Test
+    @DisplayName("Un perfil de otro Usuario se rechaza como acceso denegado")
+    void getProfile_shouldThrowAccessDenied_whenProfileBelongsToAnotherUser() {
+        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        assertThatThrownBy(() -> service.getProfile(UUID.randomUUID(), "uid-otra-persona"))
+                .isInstanceOf(ProfileAccessDeniedException.class);
+    }
 
     private static ProfessionalProfile freshProfile() {
         return ProfessionalProfile.create(new FirebaseUid(SVC_UID));

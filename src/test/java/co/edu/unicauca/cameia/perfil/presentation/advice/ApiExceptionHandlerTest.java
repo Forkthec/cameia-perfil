@@ -31,6 +31,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -303,6 +304,23 @@ class ApiExceptionHandlerTest {
 
         assertThat(response.getBody()).isEqualTo("texto");
         assertThat(response.getHeaders().get("X-Request-Id")).isNull();
+    }
+
+    @Test
+    @DisplayName("Si la respuesta ya se envió, el framework no responde nada y el manejador tampoco")
+    void exceptionInternal_shouldReturnNull_whenResponseIsCommitted() {
+        var servletResponse = new MockHttpServletResponse();
+        servletResponse.setCommitted(true);
+        var webRequest = new ServletWebRequest(new MockHttpServletRequest(), servletResponse);
+
+        var response = new ApiExceptionHandler() {
+            ResponseEntity<Object> call() {
+                return handleExceptionInternal(new IllegalStateException(), null, new HttpHeaders(),
+                        HttpStatus.BAD_REQUEST, webRequest);
+            }
+        }.call();
+
+        assertThat(response).isNull();
     }
 
     @Test
