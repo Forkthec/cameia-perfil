@@ -35,6 +35,12 @@ spring:
     problemdetails:
       enabled: true
 
+  servlet:
+    encoding:
+      # Toda respuesta declara charset=UTF-8 en Content-Type, tambien las de exito, para que
+      # ningun cliente adivine la codificacion de los textos con tildes.
+      force-response: true
+
 server:
   # PROVISIONAL. El puerto real es DEV-IN-05 y lo coordina quien arma la matriz
   # ruta -> servicio del Gateway. 8082 sale de la plantilla del Gateway
