@@ -3,7 +3,7 @@
 - **Tarea:** CM-271 · Subtarea «Ajustes v4 – Backend Perfil (HU-2.2)» · padre CM-16 «HU-2.2 Selección del Método de Configuración» · Sprint 2 · responsable: Paula Andrea Muñoz Delgado
 - **Repositorio:** `cameia-perfil`, rama `CM-271-cupo-perfil-plan-free`, creada desde `origin/develop` (`42320d9`)
 - **Backlog vigente:** `05102026_01_Backlog.xlsx`, hoja `HE-02`, HU-2.2 (CA-2.2.1 a 2.2.7) y reglas transversales RT-01, RT-03, RT-05 y RT-06
-- **Estado:** spec, plan y tarjetas escritos; **pendiente de aprobación de Paula** (preguntas en la sección 12)
+- **Estado:** spec y plan **aprobados por Paula el 6-oct-2026** (decisiones D1 a D5); preguntas de la sección 12 respondidas
 - **Atributos de calidad que toca:** compatibilidad de contrato (aditiva salvo dos estados, sección 6), mantenibilidad y observabilidad (código estable por error), fiabilidad (sin perfiles duplicados por doble envío), seguridad (sin mensajes de librería al cliente)
 
 ## 1. Contexto y objetivo

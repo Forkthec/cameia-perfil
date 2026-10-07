@@ -1,6 +1,6 @@
 # Plan — CM-271 (cameia-perfil)
 
-Base: `origin/develop` `42320d9`. Estado: pendiente de aprobación de Paula. Dos PR: **A** (formato de error, ≈ 3,5 h, ≈ 550 líneas) y **B** (cupo y concurrencia, ≈ 2 h, ≈ 300 líneas). Si se aprueba la pregunta 1, antes va un PR corto de Testcontainers (P2-09 adelantado, ≈ 1 h, ≈ 120 líneas), que sirve también a CM-274, CM-66 y CM-67.
+Base: `origin/develop` `42320d9`. Estado: aprobado por Paula el 6-oct-2026. Dos PR: **A** (formato de error, ≈ 3,5 h, ≈ 550 líneas) y **B** (cupo y concurrencia, ≈ 2 h, ≈ 300 líneas). Si se aprueba la pregunta 1, antes va un PR corto de Testcontainers (P2-09 adelantado, ≈ 1 h, ≈ 120 líneas), que sirve también a CM-274, CM-66 y CM-67.
 
 Paquete base: `src/main/java/co/edu/unicauca/cameia/perfil/`; pruebas en `src/test/java/co/edu/unicauca/cameia/perfil/`.
 
