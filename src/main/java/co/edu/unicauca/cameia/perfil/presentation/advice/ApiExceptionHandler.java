@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,15 +31,15 @@ import java.util.regex.Pattern;
 /**
  * Única frontera donde las excepciones se traducen a HTTP (reglas de código, sección 7, regla 5).
  *
- * <p>Usa ProblemDetail de RFC 9457. Toda respuesta de error lleva {@code code} estable y
- * {@code requestId}, y el encabezado {@code X-Request-Id}. Un fallo no controlado responde un
- * mensaje genérico: nunca el texto de la excepción.</p>
+ * <p>Usa ProblemDetail de RFC 9457. Toda respuesta de error lleva {@code code} y {@code requestId},
+ * y el encabezado {@code X-Request-Id}. Un fallo no controlado responde un mensaje genérico.</p>
  */
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
+    private static final MediaType PROBLEM_JSON_UTF8 = new MediaType("application", "problem+json", StandardCharsets.UTF_8);
     private static final Pattern REQUEST_ID_FORMAT = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
 
     static final Map<ErrorCode, HttpStatus> STATUS = Map.ofEntries(
@@ -66,7 +68,6 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             Map.entry(ErrorCode.IDENTITY_REQUIRED, "Identidad requerida"));
 
     private static final String SELECT_OPTION = "Selecciona una opción.";
-
     static final Map<String, ErrorCode> FIELD_CODES = Map.ofEntries(
             Map.entry("AddWorkExperienceRequest.company.NotBlank", ErrorCode.COMPANY_REQUIRED),
             Map.entry("AddWorkExperienceRequest.position.NotBlank", ErrorCode.POSITION_REQUIRED),
@@ -89,7 +90,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             Map.entry(ErrorCode.SKILL_LEVEL_REQUIRED, "Elige un nivel."),
             Map.entry(ErrorCode.PROFESSIONAL_ROLE_ID_REQUIRED, SELECT_OPTION));
 
-    /** Un campo rechazado: lo que el cliente necesita para marcarlo en el formulario. */
+    /** Un campo rechazado, tal como lo necesita el cliente para marcarlo. */
     private record FieldProblem(String field, ErrorCode code, String message) { }
 
     @ExceptionHandler(BusinessException.class)
@@ -170,7 +171,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         if (!errors.isEmpty()) {
             problem.setProperty("errors", errors);
         }
-        return ResponseEntity.status(status).header(REQUEST_ID_HEADER, requestId).body(problem);
+        return ResponseEntity.status(status).contentType(PROBLEM_JSON_UTF8).header(REQUEST_ID_HEADER, requestId).body(problem);
     }
 
     private static List<FieldProblem> fieldProblems(MethodArgumentNotValidException ex) {
