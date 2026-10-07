@@ -265,7 +265,9 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 - `git branch -m CM-271-cupo-perfil-plan-free CM-271-spec-trabajo` en el worktree `perfil-CM-271`;
 - `git switch -c CM-271-cupo-perfil-plan-free CM-271-formato-error-perfil`.
 
-## [ ] T-B.1 · Excepción del cupo — ≤ 15 min, ≈ 30 líneas
+## [x] T-B.1 · Excepción del cupo — ≤ 15 min, ≈ 30 líneas
+
+> Hecha (`fc4d1a4`). También el ejemplo del 409 en el OpenAPI y el título que esperaba `ProfileControllerTest`.
 
 - **Cubre** REQ-PE-20 y REQ-PE-25.
 - `git mv domain/exception/ProfileAlreadyExistsException.java domain/exception/ProfileLimitReachedException.java`:
@@ -280,7 +282,9 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
   ```
 - Actualizar sus usos y su título en `ErrorCatalog` («Cupo del plan alcanzado»).
 
-## [ ] T-B.2 · Puerto y adaptador — ≤ 30 min, ≈ 70 líneas
+## [x] T-B.2 · Puerto y adaptador — ≤ 30 min, ≈ 70 líneas
+
+> Hecha (`45d97fb`). `ProfessionalProfileRepositoryAdapterIT` usaba `existsByFirebaseUid`: sus dos pruebas pasan a `countByFirebaseUid` y `findLatestByFirebaseUid` (tres pruebas).
 
 - **Cubre** REQ-PE-26 y REQ-PE-27.
 - **Puerto `ProfessionalProfileRepository`.** Quitar `existsByFirebaseUid` (con su Javadoc y su `TODO`) y agregar:
@@ -321,7 +325,9 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
     ```
 - **Trampa.** `pg_advisory_xact_lock` sin transacción abierta se libera de inmediato. La transacción la abre `@Transactional` en `createProfile`. No agregar `@Transactional` al adaptador para este método.
 
-## [ ] T-B.3 · Regla de creación en el servicio — ≤ 30 min, ≈ 40 líneas
+## [x] T-B.3 · Regla de creación en el servicio — ≤ 30 min, ≈ 40 líneas
+
+> Hecha (`45d97fb`). `ProfileAppService` queda en 211 líneas (límite del repositorio: 200).
 
 - **Cubre** REQ-PE-20, 21, 24, 26 y 28.
 - En `ProfileAppService`:
@@ -353,7 +359,9 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
   - Con `FREE_PLAN_MAX_PROFILES` = 1 la regla es la de la spec (REQ-PE-26).
 - **Trampa.** El aislamiento debe ser `READ COMMITTED` (el de PostgreSQL por defecto). No poner `isolation` en `@Transactional`.
 
-## [ ] T-B.4 · Pruebas del servicio — ≤ 30 min, ≈ 90 líneas
+## [x] T-B.4 · Pruebas del servicio — ≤ 30 min, ≈ 90 líneas
+
+> Hecha (`45d97fb`).
 
 `ProfileAppServiceTest`, con dobles del puerto. Ajustar las pruebas que usaban `existsByFirebaseUid`.
 
@@ -366,7 +374,9 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 | `createProfile_shouldCreate_whenAnotherUserHasProfile` (caso 6) | `uid-luis-002` con `count` 0 | crea con dueño `uid-luis-002` |
 | `createProfile_shouldThrowLimitReached_whenExistingProfileIsActive` (caso 4) | `count` 1 y 1 | igual que el caso 3 (el estado no importa: el conteo no filtra por estado) |
 
-## [ ] T-B.5 · Pruebas de integración con PostgreSQL real — ≤ 30 min, ≈ 120 líneas
+## [x] T-B.5 · Pruebas de integración con PostgreSQL real — ≤ 30 min, ≈ 120 líneas
+
+> Hecha (`c09387d`). Tres corridas seguidas: 3/0/0/0 cada una. Sin la llamada a `lockCreationFor`, la primera prueba falla con 5 perfiles distintos.
 
 - **Crear** `infrastructure/persistence/ProfileCreationConcurrencyIT`, con `@SpringBootTest`, `@Testcontainers` y contenedor propio (como T-0.2). **Sin** `@Transactional` en la clase: cada hilo necesita su propia transacción. Limpiar en `@AfterEach` con `jdbcTemplate.update("delete from perfil_profesional where firebase_uid like 'uid-it-%'")`.
 - **Pruebas:**
@@ -375,7 +385,9 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
   - `createProfile_shouldCreate_whenPreviousCreationRolledBack` (caso 11). En un hilo, abrir una transacción con `TransactionTemplate`, tomar el bloqueo (`repository.lockCreationFor`), esperar a que el otro hilo esté esperando (`Thread.sleep(300)`, documentado) y lanzar una excepción para deshacerla. El otro hilo llama a `createProfile` y debe crear el perfil (1 fila).
 - **Verificación.** Correr `./mvnw.cmd -B -Dit.test=ProfileCreationConcurrencyIT verify` **tres veces seguidas** en verde.
 
-## [ ] T-B.6 · Controlador, OpenAPI y Postman — ≤ 30 min, ≈ 90 líneas
+## [x] T-B.6 · Controlador, OpenAPI y Postman — ≤ 30 min, ≈ 90 líneas
+
+> Hecha (`93d3a08`).
 
 - **`ProfileControllerTest`:**
   - `postProfiles_shouldReturn409WithPlanMessage_whenUserAlreadyHasProfile` (casos 3 y 5): `$.code` `PROFILE_LIMIT_REACHED`, `$.detail` = «Tu Plan Free permite 1 Perfil Profesional.» y `$.detail` sin `TODO`, `CM-`, `Exception` ni `co.edu`;
@@ -388,7 +400,9 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
   - la de «400 sin header» pasa a «401 sin header» y afirma `code` `IDENTITY_REQUIRED`;
   - nueva petición `GET` del perfil recién creado (caso 2).
 
-## [ ] T-B.7 · Documentación, carrera real y cierre del PR B (parada)
+## [x] T-B.7 · Documentación, carrera real y cierre del PR B (parada)
+
+> Hecha, con un caso sin cumplir. Carrera con la app real (30 rondas × 8): siempre 1 perfil por ronda, pero en 9 rondas entre 1 y 3 peticiones recibieron 409, porque llegaron cuando la creación ya había terminado (REQ-PE-20). El caso 14 espera 8 × 201 en todas: queda para decisión de Paula. Postman: `newman` no está instalado; las 4 peticiones de CM-16 se reprodujeron con sus afirmaciones contra la app real, 15 de 15 en verde. `clean verify`: Surefire 193/0/0/0, Failsafe 12/0/0/0.
 
 - **`docs/errores.md`.** Fila de `PROFILE_LIMIT_REACHED` con su texto y su prueba.
 - **`docs/adr/0003-bloqueo-de-creacion-de-perfil.md`.** Contexto (duplicados medidos), decisión (bloqueo por Usuario y la regla de REQ-PE-26), consecuencias (las peticiones repetidas reciben el mismo perfil; Premium compara contra su cupo) y alternativas (`UNIQUE`, `SERIALIZABLE`, 409 a la repetida, `Idempotency-Key`).
