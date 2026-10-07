@@ -119,7 +119,7 @@ El catálogo del servicio está en [errores.md](../errores.md) y las reglas, en 
 
 - [ ] **Objetivo.** Constitución con los principios comunes y los propios del servicio.
 - **Cubre.** REQ-DOC-04 y REQ-PF-06.
-- **Archivos.** Crear (Gateway y Perfil) o reescribir (Cuentas y Entrevista) `docs/constitution.md`. En Perfil esta tarjeta se ejecuta en la pieza C1b, porque el enlace `../CLAUDE.md` debe existir.
+- **Archivos.** Crear (Gateway y Perfil) o reescribir (Cuentas y Entrevista) `docs/constitution.md`. En Perfil esta tarjeta se ejecuta en la pieza C1a, junto a `CLAUDE.md`, porque el enlace `../CLAUDE.md` debe existir.
 - **Hacer.**
   1. Primera línea: `# Constitución de <nombre del repositorio>`.
   2. Párrafo: `` «Principios no negociables. Toda spec y todo PR los cumple. Si dos documentos chocan, rige el orden de la [sección 1 del estándar](estandar-backend.md#1-alcance-y-precedencia). El detalle vive en el [CLAUDE.md](../CLAUDE.md) y en el [estándar](estandar-backend.md).» ``
@@ -263,7 +263,7 @@ Cada entrada es un archivo `NN_tema_prompt.md`, con `NN` consecutivo.
 - [ ] **Objetivo.** Dejar `AGENTS.md` de una línea y retirar los documentos duplicados, en tres PR.
 - **Cubre.** REQ-DOC-02 (con T-10), REQ-DOC-13, REQ-PF-11.
 - **Hacer, un PR por paso.**
-  1. **C1b.** Es T-10 (`AGENTS.md` de una línea) y T-05 (`docs/constitution.md`, que enlaza `CLAUDE.md`).
+  1. **C1b.** Es T-10 (`AGENTS.md` de una línea). La constitución (T-05) va en C1a.
   2. **C2a.** `git rm docs/03092026_v1_reglas-codigo-backend-cameia.md`. Comprobar con `git grep -n "reglas-codigo-backend"` que ningún archivo del repositorio lo menciona; si alguno lo hace, corregir esa línea.
   3. **C2b.** `git rm docs/05092026_v1_handoff-implementacion-hu.md docs/sdd.md`. Comprobar con `git grep -nE "handoff-implementacion|sdd\.md"` que ningún archivo los menciona. Revisar `docs/DOCKER.md` con la herramienta de verificación y corregir solo las líneas que V-05, V-06 o V-11 señalen.
 - **Verificación.** V-07, V-10, V-11 y V-13 en cada PR; `git diff --shortstat origin/develop` ≤ 1000 en cada uno.
