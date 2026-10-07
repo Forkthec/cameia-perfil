@@ -27,10 +27,27 @@ public interface ProfessionalProfileRepository {
     Optional<ProfessionalProfile> findById(ProfileId id);
 
     /**
-     * Verifica si el usuario ya tiene al menos un perfil creado.
-     * Usada por CM-16 para aplicar el límite de un perfil en plan gratuito.
-     * TODO CM-TBD: la lógica de cuota (Gratis=1, Premium=múltiple) queda pendiente
-     * hasta que se integre CuotaPlanReplica en Sprint 2.
+     * Cuenta los Perfiles Profesionales del Usuario, en cualquier estado.
+     *
+     * @param firebaseUid dueño
+     * @return cantidad de perfiles
      */
-    boolean existsByFirebaseUid(FirebaseUid firebaseUid);
+    long countByFirebaseUid(FirebaseUid firebaseUid);
+
+    /**
+     * Hace esperar a cualquier otra creación de perfil del mismo Usuario hasta que termine la transacción actual.
+     *
+     * <p>Debe llamarse dentro de una transacción.</p>
+     *
+     * @param firebaseUid dueño
+     */
+    void lockCreationFor(FirebaseUid firebaseUid);
+
+    /**
+     * Busca el perfil creado más recientemente por el Usuario.
+     *
+     * @param firebaseUid dueño
+     * @return el perfil, o vacío si no tiene
+     */
+    Optional<ProfessionalProfile> findLatestByFirebaseUid(FirebaseUid firebaseUid);
 }

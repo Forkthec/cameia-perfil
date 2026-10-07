@@ -3,6 +3,7 @@ package co.edu.unicauca.cameia.perfil.infrastructure.persistence.repository;
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.ProfessionalProfileEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -12,5 +13,7 @@ import java.util.UUID;
  */
 interface ProfessionalProfileJpaRepository extends JpaRepository<ProfessionalProfileEntity, UUID> {
 
-    boolean existsByFirebaseUid(String firebaseUid);
+    long countByFirebaseUid(String firebaseUid);
+
+    Optional<ProfessionalProfileEntity> findFirstByFirebaseUidOrderByCreatedAtDesc(String firebaseUid);
 }
