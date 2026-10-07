@@ -97,12 +97,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleServletRequestBindingException(
             ServletRequestBindingException ex, HttpHeaders headers,
             HttpStatusCode status, WebRequest request) {
-        if (ex instanceof MissingRequestHeaderException missing && IDENTITY_HEADER.equalsIgnoreCase(missing.getHeaderName())) {
-            var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-            log.warn("Petición rechazada: code={} requestId={}", ErrorCode.IDENTITY_REQUIRED, requestId);
-            var problem = problem(ErrorCode.IDENTITY_REQUIRED, null);
-            problem.setStatus(HttpStatus.BAD_REQUEST);
-            return respond(problem, requestId);
+        if (ex instanceof MissingRequestHeaderException missing) {
+            // Sin el encabezado de identidad no hay Usuario: 401. Cualquier otro encabezado ausente es un valor no válido.
+            var code = IDENTITY_HEADER.equalsIgnoreCase(missing.getHeaderName())
+                    ? ErrorCode.IDENTITY_REQUIRED : ErrorCode.REQUEST_INVALID_VALUE;
+            return reject(code, null, request);
         }
         return super.handleServletRequestBindingException(ex, headers, status, request);
     }

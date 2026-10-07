@@ -27,8 +27,11 @@ import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -86,6 +89,47 @@ class ProfileAppServiceTest {
         var captor = ArgumentCaptor.forClass(FirebaseUid.class);
         verify(repository).existsByFirebaseUid(captor.capture());
         assertThat(captor.getValue().value()).isEqualTo("uid-check");
+    }
+
+    @Test
+    @DisplayName("Una identidad de 129 caracteres se rechaza como identidad ausente, no como acceso denegado")
+    void getProfile_shouldThrowIdentityRequired_whenUidIsTooLong() {
+        assertThatThrownBy(() -> service.getProfile(UUID.randomUUID(), "a".repeat(129)))
+                .isInstanceOf(IdentityRequiredException.class);
+        verify(repository, never()).findById(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   ", "	"})
+    @DisplayName("Una identidad en blanco se rechaza antes de consultar el repositorio")
+    void createProfile_shouldThrowIdentityRequired_whenUidIsBlank(String uid) {
+        assertThatThrownBy(() -> service.createProfile(new CreateProfileCommand(uid)))
+                .isInstanceOf(IdentityRequiredException.class);
+        verify(repository, never()).existsByFirebaseUid(any());
+    }
+
+    @Test
+    @DisplayName("Una identidad de 129 caracteres no crea el perfil")
+    void createProfile_shouldThrowIdentityRequired_whenUidIsTooLong() {
+        assertThatThrownBy(() -> service.createProfile(new CreateProfileCommand("a".repeat(129))))
+                .isInstanceOf(IdentityRequiredException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Una identidad de 128 caracteres crea el perfil")
+    void createProfile_shouldSave_whenUidHasMaxLength() {
+        when(repository.existsByFirebaseUid(any())).thenReturn(false);
+        var result = service.createProfile(new CreateProfileCommand("a".repeat(128)));
+        assertThat(result.getFirebaseUid().value()).hasSize(128);
+    }
+
+    @Test
+    @DisplayName("Sin identidad, crear un perfil se rechaza antes de consultar el repositorio")
+    void createProfile_shouldThrowIdentityRequired_whenUidIsNull() {
+        assertThatThrownBy(() -> service.createProfile(new CreateProfileCommand(null)))
+                .isInstanceOf(IdentityRequiredException.class);
+        verify(repository, never()).existsByFirebaseUid(any());
     }
 
     @Test

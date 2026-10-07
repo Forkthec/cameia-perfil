@@ -225,14 +225,25 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("Un encabezado ausente que no es el de identidad conserva la respuesta del framework")
-    void missingHeader_shouldKeepFrameworkResponse_whenNotTheIdentityHeader() throws Exception {
+    @DisplayName("Un encabezado ausente que no es el de identidad responde 422 con valor no válido")
+    void missingHeader_shouldReturn422InvalidValue_whenNotTheIdentityHeader() throws Exception {
         var parameter = new MethodParameter(ApiExceptionHandlerTest.class.getDeclaredMethod("setUp"), -1);
         toThrow = () -> new MissingRequestHeaderException("X-Otro", parameter);
 
         mockMvc.perform(get("/boom"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").doesNotExist());
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("REQUEST_INVALID_VALUE"));
+    }
+
+    @Test
+    @DisplayName("Sin el encabezado de identidad, en cualquier forma de escribirlo, responde 401")
+    void missingHeader_shouldReturn401_whenIdentityHeader() throws Exception {
+        var parameter = new MethodParameter(ApiExceptionHandlerTest.class.getDeclaredMethod("setUp"), -1);
+        toThrow = () -> new MissingRequestHeaderException("x-user-id", parameter);
+
+        mockMvc.perform(get("/boom"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("IDENTITY_REQUIRED"));
     }
 
     @Test

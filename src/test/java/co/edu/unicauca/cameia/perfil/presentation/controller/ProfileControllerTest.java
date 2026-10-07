@@ -17,6 +17,8 @@ import co.edu.unicauca.cameia.perfil.presentation.advice.ApiExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -26,6 +28,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -74,9 +77,48 @@ class ProfileControllerTest {
     }
 
     @Test
-    void postProfiles_returns400WhenXUserIdHeaderIsMissing() throws Exception {
+    @DisplayName("Sin el encabezado de identidad, crear un perfil responde 401")
+    void postProfiles_shouldReturn401_whenXUserIdHeaderIsMissing() throws Exception {
         mockMvc.perform(post("/api/v1/profiles"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("IDENTITY_REQUIRED"))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   ", "	"})
+    @DisplayName("Una identidad en blanco responde 401 aunque el encabezado llegue")
+    void postProfiles_shouldReturn401_whenXUserIdIsBlank(String uid) throws Exception {
+        when(profileAppService.createProfile(new CreateProfileCommand(uid))).thenThrow(new IdentityRequiredException());
+
+        mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", uid))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("IDENTITY_REQUIRED"));
+    }
+
+    @Test
+    @DisplayName("Una identidad de 128 caracteres crea el perfil")
+    void postProfiles_shouldReturn201_whenXUserIdHasMaxLength() throws Exception {
+        var uid = "a".repeat(128);
+        when(profileAppService.createProfile(new CreateProfileCommand(uid)))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid(uid)));
+
+        mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", uid))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("Una identidad de 129 caracteres responde 401 sin repetir el valor")
+    void postProfiles_shouldReturn401WithoutEcho_whenXUserIdIsTooLong() throws Exception {
+        var uid = "a".repeat(129);
+        when(profileAppService.createProfile(new CreateProfileCommand(uid))).thenThrow(new IdentityRequiredException());
+
+        var result = mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", uid))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("IDENTITY_REQUIRED"))
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).doesNotContain("aaaa");
     }
 
     // ── CM-17 ─────────────────────────────────────────────────────────────

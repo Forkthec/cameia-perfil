@@ -55,8 +55,7 @@ public class ProfileAppService {
 
     @Transactional
     public ProfessionalProfile createProfile(CreateProfileCommand command) {
-        if (command.firebaseUid() == null || command.firebaseUid().isBlank()) throw new IdentityRequiredException();
-        var uid = new FirebaseUid(command.firebaseUid());
+        var uid = requireIdentity(command.firebaseUid());
         if (repository.existsByFirebaseUid(uid)) throw new ProfileAlreadyExistsException();
         var profile = ProfessionalProfile.create(uid);
         repository.save(profile);
@@ -187,9 +186,15 @@ public class ProfileAppService {
     }
 
     private ProfessionalProfile loadForUser(UUID profileId, String uid) {
-        if (uid == null || uid.isBlank()) throw new IdentityRequiredException();
+        var owner = requireIdentity(uid);
         var p = load(profileId);
-        if (!p.getFirebaseUid().value().equals(uid)) throw new ProfileAccessDeniedException();
+        if (!p.getFirebaseUid().equals(owner)) throw new ProfileAccessDeniedException();
         return p;
+    }
+
+    /** Devuelve la identidad del Usuario, o rechaza la petición si falta o no es válida. */
+    private static FirebaseUid requireIdentity(String raw) {
+        if (raw == null || raw.isBlank() || raw.length() > FirebaseUid.MAX_LENGTH) throw new IdentityRequiredException();
+        return new FirebaseUid(raw);
     }
 }
