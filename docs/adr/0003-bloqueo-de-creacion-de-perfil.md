@@ -24,8 +24,8 @@ El bloqueo se libera solo al terminar la transacción y solo afecta a las creaci
 ## Consecuencias
 
 - Nunca se crea más de un perfil por Usuario en el Plan Free. En 30 rondas de 8 peticiones simultáneas contra la app real, cada ronda terminó con un solo perfil.
-- Las peticiones que llegan mientras la creación está en proceso reciben 201 con el mismo perfil, y Frontend no necesita cambios.
-- Una petición que llega cuando la creación anterior ya terminó, aunque sea pocos milisegundos después, cuenta ese perfil en el paso 1 y recibe 409. En la misma prueba, 9 de 30 rondas tuvieron entre 1 y 3 respuestas 409 de ese tipo.
+- Las peticiones que llegan mientras la creación está en proceso reciben 201 con el mismo perfil.
+- Una petición que llega cuando la creación anterior ya terminó, aunque sea pocos milisegundos después, cuenta ese perfil en el paso 1 y recibe 409. En la misma prueba, 9 de 30 rondas tuvieron entre 1 y 3 respuestas 409 de ese tipo. Como la creación tarda pocos milisegundos, el segundo clic de una persona suele llegar así; para que no vea el mensaje de cupo, `cameia-web` deshabilita el botón de creación mientras la petición está en curso.
 - Premium cambia solo el cupo con el que se compara; la regla no cambia.
 - Si la creación en proceso falla y se deshace, la que esperaba crea el perfil normalmente.
 - El bloqueo depende de PostgreSQL; una prueba de integración con PostgreSQL real comprueba la regla, la independencia entre Usuarios y la creación tras deshacer.

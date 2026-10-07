@@ -243,7 +243,7 @@ Ya hechas:
 
 ## [x] T-A.14 · OpenAPI, documentación y cierre del PR A (parada)
 
-> Hecha (`a9939e8`). `clean verify`: Surefire 187/0/0/0, Failsafe 8/0/0/0. Cobertura de lo nuevo o modificado: 100 % de líneas y ramas; repositorio 71,1 % de líneas y 60,8 % de ramas (PR 0: 63,7 % y 50,0 %). Diff 2.173 líneas: ningún corte en dos queda bajo 1.000; el corte en tres (T-A.1 a T-A.6, T-A.7 a T-A.12, T-A.13 y T-A.14) espera la decisión de Paula.
+> Hecha (`a9939e8`). `clean verify`: Surefire 187/0/0/0, Failsafe 8/0/0/0. Cobertura de lo nuevo o modificado: 100 % de líneas y ramas; repositorio 71,1 % de líneas y 60,8 % de ramas (PR 0: 63,7 % y 50,0 %). Diff 2.173 líneas: ningún corte en dos queda bajo 1.000; se publica en tres PR apilados: T-A.1 a T-A.6, T-A.7 a T-A.12, y T-A.13 y T-A.14 con el respaldo del framework (D12).
 
 - **OpenAPI.** Un `@Schema` del error común con `code`, `detail`, `requestId` y `errors[]`, con ejemplo. En `ProfileController`, cada `@ApiResponse` de error nombra su código; en `POST /api/v1/profiles` van 401 y 500 (el 409 lo agrega el PR B).
 - **`docs/errores.md`:**
@@ -267,7 +267,7 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 
 ## [x] T-B.1 · Excepción del cupo — ≤ 15 min, ≈ 30 líneas
 
-> Hecha (`fc4d1a4`). También el ejemplo del 409 en el OpenAPI y el título que esperaba `ProfileControllerTest`.
+> Hecha (`b2ee286`). También el ejemplo del 409 en el OpenAPI y el título que esperaba `ProfileControllerTest`.
 
 - **Cubre** REQ-PE-20 y REQ-PE-25.
 - `git mv domain/exception/ProfileAlreadyExistsException.java domain/exception/ProfileLimitReachedException.java`:
@@ -284,7 +284,7 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 
 ## [x] T-B.2 · Puerto y adaptador — ≤ 30 min, ≈ 70 líneas
 
-> Hecha (`45d97fb`). `ProfessionalProfileRepositoryAdapterIT` usaba `existsByFirebaseUid`: sus dos pruebas pasan a `countByFirebaseUid` y `findLatestByFirebaseUid` (tres pruebas).
+> Hecha (`2038e6a`). `ProfessionalProfileRepositoryAdapterIT` usaba `existsByFirebaseUid`: sus dos pruebas pasan a `countByFirebaseUid` y `findLatestByFirebaseUid` (tres pruebas).
 
 - **Cubre** REQ-PE-26 y REQ-PE-27.
 - **Puerto `ProfessionalProfileRepository`.** Quitar `existsByFirebaseUid` (con su Javadoc y su `TODO`) y agregar:
@@ -327,7 +327,7 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 
 ## [x] T-B.3 · Regla de creación en el servicio — ≤ 30 min, ≈ 40 líneas
 
-> Hecha (`45d97fb`). `ProfileAppService` queda en 211 líneas (límite del repositorio: 200).
+> Hecha. La creación quedó después en `ProfileCreationAppService` y la identidad en `FirebaseUid.required` (D16), con cada clase bajo 200 líneas.
 
 - **Cubre** REQ-PE-20, 21, 24, 26 y 28.
 - En `ProfileAppService`:
@@ -361,7 +361,7 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 
 ## [x] T-B.4 · Pruebas del servicio — ≤ 30 min, ≈ 90 líneas
 
-> Hecha (`45d97fb`).
+> Hecha (`2038e6a`).
 
 `ProfileAppServiceTest`, con dobles del puerto. Ajustar las pruebas que usaban `existsByFirebaseUid`.
 
@@ -376,7 +376,7 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 
 ## [x] T-B.5 · Pruebas de integración con PostgreSQL real — ≤ 30 min, ≈ 120 líneas
 
-> Hecha (`c09387d`). Tres corridas seguidas: 3/0/0/0 cada una. Sin la llamada a `lockCreationFor`, la primera prueba falla con 5 perfiles distintos.
+> Hecha. La ráfaga comprueba un solo perfil y que cada respuesta sea ese perfil o el cupo; un caso determinista (espera en `pg_locks`) comprueba que las peticiones en espera reciben el mismo perfil, y otro el 409 de la petición tardía. Tres corridas seguidas: 5/0/0/0 cada una. Sin la llamada a `lockCreationFor` fallan 3 de las 5.
 
 - **Crear** `infrastructure/persistence/ProfileCreationConcurrencyIT`, con `@SpringBootTest`, `@Testcontainers` y contenedor propio (como T-0.2). **Sin** `@Transactional` en la clase: cada hilo necesita su propia transacción. Limpiar en `@AfterEach` con `jdbcTemplate.update("delete from perfil_profesional where firebase_uid like 'uid-it-%'")`.
 - **Pruebas:**
@@ -387,7 +387,7 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 
 ## [x] T-B.6 · Controlador, OpenAPI y Postman — ≤ 30 min, ≈ 90 líneas
 
-> Hecha (`93d3a08`).
+> Hecha (`18eae83`).
 
 - **`ProfileControllerTest`:**
   - `postProfiles_shouldReturn409WithPlanMessage_whenUserAlreadyHasProfile` (casos 3 y 5): `$.code` `PROFILE_LIMIT_REACHED`, `$.detail` = «Tu Plan Free permite 1 Perfil Profesional.» y `$.detail` sin `TODO`, `CM-`, `Exception` ni `co.edu`;
@@ -402,7 +402,7 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 
 ## [x] T-B.7 · Documentación, carrera real y cierre del PR B (parada)
 
-> Hecha, con un caso sin cumplir. Carrera con la app real (30 rondas × 8): siempre 1 perfil por ronda, pero en 9 rondas entre 1 y 3 peticiones recibieron 409, porque llegaron cuando la creación ya había terminado (REQ-PE-20). El caso 14 espera 8 × 201 en todas: queda para decisión de Paula. Postman: `newman` no está instalado; las 4 peticiones de CM-16 se reprodujeron con sus afirmaciones contra la app real, 15 de 15 en verde. `clean verify`: Surefire 193/0/0/0, Failsafe 12/0/0/0.
+> Hecha. Carrera con la app real (30 rondas × 8): siempre 1 perfil por ronda; en 9 rondas, entre 1 y 3 peticiones que llegaron con la creación ya terminada recibieron 409 (REQ-PE-20). El caso 14 de la spec se corrigió a ese comportamiento y el doble clic humano lo resuelve Frontend (D15). Postman: `newman` no está instalado; las 4 peticiones de CM-16 se reprodujeron con sus afirmaciones contra la app real, 15 de 15 en verde. 
 
 - **`docs/errores.md`.** Fila de `PROFILE_LIMIT_REACHED` con su texto y su prueba.
 - **`docs/adr/0003-bloqueo-de-creacion-de-perfil.md`.** Contexto (duplicados medidos), decisión (bloqueo por Usuario y la regla de REQ-PE-26), consecuencias (las peticiones repetidas reciben el mismo perfil; Premium compara contra su cupo) y alternativas (`UNIQUE`, `SERIALIZABLE`, 409 a la repetida, `Idempotency-Key`).
