@@ -44,7 +44,7 @@ co.edu.unicauca.cameia.perfil
     └── config              // configuración de Spring
 ```
 
-El servicio no tiene `infrastructure/client` ni `persistence/mapper`: el mapeo entre dominio y entidad es privado en cada adaptador y se escribe a mano. Si hace falta una carpeta nueva (`domain/service`, `domain/policy`, `domain/event`, `infrastructure/ia`), se pregunta antes de crearla.
+El servicio no tiene `infrastructure/client` ni `persistence/mapper`: el mapeo entre dominio y entidad se escribe a mano y es privado al paquete del adaptador (en el adaptador, o en una clase `<Agregado>Mapping` del mismo paquete cuando el adaptador pasaría de 200 líneas). Si hace falta una carpeta nueva (`domain/service`, `domain/policy`, `domain/event`, `infrastructure/ia`), se pregunta antes de crearla.
 
 **Regla de dependencias.** `domain` no importa nada de `presentation`, `application` ni `infrastructure`, ni `org.springframework`, `jakarta.persistence`, `com.rabbitmq` o `com.google`; `application` depende de `domain` por sus puertos; `infrastructure` implementa los puertos de `domain`; `presentation` no importa `infrastructure`; no hay dependencias circulares. La vigila `ArquitecturaTest`, y toda clase nueva debe pasarla.
 

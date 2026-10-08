@@ -402,7 +402,7 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 
 ## [x] T-B.7 · Documentación, carrera real y cierre del PR B (parada)
 
-> Hecha. Carrera con la app real (30 rondas × 8): siempre 1 perfil por ronda; en 9 rondas, entre 1 y 3 peticiones que llegaron con la creación ya terminada recibieron 409 (REQ-PE-20). El caso 14 de la spec se corrigió a ese comportamiento y el doble clic humano lo resuelve Frontend (D15). Postman: `newman` no está instalado; las 4 peticiones de CM-16 se reprodujeron con sus afirmaciones contra la app real, 15 de 15 en verde. 
+> Hecha. Carrera con la app real (30 rondas × 8): siempre 1 perfil por ronda; en 9 rondas, entre 1 y 3 peticiones que llegaron con la creación ya terminada recibieron 409 (REQ-PE-20). El caso 14 de la spec se corrigió a ese comportamiento y el doble clic humano lo resuelve Frontend (D15). Postman: `newman` no está instalado; las 4 peticiones de CM-16 se reprodujeron con sus afirmaciones contra la app real, 15 de 15 en verde. La colección tenía 38 caracteres con doble codificación; se repararon.
 
 - **`docs/errores.md`.** Fila de `PROFILE_LIMIT_REACHED` con su texto y su prueba.
 - **`docs/adr/0003-bloqueo-de-creacion-de-perfil.md`.** Contexto (duplicados medidos), decisión (bloqueo por Usuario y la regla de REQ-PE-26), consecuencias (las peticiones repetidas reciben el mismo perfil; Premium compara contra su cupo) y alternativas (`UNIQUE`, `SERIALIZABLE`, 409 a la repetida, `Idempotency-Key`).
