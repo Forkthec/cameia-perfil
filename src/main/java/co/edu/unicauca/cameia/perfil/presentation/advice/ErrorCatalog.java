@@ -86,6 +86,7 @@ final class ErrorCatalog {
             Map.entry("AddTargetRoleRequest.provenance.NotNull", PROVENANCE_REQUIRED),
             Map.entry("AddSkillRequest.skillName.NotBlank", SKILL_NAME_REQUIRED),
             Map.entry("AddSkillRequest.level.NotBlank", SKILL_LEVEL_REQUIRED),
+            Map.entry("UpdateTargetRoleRequest.professionalRoleId.NotNull", PROFESSIONAL_ROLE_ID_REQUIRED),
             Map.entry("AddTargetRoleRequest.professionalRoleId.NotNull", PROFESSIONAL_ROLE_ID_REQUIRED));
 
     /** Código del campo → mensaje para la persona. */

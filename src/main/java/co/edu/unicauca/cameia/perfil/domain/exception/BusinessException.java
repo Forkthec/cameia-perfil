@@ -8,7 +8,6 @@ package co.edu.unicauca.cameia.perfil.domain.exception;
  * no dependa de la web.</p>
  */
 public abstract class BusinessException extends RuntimeException {
-
     private final ErrorCode code;
 
     /**
