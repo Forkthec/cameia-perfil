@@ -70,7 +70,7 @@ class ProfessionalRoleControllerTest {
     @DisplayName("Un idioma no disponible responde 422 con su código, sin repetir el valor")
     void listAll_shouldReturn422_whenLangIsUnsupported(String lang) throws Exception {
         var result = mockMvc.perform(get("/api/v1/profiles/professional-roles").param("lang", lang))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE"))
                 .andExpect(jsonPath("$.detail").value("Elige un idioma disponible: español o inglés."))
                 .andExpect(jsonPath("$.requestId").isNotEmpty())

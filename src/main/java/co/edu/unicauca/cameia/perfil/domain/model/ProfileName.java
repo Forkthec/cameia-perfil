@@ -10,8 +10,9 @@ import java.util.Objects;
  *
  * <p>Es opcional al crear el perfil (POST /profiles lo puede omitir), pero si se provee
  * no puede estar vacío ni superar 255 caracteres. Crear {@code ProfileName(null)} no es válido;
- * la ausencia del nombre se representa con {@code null} directamente en el agregado.
- * TODO CM-TBD-PO: confirmar si nombre_perfil es obligatorio al crear (prototipo lo muestra primero).
+ * la ausencia del nombre se representa con {@code null} directamente en el agregado.</p>
+ * <p>El backlog lo resuelve así: el perfil nace sin nombre y el nombre es obligatorio al guardar
+ * la información general (1 a 255 caracteres).</p>
  */
 public record ProfileName(String value) {
 
