@@ -2087,6 +2087,63 @@
           }
         },
         {
+          "name": "ERR POST /work-experiences — 422 descripción de 2001 caracteres",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('description_2001', 'a'.repeat(2001));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca description', () => pm.expect(pm.response.json().errors[0].field).to.eql('description'));",
+                  "pm.test('errors[0].code DESCRIPTION_TOO_LONG', () => pm.expect(pm.response.json().errors[0].code).to.eql('DESCRIPTION_TOO_LONG'));",
+                  "pm.test('errors[0].message dice qué corregir', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"La descripción no puede superar los 2000 caracteres.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/work-experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "work-experiences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"ACME\",\n  \"position\": \"Dev\",\n  \"description\": \"{{description_2001}}\",\n  \"startDate\": \"2022-01\",\n  \"employmentStatus\": \"CURRENT\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
           "name": "ERR POST /work-experiences — 422 fecha que no existe (CA-2.4.43)",
           "event": [
             {
@@ -2131,6 +2188,54 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"company\": \"ACME\",\n  \"position\": \"Dev\",\n  \"startDate\": \"2020-13\",\n  \"employmentStatus\": \"CURRENT\",\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ERR POST /work-experiences — 422 año extendido en la fecha de inicio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca startDate', () => pm.expect(pm.response.json().errors[0].field).to.eql('startDate'));",
+                  "pm.test('errors[0].code START_DATE_INVALID_FORMAT', () => pm.expect(pm.response.json().errors[0].code).to.eql('START_DATE_INVALID_FORMAT'));",
+                  "pm.test('errors[0].message dice qué corregir', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"Ingresa una fecha válida con el formato mm/aaaa.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/work-experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "work-experiences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"ACME\",\n  \"position\": \"Dev\",\n  \"startDate\": \"+999999999-01\",\n  \"employmentStatus\": \"CURRENT\",\n  \"provenance\": \"MANUAL\"\n}"
             }
           }
         },
