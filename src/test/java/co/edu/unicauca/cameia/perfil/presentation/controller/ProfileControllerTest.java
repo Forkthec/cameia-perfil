@@ -205,7 +205,7 @@ class ProfileControllerTest {
         mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + "/work-experiences")
                         .header("X-User-Id", "uid-ctrl-date")
                         .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors[0].field").value("startDate"))
                 .andExpect(jsonPath("$.errors[0].code").value("START_DATE_INVALID_FORMAT"))
@@ -218,7 +218,7 @@ class ProfileControllerTest {
         mockMvc.perform(patch("/api/v1/profiles/{id}/target-roles/{roleId}", UUID.randomUUID(), UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-role")
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors[0].field").value("professionalRoleId"))
                 .andExpect(jsonPath("$.errors[0].code").value("PROFESSIONAL_ROLE_ID_REQUIRED"));
@@ -263,7 +263,7 @@ class ProfileControllerTest {
         mockMvc.perform(patch("/api/v1/profiles/{id}/salary-expectation", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-salary")
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].field").value("amount"))
                 .andExpect(jsonPath("$.errors[0].code").value("SALARY_EXPECTATION_REQUIRED"))
                 .andExpect(jsonPath("$.errors[0].message").value("Ingresa la expectativa salarial."));
@@ -272,12 +272,12 @@ class ProfileControllerTest {
     static Stream<Arguments> frameworkErrors() {
         var profileId = UUID.randomUUID();
         return Stream.of(
-                Arguments.of(get("/api/v1/no-existe"), 404, "ROUTE_NOT_FOUND", "La ruta solicitada no existe."),
+                Arguments.of(get("/api/v1/no-existe"), 404, "ROUTE_NOT_FOUND", "No existe la ruta solicitada."),
                 Arguments.of(delete("/api/v1/profiles"), 405, "METHOD_NOT_ALLOWED",
-                        "La operación no está permitida en esta ruta."),
+                        "Método no permitido."),
                 Arguments.of(patch("/api/v1/profiles/" + profileId).header("X-User-Id", "uid-ctrl-415")
                                 .contentType(MediaType.TEXT_PLAIN).content("x"),
-                        415, "CONTENT_TYPE_NOT_ALLOWED", "Envía los datos en formato JSON."),
+                        415, "MEDIA_TYPE_NOT_ALLOWED", "Tipo de contenido no admitido."),
                 Arguments.of(get("/api/v1/profiles/no-es-uuid").header("X-User-Id", "uid-ctrl-id"),
                         422, "PROFILE_ID_INVALID_FORMAT", "El identificador del perfil no es válido."),
                 Arguments.of(delete("/api/v1/profiles/" + profileId + "/skills/xyz").header("X-User-Id", "uid-ctrl-id"),
@@ -306,8 +306,8 @@ class ProfileControllerTest {
         mockMvc.perform(get("/api/v1/profiles/{id}", profile.getId().value())
                         .header("X-User-Id", "uid-ctrl-xml").accept(MediaType.APPLICATION_XML))
                 .andExpect(status().isNotAcceptable())
-                .andExpect(jsonPath("$.code").value("ACCEPT_TYPE_NOT_ALLOWED"))
-                .andExpect(jsonPath("$.detail").value("La respuesta solo está disponible en formato JSON."));
+                .andExpect(jsonPath("$.code").value("MEDIA_TYPE_NOT_ACCEPTABLE"))
+                .andExpect(jsonPath("$.detail").value("Tipo de respuesta no admitido."));
     }
 
     @Test
@@ -404,7 +404,7 @@ class ProfileControllerTest {
         mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + endpoint)
                         .header("X-User-Id", "uid-ctrl-field")
                         .contentType(MediaType.APPLICATION_JSON).content(json))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors.length()").value(1))
                 .andExpect(jsonPath("$.errors[0].field").value(field))
@@ -529,7 +529,7 @@ class ProfileControllerTest {
                         .content("""
                                 {"skillName": "Java", "provenance": "MANUAL"}
                                 """))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors[0].field").value("level"))
                 .andExpect(jsonPath("$.errors[0].code").value("SKILL_LEVEL_REQUIRED"))
@@ -542,7 +542,7 @@ class ProfileControllerTest {
                         .header("X-User-Id", "uid-ctrl-patch")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("REQUEST_BODY_INVALID_FORMAT"));
     }
 
@@ -616,7 +616,7 @@ class ProfileControllerTest {
 
         mockMvc.perform(post("/api/v1/profiles/{id}/review-requests", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-rev"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.missingRequirements").isArray());
     }
 
@@ -658,7 +658,7 @@ class ProfileControllerTest {
                         .content("""
                                 {"professionalRoleId": "%s", "provenance": "MANUAL"}
                                 """.formatted(UUID.randomUUID())))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.title").value("Máximo de roles objetivo alcanzado"));
     }
 
@@ -682,7 +682,7 @@ class ProfileControllerTest {
                         .header("X-User-Id", "uid-ctrl-role")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].field").value("professionalRoleId"))
                 .andExpect(jsonPath("$.errors[0].code").value("PROFESSIONAL_ROLE_ID_REQUIRED"));
     }
@@ -706,7 +706,7 @@ class ProfileControllerTest {
 
         mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-comp"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("PROFILE_INCOMPLETE"))
                 .andExpect(jsonPath("$.detail").value("Todavía no cumples estos requisitos:"))
                 .andExpect(jsonPath("$.missingRequirements.length()").value(2))

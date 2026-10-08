@@ -168,7 +168,7 @@ class ApiExceptionHandlerTest {
         toThrow = () -> new IncompleteProfileException(List.of("resumen", "habilidades"));
 
         mockMvc.perform(get("/boom"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("PROFILE_INCOMPLETE"))
                 .andExpect(jsonPath("$.detail").value("Todavía no cumples estos requisitos:"))
                 .andExpect(jsonPath("$.missingRequirements.length()").value(2))
@@ -253,7 +253,7 @@ class ApiExceptionHandlerTest {
                         "Selecciona una opción.")));
 
         mockMvc.perform(get("/boom").header("X-Request-Id", "req-fields-1"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.detail").value("Revisa los campos marcados."))
                 .andExpect(jsonPath("$.errors.length()").value(2))
@@ -272,7 +272,7 @@ class ApiExceptionHandlerTest {
         toThrow = () -> new LastTargetRoleException();
 
         mockMvc.perform(get("/boom"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors").doesNotExist());
     }
 
@@ -314,7 +314,7 @@ class ApiExceptionHandlerTest {
             return ex;
         };
 
-        mockMvc.perform(get("/boom")).andExpect(status().isUnprocessableEntity());
+        mockMvc.perform(get("/boom")).andExpect(status().isUnprocessableContent());
 
         assertThat(logs.list).anySatisfy(event ->
                 assertThat(event.getFormattedMessage()).contains("origen=desconocido"));
@@ -326,7 +326,7 @@ class ApiExceptionHandlerTest {
         toThrow = () -> new ServletRequestBindingException("enlace fallido");
 
         var result = mockMvc.perform(get("/boom").header("X-Request-Id", "req-fw-1"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("REQUEST_INVALID_VALUE"))
                 .andExpect(jsonPath("$.requestId").value("req-fw-1"))
                 .andExpect(header().string("X-Request-Id", "req-fw-1"))
@@ -397,8 +397,8 @@ class ApiExceptionHandlerTest {
 
         assertThat(handled).containsExactlyInAnyOrder(
                 HttpRequestMethodNotSupportedException.class,          // 405 METHOD_NOT_ALLOWED
-                HttpMediaTypeNotSupportedException.class,              // 415 CONTENT_TYPE_NOT_ALLOWED
-                HttpMediaTypeNotAcceptableException.class,             // 406 ACCEPT_TYPE_NOT_ALLOWED
+                HttpMediaTypeNotSupportedException.class,              // 415 MEDIA_TYPE_NOT_ALLOWED
+                HttpMediaTypeNotAcceptableException.class,             // 406 MEDIA_TYPE_NOT_ACCEPTABLE
                 MissingPathVariableException.class,                    // 500 INTERNAL_ERROR (error del servidor)
                 MissingServletRequestParameterException.class,         // 400 → 422 REQUEST_INVALID_VALUE
                 MissingServletRequestPartException.class,              // 400 → 422 REQUEST_INVALID_VALUE
@@ -425,7 +425,7 @@ class ApiExceptionHandlerTest {
 
         mockMvc.perform(get("/boom"))
                 .andExpect(status().isNotAcceptable())
-                .andExpect(jsonPath("$.code").value("ACCEPT_TYPE_NOT_ALLOWED"));
+                .andExpect(jsonPath("$.code").value("MEDIA_TYPE_NOT_ACCEPTABLE"));
     }
 
     @Test
@@ -444,7 +444,7 @@ class ApiExceptionHandlerTest {
         toThrow = () -> new TypeMismatchException("x", UUID.class);
 
         mockMvc.perform(get("/boom"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("REQUEST_INVALID_VALUE"));
     }
 
@@ -472,7 +472,7 @@ class ApiExceptionHandlerTest {
         toThrow = () -> new MissingRequestHeaderException("X-Otro", parameter);
 
         mockMvc.perform(get("/boom"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("REQUEST_INVALID_VALUE"));
     }
 
@@ -499,7 +499,7 @@ class ApiExceptionHandlerTest {
                 new MethodParameter(ApiExceptionHandlerTest.class.getDeclaredMethod("setUp"), -1), bindingResult);
 
         var response = new ApiExceptionHandler().handleMethodArgumentNotValid(ex, new HttpHeaders(),
-                HttpStatus.UNPROCESSABLE_ENTITY, new ServletWebRequest(new MockHttpServletRequest()));
+                HttpStatus.UNPROCESSABLE_CONTENT, new ServletWebRequest(new MockHttpServletRequest()));
 
         var body = (ProblemDetail) response.getBody();
         assertThat(body.getProperties()).containsEntry("code", ErrorCode.VALIDATION_FAILED);

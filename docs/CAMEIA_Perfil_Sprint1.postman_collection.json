@@ -1824,7 +1824,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 415', () => pm.response.to.have.status(415));",
-                  "pm.test('code CONTENT_TYPE_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('CONTENT_TYPE_NOT_ALLOWED'));"
+                  "pm.test('code MEDIA_TYPE_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('MEDIA_TYPE_NOT_ALLOWED'));"
                 ]
               }
             }
@@ -1869,7 +1869,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 406', () => pm.response.to.have.status(406));",
-                  "pm.test('code ACCEPT_TYPE_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('ACCEPT_TYPE_NOT_ALLOWED'));"
+                  "pm.test('code MEDIA_TYPE_NOT_ACCEPTABLE', () => pm.expect(pm.response.json().code).to.eql('MEDIA_TYPE_NOT_ACCEPTABLE'));"
                 ]
               }
             }

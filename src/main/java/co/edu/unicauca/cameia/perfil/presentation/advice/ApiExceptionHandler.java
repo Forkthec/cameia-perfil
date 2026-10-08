@@ -125,7 +125,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @Override
     protected ResponseEntity<Object> handleHttpMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex,
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        return withHeaders(reject(ErrorCode.CONTENT_TYPE_NOT_ALLOWED, null, request), headers);
+        return withHeaders(reject(ErrorCode.MEDIA_TYPE_NOT_ALLOWED, null, request), headers);
     }
 
     /** Un identificador de la ruta que no es UUID tiene el código de su parámetro; nunca repite el valor. */
@@ -139,7 +139,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @Override
     protected ResponseEntity<Object> handleHttpMediaTypeNotAcceptable(HttpMediaTypeNotAcceptableException ex,
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        return reject(ErrorCode.ACCEPT_TYPE_NOT_ALLOWED, null, request);
+        return reject(ErrorCode.MEDIA_TYPE_NOT_ACCEPTABLE, null, request);
     }
 
     /**

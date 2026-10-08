@@ -12,7 +12,7 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
-import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
+import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE;
 
 /**
@@ -42,27 +42,27 @@ final class ErrorCatalog {
 
     static final Map<ErrorCode, Definition> RESPONSES = Map.ofEntries(
             // Errores de la petición, con mensaje fijo.
-            entry(VALIDATION_FAILED, UNPROCESSABLE_ENTITY, "Datos no válidos", "Revisa los campos marcados."),
-            entry(REQUEST_BODY_INVALID_FORMAT, UNPROCESSABLE_ENTITY, "Datos no válidos",
+            entry(VALIDATION_FAILED, UNPROCESSABLE_CONTENT, "Datos no válidos", "Revisa los campos marcados."),
+            entry(REQUEST_BODY_INVALID_FORMAT, UNPROCESSABLE_CONTENT, "Datos no válidos",
                     "Revisa el formato de los datos enviados."),
-            entry(REQUEST_INVALID_VALUE, UNPROCESSABLE_ENTITY, "Valor no válido", "Revisa los datos enviados."),
+            entry(REQUEST_INVALID_VALUE, UNPROCESSABLE_CONTENT, "Valor no válido", "Revisa los datos enviados."),
             entry(IDENTITY_REQUIRED, UNAUTHORIZED, "Identidad requerida", "Tu sesión expiró. Inicia sesión de nuevo."),
-            entry(ROUTE_NOT_FOUND, NOT_FOUND, "Ruta no encontrada", "La ruta solicitada no existe."),
-            entry(METHOD_NOT_ALLOWED, HttpStatus.METHOD_NOT_ALLOWED, "Operación no permitida",
-                    "La operación no está permitida en esta ruta."),
-            entry(CONTENT_TYPE_NOT_ALLOWED, UNSUPPORTED_MEDIA_TYPE, "Formato no soportado",
-                    "Envía los datos en formato JSON."),
-            entry(ACCEPT_TYPE_NOT_ALLOWED, NOT_ACCEPTABLE, "Formato no disponible",
-                    "La respuesta solo está disponible en formato JSON."),
-            entry(PROFILE_ID_INVALID_FORMAT, UNPROCESSABLE_ENTITY, INVALID_ID,
+            entry(ROUTE_NOT_FOUND, NOT_FOUND, "Ruta no encontrada", "No existe la ruta solicitada."),
+            entry(METHOD_NOT_ALLOWED, HttpStatus.METHOD_NOT_ALLOWED, "Método no permitido",
+                    "Método no permitido."),
+            entry(MEDIA_TYPE_NOT_ALLOWED, UNSUPPORTED_MEDIA_TYPE, "Tipo de contenido no admitido",
+                    "Tipo de contenido no admitido."),
+            entry(MEDIA_TYPE_NOT_ACCEPTABLE, NOT_ACCEPTABLE, "Tipo de respuesta no admitido",
+                    "Tipo de respuesta no admitido."),
+            entry(PROFILE_ID_INVALID_FORMAT, UNPROCESSABLE_CONTENT, INVALID_ID,
                     "El identificador del perfil no es válido."),
-            entry(WORK_EXPERIENCE_ID_INVALID_FORMAT, UNPROCESSABLE_ENTITY, INVALID_ID,
+            entry(WORK_EXPERIENCE_ID_INVALID_FORMAT, UNPROCESSABLE_CONTENT, INVALID_ID,
                     "El identificador de la experiencia no es válido."),
-            entry(EDUCATION_ID_INVALID_FORMAT, UNPROCESSABLE_ENTITY, INVALID_ID,
+            entry(EDUCATION_ID_INVALID_FORMAT, UNPROCESSABLE_CONTENT, INVALID_ID,
                     "El identificador de la formación no es válido."),
-            entry(SKILL_ID_INVALID_FORMAT, UNPROCESSABLE_ENTITY, INVALID_ID,
+            entry(SKILL_ID_INVALID_FORMAT, UNPROCESSABLE_CONTENT, INVALID_ID,
                     "El identificador de la habilidad no es válido."),
-            entry(TARGET_ROLE_ID_INVALID_FORMAT, UNPROCESSABLE_ENTITY, INVALID_ID,
+            entry(TARGET_ROLE_ID_INVALID_FORMAT, UNPROCESSABLE_CONTENT, INVALID_ID,
                     "El identificador del rol objetivo no es válido."),
             entry(INTERNAL_ERROR, INTERNAL_SERVER_ERROR, "Error interno", "Ocurrió un error. Inténtalo de nuevo."),
             // Errores de negocio: el mensaje lo pone la excepción.
@@ -70,12 +70,12 @@ final class ErrorCatalog {
             entry(PROFILE_NOT_ALLOWED, FORBIDDEN, "Acceso denegado", null),
             entry(PROFILE_LIMIT_REACHED, CONFLICT, "Cupo del plan alcanzado", null),
             entry(PROFILE_ALREADY_COMPLETED, CONFLICT, "Perfil ya completado", null),
-            entry(PROFILE_INCOMPLETE, UNPROCESSABLE_ENTITY, "Finalización incompleta", null),
+            entry(PROFILE_INCOMPLETE, UNPROCESSABLE_CONTENT, "Finalización incompleta", null),
             entry(PROFESSIONAL_ROLE_NOT_FOUND, NOT_FOUND, "Rol profesional no encontrado", null),
-            entry(PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE, UNPROCESSABLE_ENTITY, "Idioma no disponible", null),
-            entry(TARGET_ROLE_LIMIT_REACHED, UNPROCESSABLE_ENTITY, "Máximo de roles objetivo alcanzado", null),
+            entry(PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE, UNPROCESSABLE_CONTENT, "Idioma no disponible", null),
+            entry(TARGET_ROLE_LIMIT_REACHED, UNPROCESSABLE_CONTENT, "Máximo de roles objetivo alcanzado", null),
             entry(TARGET_ROLE_ALREADY_EXISTS, CONFLICT, "Rol objetivo duplicado", null),
-            entry(TARGET_ROLE_NOT_ALLOWED, UNPROCESSABLE_ENTITY, "No se puede eliminar el último rol objetivo", null),
+            entry(TARGET_ROLE_NOT_ALLOWED, UNPROCESSABLE_CONTENT, "No se puede eliminar el último rol objetivo", null),
             entry(SKILL_ALREADY_EXISTS, CONFLICT, "Habilidad duplicada", null),
             entry(TARGET_ROLE_NOT_FOUND, NOT_FOUND, "Rol objetivo no encontrado", null),
             entry(WORK_EXPERIENCE_NOT_FOUND, NOT_FOUND, "Experiencia no encontrada", null),
