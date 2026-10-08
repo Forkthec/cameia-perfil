@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -68,7 +69,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(Exception.class)
     ResponseEntity<Object> handleUnexpected(Exception ex, WebRequest request) {
         var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-        log.error("Fallo no controlado: requestId={} firebaseUid={}", requestId, firebaseUid(request), ex);
+        // Sin los mensajes de la cadena: pueden traer datos del perfil (valores de columnas, SQL con parámetros).
+        log.error("Fallo no controlado: requestId={} firebaseUid={} sqlState={}",
+                requestId, firebaseUid(request), RedactedException.sqlState(ex), RedactedException.of(ex));
         return respond(problem(ErrorCode.INTERNAL_ERROR, null), requestId);
     }
 
@@ -140,8 +143,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /**
-     * Respaldo para las demás excepciones del framework: un fallo del servidor responde el 500
-     * genérico y cualquier otro rechazo, el valor no válido. Nunca devuelve el texto de Spring.
+     * Respaldo para las demás excepciones del framework, sin el texto de Spring: un 400 es un dato del cliente
+     * (422 de valor no válido); un 5xx, el 500 genérico. Otro estado no tiene código en el catálogo: responde
+     * el 500 genérico y se registra en {@code ERROR} para darle su código, en vez de disfrazarlo de error del cliente.
      */
     @Override
     protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers,
@@ -150,15 +154,21 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         if (response == null) {
             return null; // La respuesta ya se envió: no queda nada que responder.
         }
-        var answer = statusCode.is5xxServerError() ? handleUnexpected(ex, request) : invalidValue(ex, request);
-        return withHeaders(answer, response.getHeaders());
+        if (statusCode.value() == HttpStatus.BAD_REQUEST.value()) {
+            return withHeaders(invalidValue(ex, request), response.getHeaders());
+        }
+        if (!statusCode.is5xxServerError()) {
+            log.error("Rechazo del framework sin código en el catálogo: estado={} origen={}",
+                    statusCode.value(), RedactedException.origin(ex));
+        }
+        return withHeaders(handleUnexpected(ex, request), response.getHeaders());
     }
 
-    /** Un rechazo del framework sin código propio: responde el valor no válido y deja el origen en el log. */
+    /** Un 400 del framework sin código propio: responde el valor no válido y deja el origen en el log. */
     private ResponseEntity<Object> invalidValue(Exception ex, WebRequest request) {
         var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
         log.warn("Rechazo del framework sin código propio: code={} requestId={} firebaseUid={} origen={}",
-                ErrorCode.REQUEST_INVALID_VALUE, requestId, firebaseUid(request), origin(ex));
+                ErrorCode.REQUEST_INVALID_VALUE, requestId, firebaseUid(request), RedactedException.origin(ex));
         return respond(problem(ErrorCode.REQUEST_INVALID_VALUE, null), requestId);
     }
 
@@ -187,8 +197,4 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return List.copyOf(firstPerField.values());
     }
 
-    private static String origin(Exception ex) {
-        var frame = ex.getStackTrace().length > 0 ? ex.getStackTrace()[0] : null;
-        return frame == null ? "desconocido" : frame.getClassName() + "." + frame.getMethodName();
-    }
 }

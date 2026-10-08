@@ -28,6 +28,7 @@ El bloqueo se libera solo al terminar la transacción y solo afecta a las creaci
 - Una petición que llega cuando la creación anterior ya terminó, aunque sea pocos milisegundos después, cuenta ese perfil en el paso 1 y recibe 409. En la misma prueba, 9 de 30 rondas tuvieron entre 1 y 3 respuestas 409 de ese tipo. Como la creación tarda pocos milisegundos, el segundo clic de una persona suele llegar así; para que no vea el mensaje de cupo, `cameia-web` deshabilita el botón de creación mientras la petición está en curso.
 - Premium cambia solo el cupo con el que se compara; la regla no cambia.
 - Si la creación en proceso falla y se deshace, la que esperaba crea el perfil normalmente.
+- La espera tiene un límite de 5 s (`lock_timeout`, solo en esa transacción): si la creación en proceso se atasca, las que esperan se cortan con el 500 genérico en lugar de retener cada una una conexión del pool. El bloqueo exige una transacción abierta (`Propagation.MANDATORY`); sin ella se soltaría al terminar la sentencia.
 - El bloqueo depende de PostgreSQL; una prueba de integración con PostgreSQL real comprueba la regla, la independencia entre Usuarios y la creación tras deshacer.
 
 ## Alternativas descartadas

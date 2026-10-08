@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.presentation.advice;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
@@ -47,7 +48,26 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.ConversionNotSupportedException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.method.MethodValidationException;
+import org.springframework.web.ErrorResponseException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingPathVariableException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -320,6 +340,74 @@ class ApiExceptionHandlerTest {
                 .andReturn();
 
         assertThat(result.getResponse().getContentAsString()).doesNotContain("escribir");
+    }
+
+    @Test
+    @DisplayName("Un rechazo del framework con un estado sin código no se disfraza de 422: 500 genérico y ERROR en el registro")
+    void frameworkError_shouldReturnGeneric500AndLogError_whenStatusHasNoCode() throws Exception {
+        toThrow = () -> new ResponseStatusException(HttpStatus.CONFLICT, "texto de Spring");
+
+        var result = mockMvc.perform(get("/boom"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).doesNotContain("texto de Spring");
+        assertThat(logs.list).anySatisfy(event -> {
+            assertThat(event.getLevel()).isEqualTo(Level.ERROR);
+            assertThat(event.getFormattedMessage()).contains("sin código en el catálogo").contains("estado=409");
+        });
+    }
+
+    @Test
+    @DisplayName("Un fallo no controlado se registra sin los mensajes de la cadena, con la clase, la traza y el SQLState")
+    void unexpectedException_shouldLogWithoutMessages_whenCauseCarriesPersonalData() throws Exception {
+        toThrow = () -> new IllegalStateException("resumen: Ana Pérez, 3001234567",
+                new SQLException("Key (resumen)=(Ana Pérez) already exists", "23505"));
+
+        mockMvc.perform(get("/boom")).andExpect(status().isInternalServerError());
+
+        assertThat(logs.list).anySatisfy(event -> {
+            assertThat(event.getFormattedMessage()).contains("sqlState=23505").doesNotContain("Ana");
+            var logged = event.getThrowableProxy();
+            assertThat(logged.getMessage()).isEqualTo(IllegalStateException.class.getName());
+            assertThat(logged.getCause().getMessage()).isEqualTo(SQLException.class.getName());
+            assertThat(logged.getStackTraceElementProxyArray()).isNotEmpty();
+        });
+    }
+
+    /**
+     * Las excepciones que Spring resuelve en {@code ResponseEntityExceptionHandler}. Si una versión nueva agrega
+     * otra, esta prueba falla y obliga a decidir su código antes de que caiga en el respaldo del 500.
+     */
+    @Test
+    @DisplayName("Toda excepción que resuelve Spring MVC tiene su respuesta decidida en el manejador")
+    void springExceptions_shouldAllBeKnown_whenFrameworkIsUpgraded() throws Exception {
+        var handled = ResponseEntityExceptionHandler.class
+                .getMethod("handleException", Exception.class, WebRequest.class)
+                .getAnnotation(ExceptionHandler.class).value();
+
+        assertThat(handled).containsExactlyInAnyOrder(
+                HttpRequestMethodNotSupportedException.class,          // 405 METHOD_NOT_ALLOWED
+                HttpMediaTypeNotSupportedException.class,              // 415 CONTENT_TYPE_NOT_ALLOWED
+                HttpMediaTypeNotAcceptableException.class,             // 406 ACCEPT_TYPE_NOT_ALLOWED
+                MissingPathVariableException.class,                    // 500 INTERNAL_ERROR (error del servidor)
+                MissingServletRequestParameterException.class,         // 400 → 422 REQUEST_INVALID_VALUE
+                MissingServletRequestPartException.class,              // 400 → 422 REQUEST_INVALID_VALUE
+                ServletRequestBindingException.class,                  // 401 IDENTITY_REQUIRED o 422 REQUEST_INVALID_VALUE
+                MethodArgumentNotValidException.class,                 // 422 VALIDATION_FAILED
+                HandlerMethodValidationException.class,                // 400 → 422 REQUEST_INVALID_VALUE
+                NoHandlerFoundException.class,                         // 404 ROUTE_NOT_FOUND
+                NoResourceFoundException.class,                        // 404 ROUTE_NOT_FOUND
+                AsyncRequestTimeoutException.class,                    // 503 → 500 INTERNAL_ERROR
+                ErrorResponseException.class,                          // según su estado (prueba anterior)
+                MaxUploadSizeExceededException.class,                  // 413 → 500 INTERNAL_ERROR (sin cargas en el MVP)
+                ConversionNotSupportedException.class,                 // 500 INTERNAL_ERROR
+                TypeMismatchException.class,                           // 422 código del identificador o REQUEST_INVALID_VALUE
+                HttpMessageNotReadableException.class,                 // 422 REQUEST_BODY_INVALID_FORMAT
+                HttpMessageNotWritableException.class,                 // 500 INTERNAL_ERROR
+                MethodValidationException.class,                       // 500 INTERNAL_ERROR
+                AsyncRequestNotUsableException.class);                 // sin respuesta: el cliente ya se fue
     }
 
     @Test
