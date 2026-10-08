@@ -7,6 +7,7 @@ import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
@@ -49,9 +50,11 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
 
     /**
      * Bloqueo de transacción de PostgreSQL por Usuario; se libera solo al confirmar o deshacer.
-     * Sin transacción abierta se liberaría de inmediato: la abre el servicio que crea el perfil.
+     * Sin transacción abierta se liberaría de inmediato, así que exige la del servicio que crea el perfil
+     * y falla si no la hay.
      */
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public void lockCreationFor(FirebaseUid firebaseUid) {
         em.createNativeQuery("select pg_advisory_xact_lock(hashtextextended(:uid, 0))")
                 .setParameter("uid", firebaseUid.value())

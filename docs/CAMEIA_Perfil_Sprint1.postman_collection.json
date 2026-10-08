@@ -319,7 +319,7 @@
               "script": {
                 "exec": [
                   "pm.test('Status 422', () => pm.response.to.have.status(422));",
-                  "pm.test('title Valor no valido', () => pm.expect(pm.response.json().title).to.eql('Valor no valido'));"
+                  "pm.test('code VALIDATION_FAILED con la modalidad marcada', () => { const b = pm.response.json(); pm.expect(b.code).to.eql('VALIDATION_FAILED'); pm.expect(b.errors[0].field).to.eql('preferredModality'); pm.expect(b.errors[0].code).to.eql('PREFERRED_MODALITY_INVALID_VALUE'); });"
                 ]
               }
             }
@@ -572,7 +572,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"institution\": \"Coursera\",\n  \"degree\": \"Especializacion en Arquitectura de Software\",\n  \"fieldOfStudy\": \"Cloud Native & Microservicios\",\n  \"level\": \"SPECIALIZATION\",\n  \"startDate\": \"2026\",\n  \"inProgress\": true,\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"institution\": \"Coursera\",\n  \"degree\": \"Especializacion en Arquitectura de Software\",\n  \"fieldOfStudy\": \"Cloud Native & Microservicios\",\n  \"level\": \"POSTGRADUATE\",\n  \"startDate\": \"2026\",\n  \"inProgress\": true,\n  \"provenance\": \"MANUAL\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/educations",
@@ -1044,13 +1044,14 @@
           }
         },
         {
-          "name": "ERR PATCH /target-roles/{roleId} — 422 roleId no existe en el perfil",
+          "name": "ERR PATCH /target-roles/{roleId} — 404 roleId no existe en el perfil",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status 422 o 404', () => pm.expect(pm.response.code).to.be.oneOf([404, 422]));"
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code TARGET_ROLE_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('TARGET_ROLE_NOT_FOUND'));"
                 ]
               }
             }
