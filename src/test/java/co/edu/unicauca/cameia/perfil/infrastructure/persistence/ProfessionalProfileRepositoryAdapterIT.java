@@ -184,4 +184,21 @@ class ProfessionalProfileRepositoryAdapterIT {
 
         assertThat(repository.findById(profile.getId())).isPresent();
     }
+
+    @Test
+    @DisplayName("Una fila con el resumen en blanco se lee como perfil sin resumen, no como un fallo")
+    void findById_shouldReturnProfileWithoutSummary_whenStoredSummaryIsBlank() {
+        var profile = ProfessionalProfile.create(new FirebaseUid("firebase-it-blank-004"));
+        repository.save(profile);
+        entityManager.flush();
+        entityManager.createNativeQuery("update perfil_profesional set resumen = '   ' where id = :id")
+                .setParameter("id", profile.getId().value())
+                .executeUpdate();
+        entityManager.clear();
+
+        var loaded = repository.findById(profile.getId());
+
+        assertThat(loaded).isPresent();
+        assertThat(loaded.get().getSummary()).isNull();
+    }
 }
