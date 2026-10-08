@@ -203,6 +203,19 @@ class ProfileCreationConcurrencyIT {
                 .isInstanceOf(IllegalTransactionStateException.class);
     }
 
+    @Test
+    @DisplayName("Con el bloqueo tomado, el resto de la transacción vuelve al límite de espera normal")
+    void lockCreationFor_shouldRestoreLockTimeout_whenLockIsTaken() {
+        var uid = new FirebaseUid("uid-it-" + UUID.randomUUID());
+
+        var lockTimeout = new TransactionTemplate(transactionManager).execute(status -> {
+            repository.lockCreationFor(uid);
+            return jdbcTemplate.queryForObject("show lock_timeout", String.class);
+        });
+
+        assertThat(lockTimeout).isEqualTo("0");
+    }
+
     /**
      * Lanza una creación por hilo y las suelta a la vez. Cada resultado es el perfil devuelto o la
      * excepción de negocio que lanzó la creación.

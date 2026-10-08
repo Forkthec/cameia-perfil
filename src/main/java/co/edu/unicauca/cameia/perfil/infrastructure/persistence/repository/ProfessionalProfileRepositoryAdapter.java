@@ -60,11 +60,13 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
     @Transactional(propagation = Propagation.MANDATORY)
     public void lockCreationFor(FirebaseUid firebaseUid) {
         // Una creación atascada no retiene la conexión de las que esperan: a los 5 s PostgreSQL corta
-        // la espera (55P03) y la petición responde el 500 genérico. Rige solo en esta transacción.
+        // la espera (55P03) y la petición responde el 500 genérico. Rige solo mientras espera el bloqueo.
         em.createNativeQuery("set local lock_timeout = '" + CREATION_LOCK_TIMEOUT + "'").executeUpdate();
         em.createNativeQuery("select pg_advisory_xact_lock(hashtextextended(:uid, 0))")
                 .setParameter("uid", firebaseUid.value())
                 .getSingleResult();
+        // El límite era para esperar el bloqueo: las demás sentencias de la transacción no lo heredan.
+        em.createNativeQuery("set local lock_timeout to default").executeUpdate();
     }
 
     @Override
