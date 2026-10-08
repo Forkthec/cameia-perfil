@@ -12,6 +12,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -20,12 +21,29 @@ class ErrorCatalogTest {
 
     private static final String DTO_PACKAGE = "co.edu.unicauca.cameia.perfil.presentation.dto";
 
+    /**
+     * Códigos de campo que rechaza el dominio con {@code InvalidFieldsException}: el mensaje lo pone
+     * la excepción, porque puede llevar un límite. Un código nuevo del dominio se agrega aquí.
+     */
+    private static final Set<ErrorCode> DOMAIN_FIELD_CODES = EnumSet.of(
+            ErrorCode.PROFILE_NAME_REQUIRED, ErrorCode.PROFILE_NAME_TOO_LONG,
+            ErrorCode.SUMMARY_REQUIRED, ErrorCode.SUMMARY_TOO_LONG,
+            ErrorCode.SALARY_EXPECTATION_OUT_OF_RANGE,
+            ErrorCode.PREFERRED_MODALITY_INVALID_VALUE, ErrorCode.PROVENANCE_INVALID_VALUE,
+            ErrorCode.EMPLOYMENT_STATUS_INVALID_VALUE, ErrorCode.EDUCATION_LEVEL_INVALID_VALUE,
+            ErrorCode.SKILL_LEVEL_INVALID_VALUE,
+            ErrorCode.START_DATE_INVALID_FORMAT, ErrorCode.END_DATE_INVALID_FORMAT,
+            ErrorCode.END_DATE_REQUIRED, ErrorCode.END_DATE_NOT_ALLOWED, ErrorCode.END_DATE_BEFORE_START_DATE,
+            ErrorCode.COMPANY_TOO_LONG, ErrorCode.POSITION_TOO_LONG, ErrorCode.INSTITUTION_TOO_LONG,
+            ErrorCode.DEGREE_TOO_LONG, ErrorCode.SKILL_NAME_TOO_LONG,
+            ErrorCode.DESCRIPTION_TOO_LONG, ErrorCode.FIELD_OF_STUDY_TOO_LONG);
+
     @Test
     @DisplayName("Todo código es una respuesta, un campo de Bean Validation o un campo del dominio, uno solo")
     void everyErrorCode_shouldBeResponseOrField_whenCatalogLoaded() {
         var responses = ErrorCatalog.RESPONSES.keySet();
         var fields = ErrorCatalog.FIELD_MESSAGES.keySet();
-        var domainFields = ErrorCatalog.DOMAIN_FIELD_CODES;
+        var domainFields = DOMAIN_FIELD_CODES;
         var all = EnumSet.noneOf(ErrorCode.class);
         all.addAll(responses);
         all.addAll(fields);

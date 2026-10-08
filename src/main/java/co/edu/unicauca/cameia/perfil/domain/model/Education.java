@@ -11,7 +11,8 @@ import java.util.UUID;
  * Formación académica del candidato. Entidad interna de {@link ProfessionalProfile}.
  *
  * <p>Si {@code inProgress} es true, {@code endDate} debe ser null.
- * Si {@code inProgress} es false, {@code endDate} es opcional (puede desconocerse).
+ * Si {@code inProgress} es false, {@code endDate} es opcional (puede desconocerse) y, si llega, no es
+ * anterior a {@code startDate}.
  */
 public final class Education {
 
@@ -31,32 +32,24 @@ public final class Education {
                      EducationLevel level, YearMonth startDate, YearMonth endDate,
                      boolean inProgress, DataProvenance provenance) {
         this.id = Objects.requireNonNull(id);
-        this.institution = requireNonBlankMax(institution, "institution", ErrorCode.INSTITUTION_REQUIRED,
-                "Ingresa la institución.", ErrorCode.INSTITUTION_TOO_LONG, "La institución");
-        this.degree = requireNonBlankMax(degree, "degree", ErrorCode.DEGREE_REQUIRED,
-                "Ingresa el título obtenido.", ErrorCode.DEGREE_TOO_LONG, "El título obtenido");
-        this.fieldOfStudy = fieldOfStudy;
+        this.institution = FieldRules.requiredText(institution, "institution", ErrorCode.INSTITUTION_REQUIRED,
+                "Ingresa la institución.", ErrorCode.INSTITUTION_TOO_LONG, "La institución", MAX_TEXT_LENGTH);
+        this.degree = FieldRules.requiredText(degree, "degree", ErrorCode.DEGREE_REQUIRED,
+                "Ingresa el título obtenido.", ErrorCode.DEGREE_TOO_LONG, "El título obtenido", MAX_TEXT_LENGTH);
+        this.fieldOfStudy = FieldRules.optionalText(fieldOfStudy, "fieldOfStudy",
+                ErrorCode.FIELD_OF_STUDY_TOO_LONG, "El área de estudio", MAX_TEXT_LENGTH);
         this.level = Objects.requireNonNull(level);
         this.startDate = Objects.requireNonNull(startDate, "startDate es obligatoria");
         this.provenance = Objects.requireNonNull(provenance);
         if (inProgress && endDate != null) {
             throw InvalidFieldsException.of("endDate", ErrorCode.END_DATE_NOT_ALLOWED, "La fecha de fin debe quedar vacía.");
         }
+        if (endDate != null && endDate.isBefore(startDate)) {
+            throw InvalidFieldsException.of("endDate", ErrorCode.END_DATE_BEFORE_START_DATE,
+                    "La fecha de fin no puede ser anterior a la de inicio.");
+        }
         this.inProgress = inProgress;
         this.endDate = endDate;
-    }
-
-    private static String requireNonBlankMax(String value, String field, ErrorCode requiredCode,
-                                             String requiredMessage, ErrorCode tooLongCode, String label) {
-        Objects.requireNonNull(value, field + " no puede ser nulo");
-        if (value.isBlank()) {
-            throw InvalidFieldsException.of(field, requiredCode, requiredMessage);
-        }
-        if (value.length() > MAX_TEXT_LENGTH) {
-            throw InvalidFieldsException.of(field, tooLongCode,
-                    label + " no puede superar los " + MAX_TEXT_LENGTH + " caracteres.");
-        }
-        return value;
     }
 
     public UUID getId() { return id; }

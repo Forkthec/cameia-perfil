@@ -5,6 +5,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 
 import java.time.DateTimeException;
 import java.time.YearMonth;
+import java.util.regex.Pattern;
 
 /**
  * Convierte los textos de un comando en opciones y fechas del dominio.
@@ -16,6 +17,10 @@ public final class CommandValues {
 
     static final String SELECT_OPTION = "Selecciona una opción.";
     static final String INVALID_DATE = "Ingresa una fecha válida con el formato mm/aaaa.";
+
+    /** Año de cuatro dígitos desde 0001 y mes de dos: lo que la base de datos guarda como fecha. */
+    private static final Pattern YEAR_MONTH = Pattern.compile("(?!0000)\\d{4}-\\d{2}");
+    private static final Pattern YEAR = Pattern.compile("(?!0000)\\d{4}");
 
     private CommandValues() { }
 
@@ -50,7 +55,10 @@ public final class CommandValues {
         if (value == null) {
             return null;
         }
-        var normalized = yearOnly && value.matches("\\d{4}") ? value + "-01" : value;
+        var normalized = yearOnly && YEAR.matcher(value).matches() ? value + "-01" : value;
+        if (!YEAR_MONTH.matcher(normalized).matches()) {
+            throw InvalidFieldsException.of(field, code, INVALID_DATE);
+        }
         try {
             return YearMonth.parse(normalized);
         } catch (DateTimeException e) {
