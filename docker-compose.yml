@@ -112,9 +112,10 @@ services:
   #
   #   docker compose run --rm verify
   #
-  # Corre 'mvn clean verify' dentro de un contenedor con JDK 21 y Maven, contra la
-  # base real de al lado. Asi la suite no depende de lo que cada quien tenga
-  # instalado, y las pruebas de persistencia corren contra PostgreSQL y no contra H2.
+  # Corre 'mvn clean verify' dentro de un contenedor con JDK 21 y Maven. Las pruebas
+  # que necesitan base de datos levantan su propio PostgreSQL con Testcontainers, asi
+  # que no dependen del servicio 'db' ni de lo que cada quien tenga instalado, y
+  # corren contra PostgreSQL y no contra H2.
   # ---------------------------------------------------------------------------
   verify:
     image: maven:3.9-eclipse-temurin-21

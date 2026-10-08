@@ -451,3 +451,10 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 - **404 (D25).** `WorkExperienceNotFoundException`, `EducationNotFoundException` y `SkillNotFoundException`; `removeTargetRole` responde `TARGET_ROLE_NOT_FOUND` antes de la regla del último rol.
 - **Revisión (D26).** `@Hidden` en `POST …/review-requests`; fuera de Postman; `OpenApiDocumentIT` comprueba que no se publica.
 - **Postman contra la app real.** La colección no enviaba `X-User-Id` en 24 peticiones (exigido desde el PR A), leía `skills` en lugar de `profileSkills` y agregaba roles objetivo con el esquema anterior (`title` y `seniority`). Ahora usa la variable `user_id`, los ids fijos del catálogo, finaliza el perfil antes de probar el último rol y prueba el idioma no disponible. Resultado: 33 peticiones, 73 aserciones, 0 fallos.
+
+## [x] T-C.5 · Carpeta CM-271 de Postman
+
+> Hecha en dos ramas para quedar bajo 1.000 líneas por PR: `CM-271-postman-identidad-y-validacion` (20 peticiones: identidad, encabezados, framework y validación de experiencia) y `CM-271-postman-contrato-backlog` (20 peticiones: validación de formación y perfil, resumen, eliminar, roles objetivo, perfil activo y OpenAPI). La segunda carpeta usa el perfil que crea la primera.
+
+- 40 peticiones con su propio Usuario (`user_b`); solo el 403 usa el perfil que crea la carpeta CM-16: requisitos de la finalización en códigos, 403 con el texto de RT-03, identidad en blanco y de 129 caracteres, `X-Request-Id` devuelto y regenerado, `charset`, 404/405/415/406/422 del framework, JSON mal formado, cada error de campo con su código y su texto del backlog, dos campos a la vez, `inProgress` ausente, resumen vacío y `SUMMARY_NOT_ALLOWED`, 404 al eliminar lo ajeno, rol del catálogo inexistente, 409 de CA-2.11.8, perfil ya activo y el OpenAPI sin `review-requests`.
+- Contra la app real, la colección completa: 73 peticiones, 195 aserciones, 0 fallos. El doble clic queda en `ProfileCreationConcurrencyIT` y en la carrera real, porque Postman envía una petición a la vez.
