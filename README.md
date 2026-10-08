@@ -93,7 +93,7 @@ docker compose down -v
 
 ### Sin Docker
 
-Requiere JDK 21 y un PostgreSQL 16 con la base `cameia_perfil` y su rol ya creados.
+Requiere JDK 21. Para iniciar la aplicación, además, un PostgreSQL 16 con la base `cameia_perfil` y su rol ya creados. Las pruebas no lo necesitan: solo Docker encendido (ver [Pruebas](#pruebas)).
 
 ```bash
 # Instalación:
@@ -147,7 +147,7 @@ Los valores sensibles están vacíos y el `.env` real no se versiona.
 
 `ArquitecturaTest` verifica que el dominio no dependa de otras capas, que no importe Spring, JPA ni RabbitMQ, que presentación no dependa de infraestructura, que no haya dependencias circulares, y que los sufijos `Controller`, `AppService` y `Entity` se respeten.
 
-`PerfilApplicationTest` necesita la base de datos arriba, porque construye el `DataSource` y Flyway se conecta al arrancar.
+Las pruebas que necesitan base de datos (`PerfilApplicationTest` y las `*IT`) levantan su propio PostgreSQL 16 con Testcontainers, así que `./mvnw -B clean verify` solo requiere Docker encendido. Surefire ejecuta las `*Test` y Failsafe las `*IT`, ambas dentro de `verify`. `docker compose run --rm verify` hace lo mismo dentro de un contenedor, usando el Docker del equipo.
 
 ### Convención de nombres
 
