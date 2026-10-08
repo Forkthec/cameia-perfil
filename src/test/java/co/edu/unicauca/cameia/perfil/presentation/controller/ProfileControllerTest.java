@@ -559,6 +559,32 @@ class ProfileControllerTest {
     }
 
     @Test
+    @DisplayName("Eliminar una experiencia laboral responde 204 sin cuerpo")
+    void removeWorkExperience_shouldReturn204WithoutBody_whenRemoved() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-delexp"));
+        when(profileAppService.removeWorkExperience(any(), any(), any())).thenReturn(profile);
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/work-experiences/{expId}",
+                        UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-delexp"))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+    }
+
+    @Test
+    @DisplayName("Eliminar una formación responde 204 sin cuerpo")
+    void removeEducation_shouldReturn204WithoutBody_whenRemoved() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-deledu"));
+        when(profileAppService.removeEducation(any(), any(), any())).thenReturn(profile);
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/educations/{eduId}",
+                        UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-deledu"))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+    }
+
+    @Test
     void postReviewRequests_returns201() throws Exception {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-rev"));
         when(profileAppService.requestReview(any(), any())).thenReturn(profile);
