@@ -46,7 +46,7 @@ final class ErrorCatalog {
             entry(REQUEST_BODY_INVALID_FORMAT, UNPROCESSABLE_ENTITY, "Datos no válidos",
                     "Revisa el formato de los datos enviados."),
             entry(REQUEST_INVALID_VALUE, UNPROCESSABLE_ENTITY, "Valor no válido", "Revisa los datos enviados."),
-            entry(IDENTITY_REQUIRED, UNAUTHORIZED, "Identidad requerida", "Identidad del usuario requerida"),
+            entry(IDENTITY_REQUIRED, UNAUTHORIZED, "Identidad requerida", "Tu sesión expiró. Inicia sesión de nuevo."),
             entry(ROUTE_NOT_FOUND, NOT_FOUND, "Ruta no encontrada", "La ruta solicitada no existe."),
             entry(METHOD_NOT_ALLOWED, HttpStatus.METHOD_NOT_ALLOWED, "Operación no permitida",
                     "La operación no está permitida en esta ruta."),

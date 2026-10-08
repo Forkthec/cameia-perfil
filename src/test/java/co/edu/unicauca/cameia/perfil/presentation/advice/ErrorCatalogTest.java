@@ -27,7 +27,7 @@ class ErrorCatalogTest {
      */
     private static final Set<ErrorCode> DOMAIN_FIELD_CODES = EnumSet.of(
             ErrorCode.PROFILE_NAME_REQUIRED, ErrorCode.PROFILE_NAME_TOO_LONG,
-            ErrorCode.SUMMARY_REQUIRED, ErrorCode.SUMMARY_TOO_LONG,
+            ErrorCode.SUMMARY_NOT_ALLOWED, ErrorCode.SUMMARY_TOO_LONG,
             ErrorCode.SALARY_EXPECTATION_OUT_OF_RANGE,
             ErrorCode.PREFERRED_MODALITY_INVALID_VALUE, ErrorCode.PROVENANCE_INVALID_VALUE,
             ErrorCode.EMPLOYMENT_STATUS_INVALID_VALUE, ErrorCode.EDUCATION_LEVEL_INVALID_VALUE,

@@ -483,8 +483,8 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('workExperiences tiene 1 entrada', () => pm.expect(pm.response.json().workExperiences.length).to.eql(1));"
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));",
+                  "pm.test('Sin cuerpo', () => pm.expect(pm.response.text()).to.eql(''));"
                 ]
               }
             }
@@ -596,8 +596,8 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('educations tiene 1 entrada', () => pm.expect(pm.response.json().educations.length).to.eql(1));"
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));",
+                  "pm.test('Sin cuerpo', () => pm.expect(pm.response.text()).to.eql(''));"
                 ]
               }
             }
@@ -754,8 +754,8 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('skills tiene 1 entrada', () => pm.expect(pm.response.json().skills.length).to.eql(1));"
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));",
+                  "pm.test('Sin cuerpo', () => pm.expect(pm.response.text()).to.eql(''));"
                 ]
               }
             }
@@ -1121,8 +1121,8 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('targetRoles tiene 1 entrada', () => pm.expect(pm.response.json().targetRoles.length).to.eql(1));"
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));",
+                  "pm.test('Sin cuerpo', () => pm.expect(pm.response.text()).to.eql(''));"
                 ]
               }
             }

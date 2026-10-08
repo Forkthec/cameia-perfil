@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.presentation.controller;
 
+import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
@@ -26,6 +27,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -50,6 +52,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -232,6 +235,25 @@ class ProfileControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("TARGET_ROLE_NOT_FOUND"))
                 .andExpect(jsonPath("$.detail").value("No encontramos lo que buscabas."));
+    }
+
+    @Test
+    @DisplayName("Una formación sin inProgress se agrega como no en curso, no como cuerpo ilegible")
+    void addEducation_shouldTreatMissingInProgressAsFalse_whenFieldIsAbsent() throws Exception {
+        when(profileAppService.addEducation(any()))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-edu")));
+        var body = """
+                {"institution":"Unicauca","degree":"Sistemas","level":"UNDERGRADUATE","startDate":"2018-01","provenance":"MANUAL"}
+                """;
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/educations", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-edu")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated());
+
+        var command = ArgumentCaptor.forClass(AddEducationCommand.class);
+        verify(profileAppService).addEducation(command.capture());
+        assertThat(command.getValue().inProgress()).isFalse();
     }
 
     @Test
@@ -485,7 +507,7 @@ class ProfileControllerTest {
 
     @Test
     void postSkills_returns409WhenDuplicate() throws Exception {
-        when(profileAppService.addSkill(any())).thenThrow(new DuplicateSkillException("Java"));
+        when(profileAppService.addSkill(any())).thenThrow(new DuplicateSkillException());
 
         mockMvc.perform(post("/api/v1/profiles/{id}/skills", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-skill")
@@ -524,14 +546,42 @@ class ProfileControllerTest {
     }
 
     @Test
-    void deleteSkill_returns200() throws Exception {
+    @DisplayName("Eliminar una habilidad responde 204 sin cuerpo")
+    void removeSkill_shouldReturn204WithoutBody_whenRemoved() throws Exception {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-delskill"));
         when(profileAppService.removeSkill(any(), any(), any())).thenReturn(profile);
 
         mockMvc.perform(delete("/api/v1/profiles/{id}/skills/{skillId}",
                         UUID.randomUUID(), UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-delskill"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+    }
+
+    @Test
+    @DisplayName("Eliminar una experiencia laboral responde 204 sin cuerpo")
+    void removeWorkExperience_shouldReturn204WithoutBody_whenRemoved() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-delexp"));
+        when(profileAppService.removeWorkExperience(any(), any(), any())).thenReturn(profile);
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/work-experiences/{expId}",
+                        UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-delexp"))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+    }
+
+    @Test
+    @DisplayName("Eliminar una formación responde 204 sin cuerpo")
+    void removeEducation_shouldReturn204WithoutBody_whenRemoved() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-deledu"));
+        when(profileAppService.removeEducation(any(), any(), any())).thenReturn(profile);
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/educations/{eduId}",
+                        UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-deledu"))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
     }
 
     @Test
@@ -571,7 +621,7 @@ class ProfileControllerTest {
 
     @Test
     void postTargetRoles_returns409WhenDuplicate() throws Exception {
-        when(profileAppService.addTargetRole(any())).thenThrow(new DuplicateTargetRoleException("Backend Developer"));
+        when(profileAppService.addTargetRole(any())).thenThrow(new DuplicateTargetRoleException());
 
         mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-role")
@@ -598,14 +648,16 @@ class ProfileControllerTest {
     }
 
     @Test
-    void deleteTargetRole_returns200() throws Exception {
+    @DisplayName("Eliminar un rol objetivo responde 204 sin cuerpo")
+    void removeTargetRole_shouldReturn204WithoutBody_whenRemoved() throws Exception {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-delrole"));
         when(profileAppService.removeTargetRole(any(), any(), any())).thenReturn(profile);
 
         mockMvc.perform(delete("/api/v1/profiles/{id}/target-roles/{roleId}",
                         UUID.randomUUID(), UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-delrole"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
     }
 
     @Test
@@ -621,20 +673,21 @@ class ProfileControllerTest {
     }
 
     @Test
-    void postCompletion_returns201() throws Exception {
+    @DisplayName("Finalizar un perfil completo responde 200 con el perfil")
+    void completeProfile_shouldReturn200_whenRequirementsAreMet() throws Exception {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-comp"));
         when(profileAppService.completeProfile(any(), any())).thenReturn(profile);
 
         mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-comp"))
-                .andExpect(status().isCreated());
+                .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("Finalizar sin resumen ni habilidades responde la forma común con los dos requisitos")
     void postCompletion_shouldReturn422WithCommonShape_whenSummaryAndSkillsAreMissing() throws Exception {
         when(profileAppService.completeProfile(any(), any()))
-                .thenThrow(new IncompleteProfileException(List.of("summary", "al menos 1 habilidad")));
+                .thenThrow(new IncompleteProfileException(List.of("SUMMARY", "SKILLS")));
 
         mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-comp"))

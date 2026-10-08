@@ -30,8 +30,6 @@ class ProfileValueRulesTest {
                         "name", ErrorCode.PROFILE_NAME_REQUIRED, "Ingresa un nombre para el perfil."),
                 Arguments.of("nombre de 256", (Executable) () -> new ProfileName("a".repeat(256)),
                         "name", ErrorCode.PROFILE_NAME_TOO_LONG, "El nombre no puede superar los 255 caracteres."),
-                Arguments.of("resumen en blanco", (Executable) () -> new ProfessionalSummary("\t"),
-                        "summary", ErrorCode.SUMMARY_REQUIRED, "Ingresa el resumen profesional."),
                 Arguments.of("resumen de 2001", (Executable) () -> new ProfessionalSummary("a".repeat(2001)),
                         "summary", ErrorCode.SUMMARY_TOO_LONG, "El resumen no puede superar los 2000 caracteres."),
                 Arguments.of("salario negativo", (Executable) () -> new SalaryExpectation(new BigDecimal("-1")),

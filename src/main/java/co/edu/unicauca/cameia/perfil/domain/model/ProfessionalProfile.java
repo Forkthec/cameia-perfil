@@ -2,7 +2,9 @@ package co.edu.unicauca.cameia.perfil.domain.model;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
@@ -88,7 +90,14 @@ public final class ProfessionalProfile {
 
     // ── Información general (CM-17) ──────────────────────────────────────
     public void updateName(ProfileName name) { this.name = name; touch(); }
-    public void updateSummary(ProfessionalSummary summary) { this.summary = summary; touch(); }
+    /** @param summary resumen nuevo, o {@code null} para borrarlo (CA-2.3.4); un perfil activo no lo pierde (CA-2.3.12) */
+    public void updateSummary(ProfessionalSummary summary) {
+        if (summary == null && status == ProfileStatus.COMPLETED) {
+            throw InvalidFieldsException.of("summary", ErrorCode.SUMMARY_NOT_ALLOWED,
+                    "No puedes quedarte sin resumen profesional con el perfil activo.");
+        }
+        this.summary = summary; touch();
+    }
     public void updatePreferredModality(WorkModality modality) { this.preferredModality = modality; touch(); }
     public void updateProvenance(DataProvenance provenance) { this.provenance = Objects.requireNonNull(provenance); touch(); }
 
@@ -99,7 +108,7 @@ public final class ProfessionalProfile {
     public void addTargetRole(TargetRole role) {
         Objects.requireNonNull(role);
         if (targetRoles.size() >= MAX_TARGET_ROLES) throw new MaxTargetRolesExceededException(MAX_TARGET_ROLES);
-        if (targetRoles.stream().anyMatch(r -> r.isSameRoleAs(role))) throw new DuplicateTargetRoleException(role.getRoleTitle());
+        if (targetRoles.stream().anyMatch(r -> r.isSameRoleAs(role))) throw new DuplicateTargetRoleException();
         targetRoles.add(role);
         touch();
     }
@@ -115,12 +124,16 @@ public final class ProfessionalProfile {
         Objects.requireNonNull(roleId);
         TargetRole existing = targetRoles.stream().filter(r -> r.getId().equals(roleId))
                 .findFirst().orElseThrow(TargetRoleNotFoundException::new);
-        DataProvenance prov = existing.getProvenance();
-        targetRoles.removeIf(r -> r.getId().equals(roleId));
-        targetRoles.add(new TargetRole(roleId,
+        var replacement = new TargetRole(roleId,
                 professionalRoleId != null ? professionalRoleId : existing.getProfessionalRoleId(),
                 roleTitle != null ? roleTitle : existing.getRoleTitle(),
-                prov));
+                existing.getProvenance());
+        // CA-2.11.8: sustituir por un rol que ya está en el perfil se rechaza.
+        if (targetRoles.stream().anyMatch(r -> !r.getId().equals(roleId) && r.isSameRoleAs(replacement))) {
+            throw new DuplicateTargetRoleException();
+        }
+        targetRoles.removeIf(r -> r.getId().equals(roleId));
+        targetRoles.add(replacement);
         touch();
     }
 
@@ -136,7 +149,7 @@ public final class ProfessionalProfile {
         String normalizado = normalizarNombreHabilidad(skill.getSkillName());
         boolean duplicada = profileSkills.stream()
                 .anyMatch(s -> normalizarNombreHabilidad(s.getSkillName()).equals(normalizado));
-        if (duplicada) throw new DuplicateSkillException(skill.getSkillName());
+        if (duplicada) throw new DuplicateSkillException();
         profileSkills.add(skill);
         touch();
     }
@@ -169,11 +182,11 @@ public final class ProfessionalProfile {
 
     public List<String> getMissingRequirements() {
         List<String> missing = new ArrayList<>();
-        if (name == null || name.value().isBlank()) missing.add("name");
-        if (summary == null || summary.value().isBlank()) missing.add("summary");
-        if (educations.isEmpty()) missing.add("al menos 1 educación");
-        if (profileSkills.isEmpty()) missing.add("al menos 1 habilidad");
-        if (targetRoles.isEmpty()) missing.add("al menos 1 rol objetivo");
+        if (name == null || name.value().isBlank()) missing.add("NAME");
+        if (summary == null) missing.add("SUMMARY");
+        if (educations.isEmpty()) missing.add("EDUCATION");
+        if (profileSkills.isEmpty()) missing.add("SKILLS");
+        if (targetRoles.isEmpty()) missing.add("TARGET_ROLES");
         return missing;
     }
 

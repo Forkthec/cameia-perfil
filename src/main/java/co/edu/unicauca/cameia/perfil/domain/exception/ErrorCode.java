@@ -59,8 +59,8 @@ public enum ErrorCode {
     PROFILE_NAME_REQUIRED,
     /** El nombre del perfil supera su largo máximo. */
     PROFILE_NAME_TOO_LONG,
-    /** El resumen profesional está en blanco. */
-    SUMMARY_REQUIRED,
+    /** Un perfil activo no puede quedarse sin resumen profesional. */
+    SUMMARY_NOT_ALLOWED,
     /** El resumen profesional supera su largo máximo. */
     SUMMARY_TOO_LONG,
     /** La expectativa salarial está fuera del rango permitido. */

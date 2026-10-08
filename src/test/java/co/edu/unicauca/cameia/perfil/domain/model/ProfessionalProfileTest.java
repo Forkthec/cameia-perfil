@@ -3,6 +3,7 @@ package co.edu.unicauca.cameia.perfil.domain.model;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
@@ -227,6 +228,56 @@ class ProfessionalProfileTest {
 
         assertThat(profile.getTargetRoles()).singleElement()
                 .satisfies(r -> assertThat(r.getProfessionalRoleId()).isEqualTo(newProfessionalRole));
+    }
+
+    @Test
+    @DisplayName("Sustituir un rol objetivo por otro que ya está en el perfil se rechaza y no cambia nada (CA-2.11.8)")
+    void updateTargetRole_shouldThrowDuplicate_whenNewRoleIsAlreadyInProfile() {
+        var profile = ProfessionalProfile.create(UID);
+        var analyst = UUID.randomUUID();
+        var scientist = UUID.randomUUID();
+        profile.addTargetRole(role(analyst, "Analista de datos"));
+        profile.addTargetRole(role(scientist, "Científico de datos"));
+        var analystRoleId = profile.getTargetRoles().get(0).getId();
+
+        assertThatThrownBy(() -> profile.updateTargetRole(analystRoleId, scientist, "Científico de datos"))
+                .isInstanceOf(DuplicateTargetRoleException.class)
+                .hasMessage("Ese rol objetivo ya está en tu perfil.");
+        assertThat(profile.getTargetRoles()).extracting(TargetRole::getProfessionalRoleId)
+                .containsExactlyInAnyOrder(analyst, scientist);
+    }
+
+    // ── updateSummary() ──────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Borrar el resumen de un perfil en Borrador lo deja vacío (CA-2.3.4)")
+    void updateSummary_shouldClear_whenProfileIsInProgress() {
+        var profile = ProfessionalProfile.create(UID);
+        profile.updateSummary(new ProfessionalSummary("Resumen"));
+
+        profile.updateSummary(null);
+
+        assertThat(profile.getSummary()).isNull();
+    }
+
+    @Test
+    @DisplayName("Borrar el resumen de un perfil activo se rechaza y lo conserva (CA-2.3.12)")
+    void updateSummary_shouldRejectClear_whenProfileIsCompleted() {
+        var profile = buildCompleteProfile();
+        profile.complete();
+
+        assertThatThrownBy(() -> profile.updateSummary(null))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .containsExactly(new InvalidFieldsException.FieldError("summary", ErrorCode.SUMMARY_NOT_ALLOWED,
+                                "No puedes quedarte sin resumen profesional con el perfil activo.")));
+        assertThat(profile.getSummary()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Los requisitos faltantes usan los códigos del backlog, en orden fijo")
+    void getMissingRequirements_shouldUseBacklogCodes_whenProfileIsEmpty() {
+        assertThat(ProfessionalProfile.create(UID).getMissingRequirements())
+                .containsExactly("NAME", "SUMMARY", "EDUCATION", "SKILLS", "TARGET_ROLES");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

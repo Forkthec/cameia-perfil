@@ -427,3 +427,11 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
   - `PerfilApplicationTest` pasa a `PerfilApplicationIT` (levanta PostgreSQL y lo corre Failsafe);
   - dos pruebas renombradas a `metodo_shouldResultado_whenCondicion`.
 - **Documentación.** `docs/errores.md`, ADR 0002, OpenAPI del controlador y `README`.
+
+## [x] T-C.2 · Textos y contrato del backlog antes de integrar con Frontend
+
+> Hecha en `CM-271-textos-y-contrato-backlog`, encima de `CM-271-hallazgos-revision-final`.
+
+- **Textos (D19).** Las excepciones existentes responden el literal del backlog y dejan de recibir el valor que repetían (`ProfileNotFoundException`, `ProfessionalRoleNotFoundException`, `DuplicateSkillException` y `DuplicateTargetRoleException` ya no tienen parámetro).
+- **Contrato (D20).** `DELETE` de experiencia, formación, habilidad y rol objetivo → 204 sin cuerpo; `POST …/completion` → 200. OpenAPI y Postman al día.
+- **CA pendientes (D21).** Resumen vacío lo borra y `SUMMARY_NOT_ALLOWED` en un perfil activo; requisitos con los códigos del backlog; `PATCH` del rol objetivo responde 409 si el rol nuevo ya está; `inProgress` ausente es `false`.

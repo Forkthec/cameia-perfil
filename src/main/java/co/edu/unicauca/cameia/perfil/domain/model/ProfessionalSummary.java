@@ -19,7 +19,7 @@ public record ProfessionalSummary(String value) {
     public ProfessionalSummary {
         Objects.requireNonNull(value, "ProfessionalSummary no puede ser nulo");
         if (value.isBlank()) {
-            throw InvalidFieldsException.of("summary", ErrorCode.SUMMARY_REQUIRED, "Ingresa el resumen profesional.");
+            throw new IllegalArgumentException("ProfessionalSummary no puede estar en blanco: para borrarlo se usa null");
         }
         if (value.length() > MAX_LENGTH) {
             throw InvalidFieldsException.of("summary", ErrorCode.SUMMARY_TOO_LONG,

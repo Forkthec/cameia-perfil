@@ -118,6 +118,11 @@ final class ProfessionalProfileMapping {
     }
 
     // ── Entity → Domain
+
+    /** Una fila con el resumen en blanco, anterior a que el dominio lo rechazara, se lee como sin resumen. */
+    private static ProfessionalSummary toSummary(String stored) {
+        return stored == null || stored.isBlank() ? null : new ProfessionalSummary(stored);
+    }
     static ProfessionalProfile toDomain(ProfessionalProfileEntity e) {
         List<WorkExperience> exps = e.getWorkExperiences().stream()
                 .map(ProfessionalProfileMapping::toWorkExpDomain).toList();
@@ -132,7 +137,7 @@ final class ProfessionalProfileMapping {
                 ProfileId.of(e.getId()),
                 new FirebaseUid(e.getFirebaseUid()),
                 e.getName() != null ? new ProfileName(e.getName()) : null,
-                e.getSummary() != null ? new ProfessionalSummary(e.getSummary()) : null,
+                toSummary(e.getSummary()),
                 e.getSalaryExpectation() != null ? new SalaryExpectation(e.getSalaryExpectation()) : null,
                 e.getPreferredModality(),
                 e.getProvenance(),
