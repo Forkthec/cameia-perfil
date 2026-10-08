@@ -19,6 +19,7 @@ import java.util.UUID;
 public final class WorkExperience {
 
     private static final int MAX_TEXT_LENGTH = 500;
+    private static final int MAX_DESCRIPTION_LENGTH = 2000;
 
     private final UUID id;
     private final String company;
@@ -34,11 +35,12 @@ public final class WorkExperience {
                           EmploymentStatus employmentStatus,
                           DataProvenance provenance) {
         this.id = Objects.requireNonNull(id);
-        this.company = requireNonBlankMax(company, "company",
-                ErrorCode.COMPANY_REQUIRED, "Ingresa la empresa.", ErrorCode.COMPANY_TOO_LONG, "La empresa");
-        this.position = requireNonBlankMax(position, "position",
-                ErrorCode.POSITION_REQUIRED, "Ingresa el cargo.", ErrorCode.POSITION_TOO_LONG, "El cargo");
-        this.description = description;
+        this.company = FieldRules.requiredText(company, "company", ErrorCode.COMPANY_REQUIRED,
+                "Ingresa la empresa.", ErrorCode.COMPANY_TOO_LONG, "La empresa", MAX_TEXT_LENGTH);
+        this.position = FieldRules.requiredText(position, "position", ErrorCode.POSITION_REQUIRED,
+                "Ingresa el cargo.", ErrorCode.POSITION_TOO_LONG, "El cargo", MAX_TEXT_LENGTH);
+        this.description = FieldRules.optionalText(description, "description",
+                ErrorCode.DESCRIPTION_TOO_LONG, "La descripción", MAX_DESCRIPTION_LENGTH);
         this.startDate = Objects.requireNonNull(startDate, "startDate es obligatoria");
         this.employmentStatus = Objects.requireNonNull(employmentStatus);
         this.provenance = Objects.requireNonNull(provenance);
@@ -58,19 +60,6 @@ public final class WorkExperience {
         } else if (end != null) {
             throw InvalidFieldsException.of("endDate", ErrorCode.END_DATE_NOT_ALLOWED, "La fecha de fin debe quedar vacía.");
         }
-    }
-
-    private static String requireNonBlankMax(String value, String field, ErrorCode requiredCode,
-                                             String requiredMessage, ErrorCode tooLongCode, String label) {
-        Objects.requireNonNull(value, field + " no puede ser nulo");
-        if (value.isBlank()) {
-            throw InvalidFieldsException.of(field, requiredCode, requiredMessage);
-        }
-        if (value.length() > MAX_TEXT_LENGTH) {
-            throw InvalidFieldsException.of(field, tooLongCode,
-                    label + " no puede superar los " + MAX_TEXT_LENGTH + " caracteres.");
-        }
-        return value;
     }
 
     public UUID getId() { return id; }

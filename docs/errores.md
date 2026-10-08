@@ -59,15 +59,17 @@ Responden igual que Bean Validation: 422 `VALIDATION_FAILED` con «Revisa los ca
 | `PROFILE_NAME_TOO_LONG` | `PATCH …` | `name` | «El nombre no puede superar los 255 caracteres.» | `ProfileName` | La misma |
 | `SUMMARY_REQUIRED` | `PATCH …` | `summary` | «Ingresa el resumen profesional.» | `ProfessionalSummary` | La misma |
 | `SUMMARY_TOO_LONG` | `PATCH …` | `summary` | «El resumen no puede superar los 2000 caracteres.» | `ProfessionalSummary` | La misma |
-| `SALARY_EXPECTATION_OUT_OF_RANGE` | `PATCH …/salary-expectation` | `amount` | «La expectativa salarial no puede ser negativa.» | `SalaryExpectation` | La misma |
+| `SALARY_EXPECTATION_OUT_OF_RANGE` | `PATCH …/salary-expectation` | `amount` | «La expectativa salarial no puede ser negativa.» o «La expectativa salarial no puede tener más de 13 dígitos.» | `SalaryExpectation` | La misma |
 | `COMPANY_TOO_LONG` | `POST …/work-experiences` | `company` | «La empresa no puede superar los 500 caracteres.» | `WorkExperience` | La misma |
 | `POSITION_TOO_LONG` | `POST …/work-experiences` | `position` | «El cargo no puede superar los 500 caracteres.» | `WorkExperience` | La misma |
 | `INSTITUTION_TOO_LONG` | `POST …/educations` | `institution` | «La institución no puede superar los 500 caracteres.» | `Education` | La misma |
 | `DEGREE_TOO_LONG` | `POST …/educations` | `degree` | «El título obtenido no puede superar los 500 caracteres.» | `Education` | La misma |
 | `SKILL_NAME_TOO_LONG` | `POST …/skills` | `skillName` | «La habilidad no puede superar los 255 caracteres.» | `ProfileSkill` | La misma |
+| `DESCRIPTION_TOO_LONG` | `POST …/work-experiences` | `description` | «La descripción no puede superar los 2000 caracteres.» | `WorkExperience` | La misma |
+| `FIELD_OF_STUDY_TOO_LONG` | `POST …/educations` | `fieldOfStudy` | «El área de estudio no puede superar los 500 caracteres.» | `Education` | La misma |
 | `END_DATE_REQUIRED` | `POST …/work-experiences` | `endDate` | «Ingresa la fecha de fin.» | `WorkExperience` (estado `ENDED`) | `WorkExperienceTest.ended_requiresEndDate` |
 | `END_DATE_NOT_ALLOWED` | `POST …/work-experiences`, `POST …/educations` | `endDate` | «La fecha de fin debe quedar vacía.» | `WorkExperience` (`CURRENT`, `UNKNOWN_END`), `Education` (en curso) | `WorkExperienceTest.current_throwsWhenEndDateIsProvided`, `ProfileValueRulesTest.constructor_shouldRejectField_whenRuleIsBroken` |
-| `END_DATE_BEFORE_START_DATE` | `POST …/work-experiences` | `endDate` | «La fecha de fin no puede ser anterior a la de inicio.» | `WorkExperience` | `WorkExperienceTest.ended_throwsWhenEndDateBeforeStartDate`, `ProfileAppServiceTest.addWorkExperience_shouldThrowEndDateBeforeStart_whenEndIsBeforeStart` |
+| `END_DATE_BEFORE_START_DATE` | `POST …/work-experiences`, `POST …/educations` | `endDate` | «La fecha de fin no puede ser anterior a la de inicio.» | `WorkExperience`, `Education` | `WorkExperienceTest.ended_throwsWhenEndDateBeforeStartDate`, `ProfileValueRulesTest.constructor_shouldRejectField_whenRuleIsBroken`, `ProfileAppServiceTest.addWorkExperience_shouldThrowEndDateBeforeStart_whenEndIsBeforeStart` |
 | `START_DATE_INVALID_FORMAT` | `POST …/work-experiences`, `POST …/educations` | `startDate` | «Ingresa una fecha válida con el formato mm/aaaa.» | `CommandValues.yearMonth` | `CommandValuesTest.yearMonth_shouldRejectField_whenFormatIsInvalid`, `ProfileControllerTest.addWorkExperience_shouldReturnStartDateInvalid_whenStartDateIsMalformed` |
 | `END_DATE_INVALID_FORMAT` | `POST …/work-experiences`, `POST …/educations` | `endDate` | «Ingresa una fecha válida con el formato mm/aaaa.» | `CommandValues.yearMonth` | La misma de `CommandValuesTest` |
 | `PREFERRED_MODALITY_INVALID_VALUE` | `PATCH …` | `preferredModality` | «Selecciona una opción.» | `CommandValues.option` | `ProfileAppServiceTest.updateProfileInfo_shouldThrowModalityInvalid_whenModalityIsUnknown`, `CommandValuesTest.option_shouldRejectField_whenValueIsNotAnOption` |

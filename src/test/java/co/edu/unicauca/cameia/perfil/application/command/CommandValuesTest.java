@@ -46,6 +46,25 @@ class CommandValuesTest {
         assertThat(CommandValues.yearMonth(null, false, ErrorCode.END_DATE_INVALID_FORMAT, "endDate")).isNull();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"+999999999-01", "-0001-05", "0000-01", "0000", "20200"})
+    @DisplayName("Un año fuera de cuatro dígitos o el año cero se rechazan aunque Java los lea, porque la base no los guarda")
+    void yearMonth_shouldRejectField_whenYearIsOutsideFourDigits(String value) {
+        assertThatThrownBy(() -> CommandValues.yearMonth(value, true, ErrorCode.END_DATE_INVALID_FORMAT, "endDate"))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .containsExactly(new FieldError("endDate", ErrorCode.END_DATE_INVALID_FORMAT,
+                                "Ingresa una fecha válida con el formato mm/aaaa.")));
+    }
+
+    @Test
+    @DisplayName("El primer y el último año de cuatro dígitos se aceptan")
+    void yearMonth_shouldParse_whenYearIsAtTheLimits() {
+        assertThat(CommandValues.yearMonth("0001-01", false, ErrorCode.START_DATE_INVALID_FORMAT, "startDate"))
+                .isEqualTo(YearMonth.of(1, 1));
+        assertThat(CommandValues.yearMonth("9999-12", false, ErrorCode.START_DATE_INVALID_FORMAT, "startDate"))
+                .isEqualTo(YearMonth.of(9999, 12));
+    }
+
     @Test
     @DisplayName("Solo el año se acepta cuando se permite y se lee como enero")
     void yearMonth_shouldReadJanuary_whenOnlyYearIsAllowed() {
@@ -56,7 +75,7 @@ class CommandValuesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"2020-13", "31/02/2020", "2020"})
+    @ValueSource(strings = {"2020-13", "31/02/2020", "2020", "+999999999-01", "-0001-05", "0000-01", "20200-01", "2020-1"})
     @DisplayName("Una fecha que no existe o con otro formato se rechaza en su campo con el formato esperado")
     void yearMonth_shouldRejectField_whenFormatIsInvalid(String value) {
         assertThatThrownBy(() -> CommandValues.yearMonth(value, false, ErrorCode.START_DATE_INVALID_FORMAT, "startDate"))

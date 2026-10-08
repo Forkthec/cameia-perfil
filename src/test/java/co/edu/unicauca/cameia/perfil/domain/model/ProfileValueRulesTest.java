@@ -37,6 +37,13 @@ class ProfileValueRulesTest {
                 Arguments.of("salario negativo", (Executable) () -> new SalaryExpectation(new BigDecimal("-1")),
                         "amount", ErrorCode.SALARY_EXPECTATION_OUT_OF_RANGE,
                         "La expectativa salarial no puede ser negativa."),
+                Arguments.of("salario de 14 dígitos", (Executable) () -> new SalaryExpectation(new BigDecimal("10000000000000")),
+                        "amount", ErrorCode.SALARY_EXPECTATION_OUT_OF_RANGE,
+                        "La expectativa salarial no puede tener más de 13 dígitos."),
+                Arguments.of("salario en notación científica de 14 dígitos",
+                        (Executable) () -> new SalaryExpectation(new BigDecimal("1E+13")),
+                        "amount", ErrorCode.SALARY_EXPECTATION_OUT_OF_RANGE,
+                        "La expectativa salarial no puede tener más de 13 dígitos."),
                 Arguments.of("habilidad en blanco", (Executable) () -> skill(" "),
                         "skillName", ErrorCode.SKILL_NAME_REQUIRED, "Ingresa una habilidad."),
                 Arguments.of("habilidad de 256", (Executable) () -> skill("a".repeat(256)),
@@ -45,6 +52,11 @@ class ProfileValueRulesTest {
                         "company", ErrorCode.COMPANY_REQUIRED, "Ingresa la empresa."),
                 Arguments.of("empresa de 501", (Executable) () -> experience("a".repeat(501), "Dev"),
                         "company", ErrorCode.COMPANY_TOO_LONG, "La empresa no puede superar los 500 caracteres."),
+                Arguments.of("descripción de 2001",
+                        (Executable) () -> new WorkExperience(UUID.randomUUID(), "ACME", "Dev", "a".repeat(2001), START,
+                                null, EmploymentStatus.CURRENT, DataProvenance.MANUAL),
+                        "description", ErrorCode.DESCRIPTION_TOO_LONG,
+                        "La descripción no puede superar los 2000 caracteres."),
                 Arguments.of("cargo en blanco", (Executable) () -> experience("ACME", ""),
                         "position", ErrorCode.POSITION_REQUIRED, "Ingresa el cargo."),
                 Arguments.of("cargo de 501", (Executable) () -> experience("ACME", "a".repeat(501)),
@@ -58,6 +70,15 @@ class ProfileValueRulesTest {
                         "degree", ErrorCode.DEGREE_REQUIRED, "Ingresa el título obtenido."),
                 Arguments.of("título de 501", (Executable) () -> education("Unicauca", "a".repeat(501), null, false),
                         "degree", ErrorCode.DEGREE_TOO_LONG, "El título obtenido no puede superar los 500 caracteres."),
+                Arguments.of("área de estudio de 501",
+                        (Executable) () -> new Education(UUID.randomUUID(), "Unicauca", "Ing", "a".repeat(501),
+                                EducationLevel.UNDERGRADUATE, START, null, false, DataProvenance.MANUAL),
+                        "fieldOfStudy", ErrorCode.FIELD_OF_STUDY_TOO_LONG,
+                        "El área de estudio no puede superar los 500 caracteres."),
+                Arguments.of("formación terminada antes de empezar",
+                        (Executable) () -> education("Unicauca", "Ing", START.minusMonths(1), false),
+                        "endDate", ErrorCode.END_DATE_BEFORE_START_DATE,
+                        "La fecha de fin no puede ser anterior a la de inicio."),
                 Arguments.of("formación en curso con fecha de fin",
                         (Executable) () -> education("Unicauca", "Ing", START.plusYears(1), true),
                         "endDate", ErrorCode.END_DATE_NOT_ALLOWED, "La fecha de fin debe quedar vacía."));
@@ -82,8 +103,14 @@ class ProfileValueRulesTest {
             new ProfileName("a".repeat(255));
             new ProfessionalSummary("a".repeat(2000));
             new SalaryExpectation(BigDecimal.ZERO);
+            new SalaryExpectation(new BigDecimal("9999999999999.99"));
+            new SalaryExpectation(new BigDecimal("1E+12"));
             skill("a".repeat(255));
             experience("a".repeat(500), "a".repeat(500));
+            new WorkExperience(UUID.randomUUID(), "ACME", "Dev", "a".repeat(2000), START, null,
+                    EmploymentStatus.CURRENT, DataProvenance.MANUAL);
+            new Education(UUID.randomUUID(), "Unicauca", "Ing", "a".repeat(500), EducationLevel.UNDERGRADUATE,
+                    START, START, false, DataProvenance.MANUAL);
             education("a".repeat(500), "a".repeat(500), START.plusYears(1), false);
             education("Unicauca", "Ing", null, true);
         }).doesNotThrowAnyException();

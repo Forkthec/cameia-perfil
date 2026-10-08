@@ -95,6 +95,10 @@ public enum ErrorCode {
     DEGREE_TOO_LONG,
     /** El nombre de la habilidad supera su largo máximo. */
     SKILL_NAME_TOO_LONG,
+    /** La descripción de la experiencia supera su largo máximo. */
+    DESCRIPTION_TOO_LONG,
+    /** El área de estudio de la formación supera su largo máximo. */
+    FIELD_OF_STUDY_TOO_LONG,
     /** Falta la empresa de la experiencia laboral. */
     COMPANY_REQUIRED,
     /** Falta el cargo de la experiencia laboral. */

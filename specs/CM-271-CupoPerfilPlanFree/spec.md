@@ -262,6 +262,7 @@ Cobertura de lo nuevo o modificado: ≥ 90 % de líneas y de ramas con JaCoCo; c
 | Deshabilitar «Llenado Manual» mientras la creación está en curso (D15) | Frontend, por el documento de aclaraciones de Backend |
 | Lista de perfiles del Usuario (`GET /api/v1/profiles`, HU-4.2): sin ella el Usuario no vuelve a su perfil si el navegador no guardó su `id` | Product Owner: tarea nueva en Jira, por comunicación a Vela |
 | `ProfessionalProfile` (201 líneas) pasa del límite de 200 desde antes de esta tarea | Se parte en la primera tarea que cambie su estructura (CM-274, bloque 1) |
+| Textos que el backlog no fija y se escribieron para no dejar un 500: la descripción de la experiencia (2000), el área de estudio (500), la expectativa salarial de más de 13 dígitos y la formación terminada antes de empezar. Los límites son los de la columna | Product Owner, para confirmar el texto; el límite de 100, 150 o 60 de la interfaz sigue en CM-274 y CM-66 |
 
 **Entregables de documentación en esta tarea:** `docs/errores.md` (catálogo completo y los estados que difieren del mapa base), un ADR para el cambio a 422 y otro para el bloqueo de creación con la regla de REQ-PE-26, `README` (Docker necesario para las pruebas de integración) y `CLAUDE.md` del repositorio si lista estos puntos como pendientes. La carpeta de esta spec se renombra a `specs/CM-271-CupoPerfilPlanFree` (convención del estándar) en el PR B.
 
