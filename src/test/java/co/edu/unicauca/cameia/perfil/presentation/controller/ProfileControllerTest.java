@@ -30,8 +30,11 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.YearMonth;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,8 +62,6 @@ class ProfileControllerTest {
                 .setControllerAdvice(new ApiExceptionHandler())
                 .build();
     }
-
-    // ── CM-16 ─────────────────────────────────────────────────────────────
 
     @Test
     void postProfiles_returns201WithProfileBody() throws Exception {
@@ -178,6 +179,19 @@ class ProfileControllerTest {
     }
 
     @Test
+    @DisplayName("Pedir el perfil en XML responde 406 con su código en JSON")
+    void getProfile_shouldReturn406_whenClientAcceptsOnlyXml() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-xml"));
+        when(profileAppService.getProfile(profile.getId().value(), "uid-ctrl-xml")).thenReturn(profile);
+
+        mockMvc.perform(get("/api/v1/profiles/{id}", profile.getId().value())
+                        .header("X-User-Id", "uid-ctrl-xml").accept(MediaType.APPLICATION_XML))
+                .andExpect(status().isNotAcceptable())
+                .andExpect(jsonPath("$.code").value("ACCEPT_TYPE_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.detail").value("La respuesta solo está disponible en formato JSON."));
+    }
+
+    @Test
     @DisplayName("El 405 conserva el encabezado Allow con los métodos permitidos")
     void deleteProfiles_shouldKeepAllowHeader_whenMethodNotAllowed() throws Exception {
         mockMvc.perform(delete("/api/v1/profiles"))
@@ -185,7 +199,85 @@ class ProfileControllerTest {
                 .andExpect(header().string("Allow", containsString("POST")));
     }
 
-    // ── CM-17 ─────────────────────────────────────────────────────────────
+    private static final String WORK_EXPERIENCE = "/work-experiences";
+    private static final String SKILLS = "/skills";
+    private static final String TARGET_ROLES = "/target-roles";
+    private static final String SELECT_OPTION = "Selecciona una opción.";
+
+    /** Cuerpo válido de cada endpoint, en el orden de sus campos. */
+    private static Map<String, String> validBody(String endpoint) {
+        var body = new LinkedHashMap<String, String>();
+        switch (endpoint) {
+            case WORK_EXPERIENCE -> {
+                body.put("company", "\"ACME\"");
+                body.put("position", "\"Dev\"");
+                body.put("startDate", "\"2022-01\"");
+                body.put("employmentStatus", "\"CURRENT\"");
+                body.put("provenance", "\"MANUAL\"");
+            }
+            case SKILLS -> {
+                body.put("skillName", "\"Java\"");
+                body.put("level", "\"ADVANCED\"");
+                body.put("provenance", "\"MANUAL\"");
+            }
+            default -> {
+                body.put("professionalRoleId", "\"" + UUID.randomUUID() + "\"");
+                body.put("provenance", "\"MANUAL\"");
+            }
+        }
+        return body;
+    }
+
+    /**
+     * Una fila por código de campo: cada {@code NotBlank} se prueba ausente, {@code null}, vacío,
+     * con espacios y con un tabulador; cada {@code NotNull}, ausente y {@code null}.
+     */
+    static Stream<Arguments> fieldCodes() {
+        var rows = Stream.of(
+                new Object[]{WORK_EXPERIENCE, "company", true, "COMPANY_REQUIRED", "Ingresa la empresa."},
+                new Object[]{WORK_EXPERIENCE, "position", true, "POSITION_REQUIRED", "Ingresa el cargo."},
+                new Object[]{WORK_EXPERIENCE, "startDate", true, "START_DATE_REQUIRED", "Ingresa la fecha de inicio."},
+                new Object[]{WORK_EXPERIENCE, "employmentStatus", false, "EMPLOYMENT_STATUS_REQUIRED", SELECT_OPTION},
+                new Object[]{WORK_EXPERIENCE, "provenance", false, "PROVENANCE_REQUIRED", SELECT_OPTION},
+                new Object[]{SKILLS, "skillName", true, "SKILL_NAME_REQUIRED", "Ingresa una habilidad."},
+                new Object[]{SKILLS, "level", true, "SKILL_LEVEL_REQUIRED", "Elige un nivel."},
+                new Object[]{SKILLS, "provenance", true, "PROVENANCE_REQUIRED", SELECT_OPTION},
+                new Object[]{TARGET_ROLES, "professionalRoleId", false, "PROFESSIONAL_ROLE_ID_REQUIRED", SELECT_OPTION},
+                new Object[]{TARGET_ROLES, "provenance", false, "PROVENANCE_REQUIRED", SELECT_OPTION});
+        return rows.flatMap(row -> {
+            // null significa que el campo no se envía; el resto son valores JSON literales.
+            var values = (boolean) row[2]
+                    ? new String[]{null, "null", "\"\"", "\"   \"", "\"\\t\""}
+                    : new String[]{null, "null"};
+            return Stream.of(values).map(value -> Arguments.of(row[0], row[1], value, row[3], row[4]));
+        });
+    }
+
+    @ParameterizedTest(name = "{0} {1}={2} -> {3}")
+    @MethodSource("fieldCodes")
+    @DisplayName("Cada campo obligatorio rechazado responde 422 con su campo, su código y su mensaje")
+    void addToProfile_shouldReturnFieldCode_whenRequiredFieldIsMissingOrBlank(
+            String endpoint, String field, String value, String code, String message) throws Exception {
+        var body = validBody(endpoint);
+        if (value == null) {
+            body.remove(field);
+        } else {
+            body.put(field, value);
+        }
+        var json = body.entrySet().stream()
+                .map(entry -> "\"" + entry.getKey() + "\":" + entry.getValue())
+                .collect(Collectors.joining(",", "{", "}"));
+
+        mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + endpoint)
+                        .header("X-User-Id", "uid-ctrl-field")
+                        .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors.length()").value(1))
+                .andExpect(jsonPath("$.errors[0].field").value(field))
+                .andExpect(jsonPath("$.errors[0].code").value(code))
+                .andExpect(jsonPath("$.errors[0].message").value(message));
+    }
 
     @Test
     void patchProfile_returns200WithUpdatedProfile() throws Exception {
@@ -202,8 +294,6 @@ class ProfileControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Ana Sofía"));
     }
-
-    // ── CM-174 ────────────────────────────────────────────────────────────
 
     @Test
     void getProfile_returns403WhenProfileIsOwnedByAnotherUser() throws Exception {
@@ -254,8 +344,6 @@ class ProfileControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.title").value("Identidad requerida"));
     }
-
-    // ── CM-19 ─────────────────────────────────────────────────────────────
 
     @Test
     void patchSalaryExpectation_returns200() throws Exception {
@@ -356,8 +444,6 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.missingRequirements").isArray());
     }
 
-    // ── CM-20 / CM-21 / CM-23 ─────────────────────────────────────────────
-
     @Test
     void postTargetRoles_returns201() throws Exception {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-role"));
@@ -422,8 +508,6 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.errors[0].field").value("professionalRoleId"))
                 .andExpect(jsonPath("$.errors[0].code").value("PROFESSIONAL_ROLE_ID_REQUIRED"));
     }
-
-    // ── CM-22 ─────────────────────────────────────────────────────────────
 
     @Test
     void postCompletion_returns201() throws Exception {

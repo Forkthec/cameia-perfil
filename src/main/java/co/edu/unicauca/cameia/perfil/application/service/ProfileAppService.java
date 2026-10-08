@@ -51,8 +51,6 @@ public class ProfileAppService {
         this.roleRepository = roleRepository;
     }
 
-    // ── CM-16 ────────────────────────────────────────────────────────────
-
     @Transactional
     public ProfessionalProfile createProfile(CreateProfileCommand command) {
         var uid = requireIdentity(command.firebaseUid());
@@ -63,8 +61,6 @@ public class ProfileAppService {
         return profile;
     }
 
-    // ── CM-17 ────────────────────────────────────────────────────────────
-
     @Transactional
     public ProfessionalProfile updateProfileInfo(UpdateProfileInfoCommand cmd) {
         var p = loadForUser(cmd.profileId(), cmd.uid());
@@ -74,8 +70,6 @@ public class ProfileAppService {
         if (cmd.provenance() != null) p.updateProvenance(DataProvenance.valueOf(cmd.provenance()));
         repository.save(p); return p;
     }
-
-    // ── CM-18 ────────────────────────────────────────────────────────────
 
     @Transactional
     public ProfessionalProfile addWorkExperience(AddWorkExperienceCommand cmd) {
@@ -111,8 +105,6 @@ public class ProfileAppService {
         var p = loadForUser(profileId, uid); p.removeEducation(eduId); repository.save(p); return p;
     }
 
-    // ── CM-19 ────────────────────────────────────────────────────────────
-
     @Transactional
     public ProfessionalProfile updateSalaryExpectation(UpdateSalaryExpectationCommand cmd) {
         var p = loadForUser(cmd.profileId(), cmd.uid());
@@ -137,11 +129,7 @@ public class ProfileAppService {
         var p = loadForUser(profileId, uid); p.requestReview(); repository.save(p); return p;
     }
 
-    // ── CM-20 ────────────────────────────────────────────────────────────
-
     public ProfessionalProfile getProfile(UUID id, String uid) { return loadForUser(id, uid); }
-
-    // ── CM-21 / CM-23 ────────────────────────────────────────────────────
 
     @Transactional
     public ProfessionalProfile addTargetRole(AddTargetRoleCommand cmd) {
@@ -165,8 +153,6 @@ public class ProfileAppService {
     public ProfessionalProfile removeTargetRole(UUID profileId, String uid, UUID roleId) {
         var p = loadForUser(profileId, uid); p.removeTargetRole(roleId); repository.save(p); return p;
     }
-
-    // ── CM-22 ────────────────────────────────────────────────────────────
 
     @Transactional
     public ProfessionalProfile completeProfile(UUID profileId, String uid) {

@@ -9,6 +9,7 @@ import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectation
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
@@ -64,8 +65,6 @@ class ProfileAppServiceTest {
     void setUp() {
         service = new ProfileAppService(repository, roleRepository);
     }
-
-    // ── CM-16 ────────────────────────────────────────────────────────────
 
     @Test
     void createProfile_savesProfileAndReturnsIt() {
@@ -140,8 +139,6 @@ class ProfileAppServiceTest {
         verify(repository, never()).existsByFirebaseUid(any());
     }
 
-    // ── CM-17 ────────────────────────────────────────────────────────────
-
     @Test
     void updateProfileInfo_appliesNameAndSummary() {
         var profile = freshProfile();
@@ -169,8 +166,6 @@ class ProfileAppServiceTest {
         assertThat(profile.getName().value()).isEqualTo("Nombre original");
         assertThat(profile.getSummary().value()).isEqualTo("nuevo resumen");
     }
-
-    // ── CM-18 ────────────────────────────────────────────────────────────
 
     @Test
     void addWorkExperience_addsEntryAndSaves() {
@@ -206,8 +201,6 @@ class ProfileAppServiceTest {
         assertThat(profile.getWorkExperiences()).isEmpty();
         verify(repository).save(profile);
     }
-
-    // ── CM-19 ────────────────────────────────────────────────────────────
 
     @Test
     void updateSalaryExpectation_setsAmountAndSaves() {
@@ -257,8 +250,6 @@ class ProfileAppServiceTest {
         verify(repository).save(profile);
     }
 
-    // ── CM-20 / CM-21 / CM-23 ────────────────────────────────────────────
-
     @Test
     void addTargetRole_addsRoleAndSaves() {
         var profile = freshProfile();
@@ -282,8 +273,6 @@ class ProfileAppServiceTest {
                 .isInstanceOf(LastTargetRoleException.class);
         verify(repository, never()).save(any());
     }
-
-    // ── CM-22 ────────────────────────────────────────────────────────────
 
     @Test
     void completeProfile_setsStatusToCompleted() {
@@ -314,7 +303,13 @@ class ProfileAppServiceTest {
                 .hasMessageContaining(id.toString());
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
+    @Test
+    @DisplayName("Un perfil de otro Usuario se rechaza como acceso denegado")
+    void getProfile_shouldThrowAccessDenied_whenProfileBelongsToAnotherUser() {
+        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        assertThatThrownBy(() -> service.getProfile(UUID.randomUUID(), "uid-otra-persona"))
+                .isInstanceOf(ProfileAccessDeniedException.class);
+    }
 
     private static ProfessionalProfile freshProfile() {
         return ProfessionalProfile.create(new FirebaseUid(SVC_UID));

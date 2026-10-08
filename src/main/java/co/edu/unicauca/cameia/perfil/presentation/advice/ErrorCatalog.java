@@ -9,6 +9,7 @@ import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.*;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
@@ -51,6 +52,8 @@ final class ErrorCatalog {
                     "La operación no está permitida en esta ruta."),
             entry(CONTENT_TYPE_NOT_ALLOWED, UNSUPPORTED_MEDIA_TYPE, "Formato no soportado",
                     "Envía los datos en formato JSON."),
+            entry(ACCEPT_TYPE_NOT_ALLOWED, NOT_ACCEPTABLE, "Formato no disponible",
+                    "La respuesta solo está disponible en formato JSON."),
             entry(PROFILE_ID_INVALID_FORMAT, UNPROCESSABLE_ENTITY, INVALID_ID,
                     "El identificador del perfil no es válido."),
             entry(WORK_EXPERIENCE_ID_INVALID_FORMAT, UNPROCESSABLE_ENTITY, INVALID_ID,

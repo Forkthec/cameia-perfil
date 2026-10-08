@@ -2,6 +2,7 @@ package co.edu.unicauca.cameia.perfil.domain.exception;
 
 /** Se lanza cuando el usuario intenta crear un segundo perfil y su plan solo admite uno. */
 public class ProfileAlreadyExistsException extends BusinessException {
+    /** Crea la excepción con su código y el mensaje para la persona. */
     public ProfileAlreadyExistsException() {
         super(ErrorCode.PROFILE_LIMIT_REACHED, "El usuario ya tiene un perfil profesional creado. "
                 + "El plan gratuito permite solo uno. "
