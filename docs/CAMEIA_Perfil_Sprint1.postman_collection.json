@@ -2435,6 +2435,111 @@
           }
         },
         {
+          "name": "ERR POST /educations — 422 área de estudio de 501 caracteres",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('field_501', 'a'.repeat(501));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca fieldOfStudy', () => pm.expect(pm.response.json().errors[0].field).to.eql('fieldOfStudy'));",
+                  "pm.test('errors[0].code FIELD_OF_STUDY_TOO_LONG', () => pm.expect(pm.response.json().errors[0].code).to.eql('FIELD_OF_STUDY_TOO_LONG'));",
+                  "pm.test('errors[0].message dice qué corregir', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"El área de estudio no puede superar los 500 caracteres.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/educations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "educations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"institution\": \"Unicauca\",\n  \"degree\": \"Ingeniería\",\n  \"fieldOfStudy\": \"{{field_501}}\",\n  \"level\": \"UNDERGRADUATE\",\n  \"startDate\": \"2020-01\",\n  \"inProgress\": false,\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ERR POST /educations — 422 fin antes del inicio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
+                  "pm.test('errors[0] marca endDate', () => pm.expect(pm.response.json().errors[0].field).to.eql('endDate'));",
+                  "pm.test('errors[0].code END_DATE_BEFORE_START_DATE', () => pm.expect(pm.response.json().errors[0].code).to.eql('END_DATE_BEFORE_START_DATE'));",
+                  "pm.test('errors[0].message dice qué corregir', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"La fecha de fin no puede ser anterior a la de inicio.\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_b}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_b}}/educations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_b}}",
+                "educations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"institution\": \"Unicauca\",\n  \"degree\": \"Ingeniería\",\n  \"level\": \"UNDERGRADUATE\",\n  \"startDate\": \"2022-05\",\n  \"endDate\": \"2020-01\",\n  \"inProgress\": false,\n  \"provenance\": \"MANUAL\"\n}"
+            }
+          }
+        },
+        {
           "name": "OK POST /educations — 201 sin inProgress (cuenta como false)",
           "event": [
             {
