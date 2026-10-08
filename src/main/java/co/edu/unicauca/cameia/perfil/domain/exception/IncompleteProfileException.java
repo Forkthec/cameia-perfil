@@ -8,7 +8,7 @@ public class IncompleteProfileException extends BusinessException {
     private final List<String> missingRequirements;
 
     public IncompleteProfileException(List<String> missingRequirements) {
-        super(ErrorCode.PROFILE_INCOMPLETE, "El perfil no cumple los requisitos mínimos: " + missingRequirements);
+        super(ErrorCode.PROFILE_INCOMPLETE, "Todavía no cumples estos requisitos:");
         this.missingRequirements = List.copyOf(missingRequirements);
     }
 

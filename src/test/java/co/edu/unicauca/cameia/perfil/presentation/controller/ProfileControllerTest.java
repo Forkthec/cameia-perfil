@@ -15,23 +15,34 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.presentation.advice.ApiExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -74,9 +85,104 @@ class ProfileControllerTest {
     }
 
     @Test
-    void postProfiles_returns400WhenXUserIdHeaderIsMissing() throws Exception {
+    @DisplayName("Sin el encabezado de identidad, crear un perfil responde 401")
+    void postProfiles_shouldReturn401_whenXUserIdHeaderIsMissing() throws Exception {
         mockMvc.perform(post("/api/v1/profiles"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("IDENTITY_REQUIRED"))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   ", "\t"})
+    @DisplayName("Una identidad en blanco responde 401 aunque el encabezado llegue")
+    void postProfiles_shouldReturn401_whenXUserIdIsBlank(String uid) throws Exception {
+        when(profileAppService.createProfile(new CreateProfileCommand(uid))).thenThrow(new IdentityRequiredException());
+
+        mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", uid))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("IDENTITY_REQUIRED"));
+    }
+
+    @Test
+    @DisplayName("Una identidad de 128 caracteres crea el perfil")
+    void postProfiles_shouldReturn201_whenXUserIdHasMaxLength() throws Exception {
+        var uid = "a".repeat(128);
+        when(profileAppService.createProfile(new CreateProfileCommand(uid)))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid(uid)));
+
+        mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", uid))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("Una identidad de 129 caracteres responde 401 sin repetir el valor")
+    void postProfiles_shouldReturn401WithoutEcho_whenXUserIdIsTooLong() throws Exception {
+        var uid = "a".repeat(129);
+        when(profileAppService.createProfile(new CreateProfileCommand(uid))).thenThrow(new IdentityRequiredException());
+
+        var result = mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", uid))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("IDENTITY_REQUIRED"))
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).doesNotContain("aaaa");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2020-13", "31/02/2020"})
+    @DisplayName("Una fecha mal escrita responde 422 sin el mensaje del analizador de fechas")
+    void addWorkExperience_shouldReturn422_whenStartDateIsMalformed(String startDate) throws Exception {
+        when(profileAppService.addWorkExperience(any()))
+                .thenAnswer(invocation -> YearMonth.parse(startDate));
+        var body = """
+                {"company":"ACME","position":"Dev","startDate":"%s","employmentStatus":"CURRENT","provenance":"MANUAL"}
+                """.formatted(startDate);
+
+        var result = mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + "/work-experiences")
+                        .header("X-User-Id", "uid-ctrl-date")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("REQUEST_INVALID_VALUE"))
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).doesNotContain("Text").doesNotContain("parse");
+    }
+
+    static Stream<Arguments> frameworkErrors() {
+        var profileId = UUID.randomUUID();
+        return Stream.of(
+                Arguments.of(get("/api/v1/no-existe"), 404, "ROUTE_NOT_FOUND", "La ruta solicitada no existe."),
+                Arguments.of(delete("/api/v1/profiles"), 405, "METHOD_NOT_ALLOWED",
+                        "La operación no está permitida en esta ruta."),
+                Arguments.of(patch("/api/v1/profiles/" + profileId).header("X-User-Id", "uid-ctrl-415")
+                                .contentType(MediaType.TEXT_PLAIN).content("x"),
+                        415, "CONTENT_TYPE_NOT_ALLOWED", "Envía los datos en formato JSON."),
+                Arguments.of(get("/api/v1/profiles/no-es-uuid").header("X-User-Id", "uid-ctrl-id"),
+                        422, "PROFILE_ID_INVALID_FORMAT", "El identificador del perfil no es válido."),
+                Arguments.of(delete("/api/v1/profiles/" + profileId + "/skills/xyz").header("X-User-Id", "uid-ctrl-id"),
+                        422, "SKILL_ID_INVALID_FORMAT", "El identificador de la habilidad no es válido."));
+    }
+
+    @ParameterizedTest
+    @MethodSource("frameworkErrors")
+    @DisplayName("Los errores del framework responden la forma común con su código, sin repetir la entrada")
+    void frameworkError_shouldReturnCommonShape_whenRequestIsRejected(
+            MockHttpServletRequestBuilder request, int status, String code, String detail) throws Exception {
+        // El detail es el texto fijo del catálogo, así que no puede llevar el valor ni el mensaje de Spring.
+        mockMvc.perform(request)
+                .andExpect(status().is(status))
+                .andExpect(jsonPath("$.code").value(code))
+                .andExpect(jsonPath("$.detail").value(detail))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("El 405 conserva el encabezado Allow con los métodos permitidos")
+    void deleteProfiles_shouldKeepAllowHeader_whenMethodNotAllowed() throws Exception {
+        mockMvc.perform(delete("/api/v1/profiles"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(header().string("Allow", containsString("POST")));
     }
 
     // ── CM-17 ─────────────────────────────────────────────────────────────
@@ -305,6 +411,18 @@ class ProfileControllerTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    @DisplayName("PATCH de rol objetivo sin professionalRoleId responde 422 con su código y no llega al servicio")
+    void patchTargetRole_shouldReturn422_whenProfessionalRoleIdMissing() throws Exception {
+        mockMvc.perform(patch("/api/v1/profiles/{id}/target-roles/{roleId}", UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].field").value("professionalRoleId"))
+                .andExpect(jsonPath("$.errors[0].code").value("PROFESSIONAL_ROLE_ID_REQUIRED"));
+    }
+
     // ── CM-22 ─────────────────────────────────────────────────────────────
 
     @Test
@@ -318,13 +436,17 @@ class ProfileControllerTest {
     }
 
     @Test
-    void postCompletion_returns422WhenIncomplete() throws Exception {
+    @DisplayName("Finalizar sin resumen ni habilidades responde la forma común con los dos requisitos")
+    void postCompletion_shouldReturn422WithCommonShape_whenSummaryAndSkillsAreMissing() throws Exception {
         when(profileAppService.completeProfile(any(), any()))
-                .thenThrow(new IncompleteProfileException(List.of("nombre", "resumen", "educacion")));
+                .thenThrow(new IncompleteProfileException(List.of("summary", "al menos 1 habilidad")));
 
         mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-comp"))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.missingRequirements").isArray());
+                .andExpect(jsonPath("$.code").value("PROFILE_INCOMPLETE"))
+                .andExpect(jsonPath("$.detail").value("Todavía no cumples estos requisitos:"))
+                .andExpect(jsonPath("$.missingRequirements.length()").value(2))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
     }
 }

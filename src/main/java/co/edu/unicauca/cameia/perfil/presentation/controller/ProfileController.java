@@ -12,7 +12,6 @@ import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddEducationRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddSkillRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddTargetRoleRequest;
-import co.edu.unicauca.cameia.perfil.presentation.dto.CompletionErrorResponse;
 import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateTargetRoleRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddWorkExperienceRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.ProfileResponse;
@@ -261,7 +260,7 @@ class ProfileController {
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "422", description = "Perfil incompleto; el cuerpo contiene la lista de requisitos faltantes",
-                    content = @Content(schema = @Schema(implementation = CompletionErrorResponse.class)))
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/{id}/review-requests")
     ResponseEntity<ProfileResponse> requestReview(@PathVariable UUID id,
@@ -350,7 +349,7 @@ class ProfileController {
             @ApiResponse(responseCode = "409", description = "El perfil ya está en estado COMPLETED",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "422", description = "El perfil no cumple los 5 requisitos; el cuerpo contiene la lista de campos faltantes",
-                    content = @Content(schema = @Schema(implementation = CompletionErrorResponse.class)))
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/{id}/completion")
     ResponseEntity<ProfileResponse> completeProfile(@PathVariable UUID id,

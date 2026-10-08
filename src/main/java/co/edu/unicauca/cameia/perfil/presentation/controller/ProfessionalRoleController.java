@@ -1,6 +1,7 @@
 package co.edu.unicauca.cameia.perfil.presentation.controller;
 
 import co.edu.unicauca.cameia.perfil.application.service.ProfessionalRoleAppService;
+import co.edu.unicauca.cameia.perfil.domain.exception.UnsupportedLanguageException;
 import co.edu.unicauca.cameia.perfil.presentation.dto.ProfessionalRoleResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,7 +11,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,19 +36,16 @@ class ProfessionalRoleController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista de roles profesionales",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProfessionalRoleResponse.class)))),
-            @ApiResponse(responseCode = "400", description = "Idioma no soportado (use 'es' o 'en')",
+            @ApiResponse(responseCode = "422", description = "PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE: idioma no disponible (use 'es' o 'en')",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @GetMapping
-    ResponseEntity<?> listAll(
+    ResponseEntity<List<ProfessionalRoleResponse>> listAll(
             @Parameter(description = "Idioma de la respuesta: 'es' (español) o 'en' (inglés). Por defecto 'es'.")
             @RequestParam(value = "lang", defaultValue = "es") String lang) {
 
         if (!SUPPORTED_LANGS.contains(lang)) {
-            ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-            pd.setTitle("Parámetro inválido");
-            pd.setDetail("El valor '" + lang + "' no es un idioma soportado. Use 'es' o 'en'.");
-            return ResponseEntity.badRequest().body(pd);
+            throw new UnsupportedLanguageException();
         }
 
         return ResponseEntity.ok(

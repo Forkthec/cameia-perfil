@@ -11,7 +11,8 @@ import java.util.Objects;
  */
 public record FirebaseUid(String value) {
 
-    private static final int MAX_LENGTH = 128;
+    /** Longitud máxima de un UID de Firebase. */
+    public static final int MAX_LENGTH = 128;
 
     public FirebaseUid {
         Objects.requireNonNull(value, "FirebaseUid no puede ser nulo");
