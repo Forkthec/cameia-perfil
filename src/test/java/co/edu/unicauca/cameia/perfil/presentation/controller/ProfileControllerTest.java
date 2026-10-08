@@ -5,6 +5,7 @@ import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationTimeoutException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
@@ -146,6 +147,18 @@ class ProfileControllerTest {
                 .andReturn();
 
         assertThat(result.getResponse().getContentAsString()).doesNotContain("conexión");
+    }
+
+    @Test
+    @DisplayName("Si otra creación del mismo Usuario no termina a tiempo, crear un perfil responde 503 con su código")
+    void postProfiles_shouldReturn503_whenCreationLockTimesOut() throws Exception {
+        when(profileCreationAppService.createProfile(any())).thenThrow(new ProfileCreationTimeoutException());
+
+        mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-ana-001"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("PROFILE_CREATION_TIMEOUT"))
+                .andExpect(jsonPath("$.detail").value("Estamos creando tu perfil. Inténtalo de nuevo en unos segundos."))
+                .andExpect(jsonPath("$.requestId").exists());
     }
 
     @Test

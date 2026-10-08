@@ -17,6 +17,8 @@ public enum ErrorCode {
     PROFILE_NOT_ALLOWED,
     /** El usuario alcanzó el cupo de perfiles de su plan. */
     PROFILE_LIMIT_REACHED,
+    /** La creación del perfil esperó demasiado a otra creación del mismo usuario que no terminó. */
+    PROFILE_CREATION_TIMEOUT,
     /** El perfil ya está finalizado y no admite más cambios de estado. */
     PROFILE_ALREADY_COMPLETED,
     /** El perfil no cumple los requisitos mínimos para finalizar. */
