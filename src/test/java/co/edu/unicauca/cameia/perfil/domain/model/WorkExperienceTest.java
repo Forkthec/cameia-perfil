@@ -1,10 +1,14 @@
 package co.edu.unicauca.cameia.perfil.domain.model;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException.FieldError;
 import org.junit.jupiter.api.Test;
 
 import java.time.YearMonth;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -24,8 +28,9 @@ class WorkExperienceTest {
     @Test
     void current_throwsWhenEndDateIsProvided() {
         assertThatThrownBy(() -> exp(EmploymentStatus.CURRENT, DEC_2022))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("null");
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .containsExactly(new FieldError("endDate", ErrorCode.END_DATE_NOT_ALLOWED,
+                                "La fecha de fin debe quedar vacía.")));
     }
 
     // ── UNKNOWN_END ───────────────────────────────────────────────────────
@@ -39,7 +44,8 @@ class WorkExperienceTest {
     @Test
     void unknownEnd_throwsWhenEndDateIsProvided() {
         assertThatThrownBy(() -> exp(EmploymentStatus.UNKNOWN_END, DEC_2022))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::code).containsExactly(ErrorCode.END_DATE_NOT_ALLOWED));
     }
 
     // ── ENDED ─────────────────────────────────────────────────────────────
@@ -47,8 +53,8 @@ class WorkExperienceTest {
     @Test
     void ended_requiresEndDate() {
         assertThatThrownBy(() -> exp(EmploymentStatus.ENDED, null))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("endDate es obligatoria");
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .containsExactly(new FieldError("endDate", ErrorCode.END_DATE_REQUIRED, "Ingresa la fecha de fin.")));
     }
 
     @Test
@@ -57,8 +63,9 @@ class WorkExperienceTest {
         assertThatThrownBy(() ->
                 new WorkExperience(UUID.randomUUID(), "ACME", "Dev", null,
                         DEC_2022, JAN_2022, EmploymentStatus.ENDED, DataProvenance.MANUAL)
-        ).isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("anterior");
+        ).isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                .containsExactly(new FieldError("endDate", ErrorCode.END_DATE_BEFORE_START_DATE,
+                        "La fecha de fin no puede ser anterior a la de inicio.")));
     }
 
     @Test

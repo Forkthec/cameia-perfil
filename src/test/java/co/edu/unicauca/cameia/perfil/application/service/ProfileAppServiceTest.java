@@ -5,11 +5,17 @@ import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
+import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
+import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException.FieldError;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
@@ -23,6 +29,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRole;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
+import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,13 +40,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.DateTimeException;
 import java.time.YearMonth;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -109,12 +116,127 @@ class ProfileAppServiceTest {
     }
 
     @Test
-    @DisplayName("Una fecha de inicio con mes 13 no guarda la experiencia")
-    void addWorkExperience_shouldThrowDateTimeException_whenStartDateIsMalformed() {
+    @DisplayName("Una fecha de inicio con mes 13 no guarda la experiencia y marca su campo")
+    void addWorkExperience_shouldThrowStartDateInvalid_whenStartDateIsMalformed() {
         when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
                 UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2020-13", null, "CURRENT", "MANUAL")))
-                .isInstanceOf(DateTimeException.class);
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("startDate", ErrorCode.START_DATE_INVALID_FORMAT)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Un estado laboral que no existe no guarda la experiencia y marca su campo")
+    void addWorkExperience_shouldThrowEmploymentStatusInvalid_whenStatusIsUnknown() {
+        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2020-01", null, "FREELANCE", "MANUAL")))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("employmentStatus", ErrorCode.EMPLOYMENT_STATUS_INVALID_VALUE)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Una fecha de fin anterior al inicio no guarda la experiencia")
+    void addWorkExperience_shouldThrowEndDateBeforeStart_whenEndIsBeforeStart() {
+        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2022-05", "2021-01", "ENDED", "MANUAL")))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("endDate", ErrorCode.END_DATE_BEFORE_START_DATE)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Una procedencia que no existe no guarda la habilidad")
+    void addSkill_shouldThrowProvenanceInvalid_whenProvenanceIsUnknown() {
+        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        assertThatThrownBy(() -> service.addSkill(new AddSkillCommand(
+                UUID.randomUUID(), SVC_UID, "Java", "BASIC", "HUMANO")))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("provenance", ErrorCode.PROVENANCE_INVALID_VALUE)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Una educación con solo el año de inicio se guarda en enero de ese año")
+    void addEducation_shouldReadJanuary_whenStartDateIsOnlyYear() {
+        var profile = freshProfile();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        service.addEducation(new AddEducationCommand(UUID.randomUUID(), SVC_UID, "Unicauca", "Ingeniería",
+                null, "UNDERGRADUATE", "2018", null, false, "MANUAL"));
+        assertThat(profile.getEducations()).singleElement()
+                .satisfies(e -> assertThat(e.getStartDate()).isEqualTo(YearMonth.of(2018, 1)));
+    }
+
+    @Test
+    @DisplayName("Un nivel de formación que no existe no guarda la educación")
+    void addEducation_shouldThrowEducationLevelInvalid_whenLevelIsUnknown() {
+        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        assertThatThrownBy(() -> service.addEducation(new AddEducationCommand(UUID.randomUUID(), SVC_UID,
+                "Unicauca", "Ingeniería", null, "DOCTORADO", "2018", null, false, "MANUAL")))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("level", ErrorCode.EDUCATION_LEVEL_INVALID_VALUE)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Una modalidad y una procedencia de la lista se guardan en el perfil")
+    void updateProfileInfo_shouldApplyModalityAndProvenance_whenBothAreOptions() {
+        var profile = freshProfile();
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        service.updateProfileInfo(new UpdateProfileInfoCommand(
+                UUID.randomUUID(), SVC_UID, null, null, "REMOTE", "AI_EDITED"));
+        assertThat(profile.getPreferredModality()).isEqualTo(WorkModality.REMOTE);
+        assertThat(profile.getProvenance()).isEqualTo(DataProvenance.AI_EDITED);
+        verify(repository).save(profile);
+    }
+
+    @Test
+    @DisplayName("Editar un rol objetivo del perfil lo cambia por el rol del catálogo")
+    void updateTargetRole_shouldReplaceRole_whenRoleIsInProfile() {
+        var profile = freshProfile();
+        profile.addTargetRole(new TargetRole(UUID.randomUUID(), UUID.randomUUID(), "Backend", DataProvenance.MANUAL));
+        var roleId = profile.getTargetRoles().get(0).getId();
+        var catalogRole = new ProfessionalRole(UUID.randomUUID(), "Frontend Developer", "Desarrollo");
+        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(roleRepository.findById(catalogRole.id())).thenReturn(Optional.of(catalogRole));
+
+        service.updateTargetRole(new UpdateTargetRoleCommand(UUID.randomUUID(), SVC_UID, roleId, catalogRole.id()));
+
+        assertThat(profile.getTargetRoles()).singleElement()
+                .satisfies(r -> assertThat(r.getRoleTitle()).isEqualTo("Frontend Developer"));
+        verify(repository).save(profile);
+    }
+
+    @Test
+    @DisplayName("Editar un rol objetivo que no está en el perfil no guarda nada")
+    void updateTargetRole_shouldThrowTargetRoleNotFound_whenRoleIsNotInProfile() {
+        var catalogRole = new ProfessionalRole(UUID.randomUUID(), "Frontend Developer", "Desarrollo");
+        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        when(roleRepository.findById(catalogRole.id())).thenReturn(Optional.of(catalogRole));
+
+        assertThatThrownBy(() -> service.updateTargetRole(new UpdateTargetRoleCommand(
+                UUID.randomUUID(), SVC_UID, UUID.randomUUID(), catalogRole.id())))
+                .isInstanceOf(TargetRoleNotFoundException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Una modalidad preferida que no existe no actualiza el perfil")
+    void updateProfileInfo_shouldThrowModalityInvalid_whenModalityIsUnknown() {
+        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        assertThatThrownBy(() -> service.updateProfileInfo(new UpdateProfileInfoCommand(
+                UUID.randomUUID(), SVC_UID, null, null, "PRESENCIAL", null)))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("preferredModality", ErrorCode.PREFERRED_MODALITY_INVALID_VALUE)));
         verify(repository, never()).save(any());
     }
 

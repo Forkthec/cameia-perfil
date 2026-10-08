@@ -1,5 +1,8 @@
 package co.edu.unicauca.cameia.perfil.domain.model;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+
 import java.util.Objects;
 
 /**
@@ -17,11 +20,11 @@ public record ProfileName(String value) {
     public ProfileName {
         Objects.requireNonNull(value, "ProfileName no puede ser nulo — usa null directamente para ausencia");
         if (value.isBlank()) {
-            throw new IllegalArgumentException("ProfileName no puede estar vacío");
+            throw InvalidFieldsException.of("name", ErrorCode.PROFILE_NAME_REQUIRED, "Ingresa un nombre para el perfil.");
         }
         if (value.length() > MAX_LENGTH) {
-            throw new IllegalArgumentException(
-                    "ProfileName excede el máximo de " + MAX_LENGTH + " caracteres");
+            throw InvalidFieldsException.of("name", ErrorCode.PROFILE_NAME_TOO_LONG,
+                    "El nombre no puede superar los " + MAX_LENGTH + " caracteres.");
         }
     }
 }

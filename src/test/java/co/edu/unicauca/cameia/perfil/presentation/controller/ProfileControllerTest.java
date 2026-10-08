@@ -6,11 +6,14 @@ import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileLimitReachedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
@@ -31,7 +34,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.YearMonth;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -187,24 +189,61 @@ class ProfileControllerTest {
         assertThat(result.getResponse().getContentAsString()).doesNotContain("aaaa");
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"2020-13", "31/02/2020"})
-    @DisplayName("Una fecha mal escrita responde 422 sin el mensaje del analizador de fechas")
-    void addWorkExperience_shouldReturn422_whenStartDateIsMalformed(String startDate) throws Exception {
-        when(profileAppService.addWorkExperience(any()))
-                .thenAnswer(invocation -> YearMonth.parse(startDate));
+    @Test
+    @DisplayName("Una fecha mal escrita responde 422 en su campo, con su código y el formato esperado")
+    void addWorkExperience_shouldReturnStartDateInvalid_whenStartDateIsMalformed() throws Exception {
+        when(profileAppService.addWorkExperience(any())).thenThrow(InvalidFieldsException.of(
+                "startDate", ErrorCode.START_DATE_INVALID_FORMAT, "Ingresa una fecha válida con el formato mm/aaaa."));
         var body = """
-                {"company":"ACME","position":"Dev","startDate":"%s","employmentStatus":"CURRENT","provenance":"MANUAL"}
-                """.formatted(startDate);
+                {"company":"ACME","position":"Dev","startDate":"2020-13","employmentStatus":"CURRENT","provenance":"MANUAL"}
+                """;
 
-        var result = mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + "/work-experiences")
+        mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + "/work-experiences")
                         .header("X-User-Id", "uid-ctrl-date")
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.code").value("REQUEST_INVALID_VALUE"))
-                .andReturn();
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors[0].field").value("startDate"))
+                .andExpect(jsonPath("$.errors[0].code").value("START_DATE_INVALID_FORMAT"))
+                .andExpect(jsonPath("$.errors[0].message").value("Ingresa una fecha válida con el formato mm/aaaa."));
+    }
 
-        assertThat(result.getResponse().getContentAsString()).doesNotContain("Text").doesNotContain("parse");
+    @Test
+    @DisplayName("Actualizar un rol objetivo sin professionalRoleId responde 422 con su campo, no 500")
+    void updateTargetRole_shouldReturnRoleIdRequired_whenBodyIsEmpty() throws Exception {
+        mockMvc.perform(patch("/api/v1/profiles/{id}/target-roles/{roleId}", UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-role")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors[0].field").value("professionalRoleId"))
+                .andExpect(jsonPath("$.errors[0].code").value("PROFESSIONAL_ROLE_ID_REQUIRED"));
+    }
+
+    @Test
+    @DisplayName("Actualizar un rol objetivo que no está en el perfil responde 404 con su código")
+    void updateTargetRole_shouldReturn404_whenRoleIsNotInProfile() throws Exception {
+        when(profileAppService.updateTargetRole(any())).thenThrow(new TargetRoleNotFoundException());
+
+        mockMvc.perform(patch("/api/v1/profiles/{id}/target-roles/{roleId}", UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"professionalRoleId\":\"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("TARGET_ROLE_NOT_FOUND"))
+                .andExpect(jsonPath("$.detail").value("No encontramos lo que buscabas."));
+    }
+
+    @Test
+    @DisplayName("Actualizar la expectativa salarial sin monto responde 422 con su campo, no 500")
+    void updateSalaryExpectation_shouldReturnAmountRequired_whenBodyIsEmpty() throws Exception {
+        mockMvc.perform(patch("/api/v1/profiles/{id}/salary-expectation", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-salary")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].field").value("amount"))
+                .andExpect(jsonPath("$.errors[0].code").value("SALARY_EXPECTATION_REQUIRED"))
+                .andExpect(jsonPath("$.errors[0].message").value("Ingresa la expectativa salarial."));
     }
 
     static Stream<Arguments> frameworkErrors() {
@@ -259,6 +298,7 @@ class ProfileControllerTest {
     private static final String WORK_EXPERIENCE = "/work-experiences";
     private static final String SKILLS = "/skills";
     private static final String TARGET_ROLES = "/target-roles";
+    private static final String EDUCATIONS = "/educations";
     private static final String SELECT_OPTION = "Selecciona una opción.";
 
     /** Cuerpo válido de cada endpoint, en el orden de sus campos. */
@@ -275,6 +315,14 @@ class ProfileControllerTest {
             case SKILLS -> {
                 body.put("skillName", "\"Java\"");
                 body.put("level", "\"ADVANCED\"");
+                body.put("provenance", "\"MANUAL\"");
+            }
+            case EDUCATIONS -> {
+                body.put("institution", "\"Unicauca\"");
+                body.put("degree", "\"Sistemas\"");
+                body.put("level", "\"UNDERGRADUATE\"");
+                body.put("startDate", "\"2018-01\"");
+                body.put("inProgress", "false");
                 body.put("provenance", "\"MANUAL\"");
             }
             default -> {
@@ -300,7 +348,12 @@ class ProfileControllerTest {
                 new Object[]{SKILLS, "level", true, "SKILL_LEVEL_REQUIRED", "Elige un nivel."},
                 new Object[]{SKILLS, "provenance", true, "PROVENANCE_REQUIRED", SELECT_OPTION},
                 new Object[]{TARGET_ROLES, "professionalRoleId", false, "PROFESSIONAL_ROLE_ID_REQUIRED", SELECT_OPTION},
-                new Object[]{TARGET_ROLES, "provenance", false, "PROVENANCE_REQUIRED", SELECT_OPTION});
+                new Object[]{TARGET_ROLES, "provenance", false, "PROVENANCE_REQUIRED", SELECT_OPTION},
+                new Object[]{EDUCATIONS, "institution", true, "INSTITUTION_REQUIRED", "Ingresa la institución."},
+                new Object[]{EDUCATIONS, "degree", true, "DEGREE_REQUIRED", "Ingresa el título obtenido."},
+                new Object[]{EDUCATIONS, "level", true, "EDUCATION_LEVEL_REQUIRED", "Elige un nivel educativo."},
+                new Object[]{EDUCATIONS, "startDate", true, "START_DATE_REQUIRED", "Ingresa la fecha de inicio."},
+                new Object[]{EDUCATIONS, "provenance", true, "PROVENANCE_REQUIRED", SELECT_OPTION});
         return rows.flatMap(row -> {
             // null significa que el campo no se envía; el resto son valores JSON literales.
             var values = (boolean) row[2]
@@ -445,7 +498,8 @@ class ProfileControllerTest {
     }
 
     @Test
-    void postSkills_returns422WhenLevelIsMissing() throws Exception {
+    @DisplayName("Una habilidad sin nivel responde 422 con el código y el mensaje del nivel")
+    void addSkill_shouldReturnSkillLevelRequired_whenLevelIsMissing() throws Exception {
         mockMvc.perform(post("/api/v1/profiles/{id}/skills", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-skill")
                         .contentType(MediaType.APPLICATION_JSON)

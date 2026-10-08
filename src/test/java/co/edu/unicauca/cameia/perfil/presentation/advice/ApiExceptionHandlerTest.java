@@ -8,6 +8,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleExcepti
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
@@ -215,22 +216,51 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("Un valor rechazado sin campo no filtra el mensaje y deja el origen en el log")
-    void illegalArgument_shouldHideMessage_whenThrown() throws Exception {
+    @DisplayName("Campos rechazados por el dominio responden VALIDATION_FAILED con un elemento por campo, en orden")
+    void invalidFields_shouldReturnValidationFailedWithEachField_whenDomainRejects() throws Exception {
+        toThrow = () -> new InvalidFieldsException(List.of(
+                new InvalidFieldsException.FieldError("endDate", ErrorCode.END_DATE_BEFORE_START_DATE,
+                        "La fecha de fin no puede ser anterior a la de inicio."),
+                new InvalidFieldsException.FieldError("provenance", ErrorCode.PROVENANCE_INVALID_VALUE,
+                        "Selecciona una opción.")));
+
+        mockMvc.perform(get("/boom").header("X-Request-Id", "req-fields-1"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.detail").value("Revisa los campos marcados."))
+                .andExpect(jsonPath("$.errors.length()").value(2))
+                .andExpect(jsonPath("$.errors[0].field").value("endDate"))
+                .andExpect(jsonPath("$.errors[0].code").value("END_DATE_BEFORE_START_DATE"))
+                .andExpect(jsonPath("$.errors[0].message")
+                        .value("La fecha de fin no puede ser anterior a la de inicio."))
+                .andExpect(jsonPath("$.errors[1].field").value("provenance"))
+                .andExpect(jsonPath("$.errors[1].code").value("PROVENANCE_INVALID_VALUE"))
+                .andExpect(jsonPath("$.requestId").value("req-fields-1"));
+    }
+
+    @Test
+    @DisplayName("Una excepción de negocio que no rechaza campos no lleva errors[]")
+    void businessException_shouldOmitErrors_whenItRejectsNoField() throws Exception {
+        toThrow = () -> new LastTargetRoleException();
+
+        mockMvc.perform(get("/boom"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Una IllegalArgumentException es un fallo del servidor: 500 genérico, sin el mensaje y con la traza en el log")
+    void illegalArgument_shouldReturnGeneric500_whenThrown() throws Exception {
         toThrow = () -> new IllegalArgumentException(
                 "co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus.FREELANCE");
 
         var result = mockMvc.perform(get("/boom"))
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.code").value("REQUEST_INVALID_VALUE"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
                 .andReturn();
 
-        assertThat(result.getResponse().getContentAsString()).doesNotContain("co.edu");
-        var requestId = result.getResponse().getHeader("X-Request-Id");
-        assertThat(logs.list).anySatisfy(event -> {
-            assertThat(event.getFormattedMessage()).contains("origen=").contains(requestId);
-            assertThat(event.getFormattedMessage()).doesNotContain("FREELANCE");
-        });
+        assertThat(result.getResponse().getContentAsString()).doesNotContain("co.edu").doesNotContain("FREELANCE");
+        assertThat(logs.list).anySatisfy(event -> assertThat(event.getThrowableProxy()).isNotNull());
     }
 
     @Test
@@ -248,10 +278,10 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("Un valor rechazado sin traza registra el origen como desconocido")
-    void illegalArgument_shouldLogUnknownOrigin_whenStackTraceIsEmpty() throws Exception {
+    @DisplayName("Un rechazo del framework sin traza registra el origen como desconocido")
+    void bindingError_shouldLogUnknownOrigin_whenStackTraceIsEmpty() throws Exception {
         toThrow = () -> {
-            var ex = new IllegalArgumentException("x");
+            var ex = new ServletRequestBindingException("x");
             ex.setStackTrace(new StackTraceElement[0]);
             return ex;
         };

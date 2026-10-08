@@ -3,7 +3,9 @@ package co.edu.unicauca.cameia.perfil.presentation.advice;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import org.springframework.http.HttpStatus;
 
+import java.util.EnumSet;
 import java.util.Map;
+import java.util.Set;
 
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.*;
 import static org.springframework.http.HttpStatus.CONFLICT;
@@ -76,7 +78,8 @@ final class ErrorCatalog {
             entry(TARGET_ROLE_LIMIT_REACHED, UNPROCESSABLE_ENTITY, "Máximo de roles objetivo alcanzado", null),
             entry(TARGET_ROLE_ALREADY_EXISTS, CONFLICT, "Rol objetivo duplicado", null),
             entry(TARGET_ROLE_NOT_ALLOWED, UNPROCESSABLE_ENTITY, "No se puede eliminar el último rol objetivo", null),
-            entry(SKILL_ALREADY_EXISTS, CONFLICT, "Habilidad duplicada", null));
+            entry(SKILL_ALREADY_EXISTS, CONFLICT, "Habilidad duplicada", null),
+            entry(TARGET_ROLE_NOT_FOUND, NOT_FOUND, "Rol objetivo no encontrado", null));
 
     /** Clave {@code ClaseDelDto.campo.Restricción} → código del campo rechazado. */
     static final Map<String, ErrorCode> FIELD_CODES = Map.ofEntries(
@@ -90,7 +93,13 @@ final class ErrorCatalog {
             Map.entry("AddSkillRequest.skillName.NotBlank", SKILL_NAME_REQUIRED),
             Map.entry("AddSkillRequest.level.NotBlank", SKILL_LEVEL_REQUIRED),
             Map.entry("UpdateTargetRoleRequest.professionalRoleId.NotNull", PROFESSIONAL_ROLE_ID_REQUIRED),
-            Map.entry("AddTargetRoleRequest.professionalRoleId.NotNull", PROFESSIONAL_ROLE_ID_REQUIRED));
+            Map.entry("AddTargetRoleRequest.professionalRoleId.NotNull", PROFESSIONAL_ROLE_ID_REQUIRED),
+            Map.entry("AddEducationRequest.institution.NotBlank", INSTITUTION_REQUIRED),
+            Map.entry("AddEducationRequest.degree.NotBlank", DEGREE_REQUIRED),
+            Map.entry("AddEducationRequest.level.NotBlank", EDUCATION_LEVEL_REQUIRED),
+            Map.entry("AddEducationRequest.startDate.NotBlank", START_DATE_REQUIRED),
+            Map.entry("AddEducationRequest.provenance.NotBlank", PROVENANCE_REQUIRED),
+            Map.entry("UpdateSalaryExpectationRequest.amount.NotNull", SALARY_EXPECTATION_REQUIRED));
 
     /** Código del campo → mensaje para la persona. */
     static final Map<ErrorCode, String> FIELD_MESSAGES = Map.ofEntries(
@@ -101,7 +110,25 @@ final class ErrorCatalog {
             Map.entry(PROVENANCE_REQUIRED, SELECT_OPTION),
             Map.entry(SKILL_NAME_REQUIRED, "Ingresa una habilidad."),
             Map.entry(SKILL_LEVEL_REQUIRED, "Elige un nivel."),
-            Map.entry(PROFESSIONAL_ROLE_ID_REQUIRED, SELECT_OPTION));
+            Map.entry(PROFESSIONAL_ROLE_ID_REQUIRED, SELECT_OPTION),
+            Map.entry(INSTITUTION_REQUIRED, "Ingresa la institución."),
+            Map.entry(DEGREE_REQUIRED, "Ingresa el título obtenido."),
+            Map.entry(EDUCATION_LEVEL_REQUIRED, "Elige un nivel educativo."),
+            Map.entry(SALARY_EXPECTATION_REQUIRED, "Ingresa la expectativa salarial."));
+
+    /**
+     * Códigos de campo que rechaza el dominio con {@code InvalidFieldsException}: el mensaje lo pone
+     * la excepción, porque puede llevar un límite. Los obligatorios que también vigila Bean Validation
+     * están en {@link #FIELD_MESSAGES}, con el mismo texto que usa el dominio.
+     */
+    static final Set<ErrorCode> DOMAIN_FIELD_CODES = EnumSet.of(
+            PROFILE_NAME_REQUIRED, PROFILE_NAME_TOO_LONG, SUMMARY_REQUIRED, SUMMARY_TOO_LONG,
+            SALARY_EXPECTATION_OUT_OF_RANGE,
+            PREFERRED_MODALITY_INVALID_VALUE, PROVENANCE_INVALID_VALUE, EMPLOYMENT_STATUS_INVALID_VALUE,
+            EDUCATION_LEVEL_INVALID_VALUE, SKILL_LEVEL_INVALID_VALUE,
+            START_DATE_INVALID_FORMAT, END_DATE_INVALID_FORMAT,
+            END_DATE_REQUIRED, END_DATE_NOT_ALLOWED, END_DATE_BEFORE_START_DATE,
+            COMPANY_TOO_LONG, POSITION_TOO_LONG, INSTITUTION_TOO_LONG, DEGREE_TOO_LONG, SKILL_NAME_TOO_LONG);
 
     /** Nombre de la variable de ruta → código cuando su valor no es un UUID. */
     static final Map<String, ErrorCode> PATH_ID_CODES = Map.of(

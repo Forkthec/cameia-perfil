@@ -1,13 +1,15 @@
 package co.edu.unicauca.cameia.perfil.presentation.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 /** Body del POST /api/v1/profiles/{id}/educations (CM-18). */
 public record AddEducationRequest(
-        String institution,
-        String degree,
+        @NotBlank String institution,
+        @NotBlank String degree,
         String fieldOfStudy,
-        String level,
-        String startDate,
+        @NotBlank String level,
+        @NotBlank String startDate,
         String endDate,
         boolean inProgress,
-        String provenance) {
+        @NotBlank String provenance) {
 }

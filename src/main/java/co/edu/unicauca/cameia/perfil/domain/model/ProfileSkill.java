@@ -1,5 +1,8 @@
 package co.edu.unicauca.cameia.perfil.domain.model;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+
 import java.util.Objects;
 import java.util.UUID;
 
@@ -22,8 +25,12 @@ public final class ProfileSkill {
     public ProfileSkill(UUID id, String skillName, SkillLevel level, DataProvenance provenance) {
         this.id = Objects.requireNonNull(id);
         Objects.requireNonNull(skillName);
-        if (skillName.isBlank() || skillName.length() > MAX_NAME_LENGTH) {
-            throw new IllegalArgumentException("skillName debe tener entre 1 y " + MAX_NAME_LENGTH + " caracteres");
+        if (skillName.isBlank()) {
+            throw InvalidFieldsException.of("skillName", ErrorCode.SKILL_NAME_REQUIRED, "Ingresa una habilidad.");
+        }
+        if (skillName.length() > MAX_NAME_LENGTH) {
+            throw InvalidFieldsException.of("skillName", ErrorCode.SKILL_NAME_TOO_LONG,
+                    "La habilidad no puede superar los " + MAX_NAME_LENGTH + " caracteres.");
         }
         this.skillName = skillName;
         this.level = Objects.requireNonNull(level);

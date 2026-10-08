@@ -3,6 +3,7 @@ package co.edu.unicauca.cameia.perfil.presentation.advice;
 import co.edu.unicauca.cameia.perfil.domain.exception.BusinessException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
@@ -25,7 +26,6 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.time.DateTimeException;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -57,16 +57,12 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             // La finalización incompleta lista, además, los requisitos que faltan.
             problem.setProperty("missingRequirements", incomplete.getMissingRequirements());
         }
+        if (ex instanceof InvalidFieldsException invalid) {
+            // El dominio rechazó campos: responde igual que Bean Validation, un elemento por campo.
+            problem.setProperty("errors", invalid.getErrors().stream()
+                    .map(e -> new FieldProblem(e.field(), e.code(), e.message())).toList());
+        }
         return reject(problem, request);
-    }
-
-    /** Un valor que rechaza un objeto de valor, un enum o el formato de una fecha, sin campo asociado. */
-    @ExceptionHandler({IllegalArgumentException.class, DateTimeException.class})
-    ResponseEntity<Object> handleInvalidValue(Exception ex, WebRequest request) {
-        var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-        log.warn("Valor rechazado sin campo: code={} requestId={} firebaseUid={} origen={}",
-                ErrorCode.REQUEST_INVALID_VALUE, requestId, firebaseUid(request), origin(ex));
-        return respond(problem(ErrorCode.REQUEST_INVALID_VALUE, null), requestId);
     }
 
     @ExceptionHandler(Exception.class)
@@ -154,8 +150,16 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         if (response == null) {
             return null; // La respuesta ya se envió: no queda nada que responder.
         }
-        var answer = statusCode.is5xxServerError() ? handleUnexpected(ex, request) : handleInvalidValue(ex, request);
+        var answer = statusCode.is5xxServerError() ? handleUnexpected(ex, request) : invalidValue(ex, request);
         return withHeaders(answer, response.getHeaders());
+    }
+
+    /** Un rechazo del framework sin código propio: responde el valor no válido y deja el origen en el log. */
+    private ResponseEntity<Object> invalidValue(Exception ex, WebRequest request) {
+        var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
+        log.warn("Rechazo del framework sin código propio: code={} requestId={} firebaseUid={} origen={}",
+                ErrorCode.REQUEST_INVALID_VALUE, requestId, firebaseUid(request), origin(ex));
+        return respond(problem(ErrorCode.REQUEST_INVALID_VALUE, null), requestId);
     }
 
     /** Responde el problema del código, con el mensaje dado o el del catálogo. */

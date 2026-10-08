@@ -1,5 +1,8 @@
 package co.edu.unicauca.cameia.perfil.domain.model;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+
 import java.time.YearMonth;
 import java.util.Objects;
 import java.util.UUID;
@@ -31,8 +34,10 @@ public final class WorkExperience {
                           EmploymentStatus employmentStatus,
                           DataProvenance provenance) {
         this.id = Objects.requireNonNull(id);
-        this.company = requireNonBlankMax(company, "company", MAX_TEXT_LENGTH);
-        this.position = requireNonBlankMax(position, "position", MAX_TEXT_LENGTH);
+        this.company = requireNonBlankMax(company, "company",
+                ErrorCode.COMPANY_REQUIRED, "Ingresa la empresa.", ErrorCode.COMPANY_TOO_LONG, "La empresa");
+        this.position = requireNonBlankMax(position, "position",
+                ErrorCode.POSITION_REQUIRED, "Ingresa el cargo.", ErrorCode.POSITION_TOO_LONG, "El cargo");
         this.description = description;
         this.startDate = Objects.requireNonNull(startDate, "startDate es obligatoria");
         this.employmentStatus = Objects.requireNonNull(employmentStatus);
@@ -43,19 +48,27 @@ public final class WorkExperience {
 
     private static void validateEndDate(EmploymentStatus status, YearMonth start, YearMonth end) {
         if (status == EmploymentStatus.ENDED) {
-            if (end == null) throw new IllegalArgumentException("endDate es obligatoria cuando el estado es ENDED");
+            if (end == null) {
+                throw InvalidFieldsException.of("endDate", ErrorCode.END_DATE_REQUIRED, "Ingresa la fecha de fin.");
+            }
             if (end.isBefore(start)) {
-                throw new IllegalArgumentException("endDate no puede ser anterior a startDate");
+                throw InvalidFieldsException.of("endDate", ErrorCode.END_DATE_BEFORE_START_DATE,
+                        "La fecha de fin no puede ser anterior a la de inicio.");
             }
         } else if (end != null) {
-            throw new IllegalArgumentException("endDate debe ser null para estado " + status);
+            throw InvalidFieldsException.of("endDate", ErrorCode.END_DATE_NOT_ALLOWED, "La fecha de fin debe quedar vacía.");
         }
     }
 
-    private static String requireNonBlankMax(String value, String field, int max) {
+    private static String requireNonBlankMax(String value, String field, ErrorCode requiredCode,
+                                             String requiredMessage, ErrorCode tooLongCode, String label) {
         Objects.requireNonNull(value, field + " no puede ser nulo");
-        if (value.isBlank() || value.length() > max) {
-            throw new IllegalArgumentException(field + " debe tener entre 1 y " + max + " caracteres");
+        if (value.isBlank()) {
+            throw InvalidFieldsException.of(field, requiredCode, requiredMessage);
+        }
+        if (value.length() > MAX_TEXT_LENGTH) {
+            throw InvalidFieldsException.of(field, tooLongCode,
+                    label + " no puede superar los " + MAX_TEXT_LENGTH + " caracteres.");
         }
         return value;
     }

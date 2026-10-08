@@ -12,7 +12,7 @@ Perfil respondía 400 cuando un campo no pasaba la validación y cuando el cuerp
 
 - Un campo que no pasa Bean Validation responde **422** `VALIDATION_FAILED`, con `errors[]` (`field`, `code`, `message`).
 - Un cuerpo que no se puede leer (JSON mal formado, tipo incorrecto, valor de enumeración desconocido) responde **422** `REQUEST_BODY_INVALID_FORMAT`.
-- Un valor que rechaza un objeto de valor o una fecha mal escrita responde **422** `REQUEST_INVALID_VALUE`.
+- Un dato que incumple una regla del dominio (obligatorio, largo, signo, fecha mal escrita, opción que no existe o fechas que no encajan) responde igual que Bean Validation: **422** `VALIDATION_FAILED` con `errors[]`, y en cada elemento el código de la regla y un mensaje que dice qué corregir. Lo lanza `InvalidFieldsException`. Hasta el 7 de octubre respondía un único `REQUEST_INVALID_VALUE` sin campo y con un mensaje genérico; ver la decisión D18 de la spec de CM-271.
 
 Los tres siguen la forma común de [errores.md](../errores.md).
 
