@@ -443,3 +443,11 @@ Rama `CM-271-cupo-perfil-plan-free`, que **se rehace** desde la rama del PR A. L
 - **Bloqueo (D22).** `lock_timeout` de 5 s antes de `pg_advisory_xact_lock`; prueba de integración que retiene el bloqueo y comprueba el corte sin crear nada, y otra que comprueba el fallo sin transacción.
 - **Respaldo (D23).** 400 → 422 `REQUEST_INVALID_VALUE`; 5xx → 500; otro estado → 500 y `ERROR`. Prueba con la lista de excepciones de `ResponseEntityExceptionHandler`.
 - **Registro (D24).** `RedactedException` copia la cadena sin mensajes; el registro del 500 lleva `sqlState`.
+
+## [x] T-C.4 · 404 al eliminar lo que no es del perfil y revisión fuera del contrato
+
+> Hecha en `CM-271-review-oculto-y-404-eliminar`, encima de `CM-271-robustez-errores-y-registro`.
+
+- **404 (D25).** `WorkExperienceNotFoundException`, `EducationNotFoundException` y `SkillNotFoundException`; `removeTargetRole` responde `TARGET_ROLE_NOT_FOUND` antes de la regla del último rol.
+- **Revisión (D26).** `@Hidden` en `POST …/review-requests`; fuera de Postman; `OpenApiDocumentIT` comprueba que no se publica.
+- **Postman contra la app real.** La colección no enviaba `X-User-Id` en 24 peticiones (exigido desde el PR A), leía `skills` en lugar de `profileSkills` y agregaba roles objetivo con el esquema anterior (`title` y `seniority`). Ahora usa la variable `user_id`, los ids fijos del catálogo, finaliza el perfil antes de probar el último rol y prueba el idioma no disponible. Resultado: 33 peticiones, 73 aserciones, 0 fallos.

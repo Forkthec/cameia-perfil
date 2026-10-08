@@ -177,7 +177,7 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 204 sin cambios",
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o experiencia que no es de este perfil (code WORK_EXPERIENCE_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o WORK_EXPERIENCE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -218,7 +218,7 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 204 sin cambios",
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o formación que no es de este perfil (code EDUCATION_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o EDUCATION_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -270,7 +270,7 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 204 sin cambios",
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o habilidad que no es de este perfil (code SKILL_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o SKILL_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -282,21 +282,12 @@ class ProfileController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Solicitar revisión del perfil",
-            description = "Cambia el estado del perfil de IN_PROGRESS a IN_REVIEW si cumple los 5 requisitos. " +
-                    "Si el perfil está incompleto, devuelve 422 con la lista de campos faltantes en missingRequirements.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Revisión solicitada; estado cambia a IN_REVIEW",
-                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Perfil incompleto (code PROFILE_INCOMPLETE, con missingRequirements[]) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
-    })
+    /**
+     * Oculto en Swagger: no tiene HU en el MVP (hallazgo I-024 del backlog: {@code IN_REVIEW} no debería alcanzarse).
+     * La ruta sigue respondiendo: un perfil completo pasa a {@code IN_REVIEW} (201). D26 la deja hasta que CM-67
+     * decida si se borra.
+     */
+    @Hidden
     @PostMapping("/{id}/review-requests")
     ResponseEntity<ProfileResponse> requestReview(@PathVariable UUID id,
             @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
@@ -357,7 +348,7 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND). Si el elemento no existe en el perfil no hay error: responde 204 sin cambios",
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o rol objetivo que no es de este perfil (code TARGET_ROLE_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "No se puede eliminar el único rol objetivo de un perfil COMPLETED (code TARGET_ROLE_NOT_ALLOWED) o identificador mal escrito (PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))

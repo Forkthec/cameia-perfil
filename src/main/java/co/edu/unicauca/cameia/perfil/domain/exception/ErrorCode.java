@@ -55,6 +55,12 @@ public enum ErrorCode {
     INTERNAL_ERROR,
     /** El rol objetivo no existe en el perfil. */
     TARGET_ROLE_NOT_FOUND,
+    /** La experiencia laboral no existe en el perfil. */
+    WORK_EXPERIENCE_NOT_FOUND,
+    /** La formación académica no existe en el perfil. */
+    EDUCATION_NOT_FOUND,
+    /** La habilidad no existe en el perfil. */
+    SKILL_NOT_FOUND,
     /** Falta el nombre del perfil o está en blanco. */
     PROFILE_NAME_REQUIRED,
     /** El nombre del perfil supera su largo máximo. */

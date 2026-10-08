@@ -2,13 +2,16 @@ package co.edu.unicauca.cameia.perfil.domain.model;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
+import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.SkillNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceNotFoundException;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -16,6 +19,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * Agregado raíz del contexto de Perfil Profesional (glosario §6.2).
@@ -114,9 +119,11 @@ public final class ProfessionalProfile {
     }
 
     public void removeTargetRole(UUID roleId) {
+        Objects.requireNonNull(roleId);
+        if (targetRoles.stream().noneMatch(r -> r.getId().equals(roleId))) throw new TargetRoleNotFoundException();
         // Solo bloquea el último rol cuando el perfil ya está COMPLETED (BE-08)
         if (this.status == ProfileStatus.COMPLETED && targetRoles.size() == 1) throw new LastTargetRoleException();
-        targetRoles.removeIf(r -> r.getId().equals(Objects.requireNonNull(roleId)));
+        targetRoles.removeIf(r -> r.getId().equals(roleId));
         touch();
     }
 
@@ -139,9 +146,13 @@ public final class ProfessionalProfile {
 
     // ── Experiencia y educación (CM-18) ──────────────────────────────────
     public void addWorkExperience(WorkExperience exp) { workExperiences.add(Objects.requireNonNull(exp)); touch(); }
-    public void removeWorkExperience(UUID expId) { workExperiences.removeIf(e -> e.getId().equals(expId)); touch(); }
+    public void removeWorkExperience(UUID expId) {
+        removeById(workExperiences, e -> e.getId().equals(expId), WorkExperienceNotFoundException::new);
+    }
     public void addEducation(Education edu) { educations.add(Objects.requireNonNull(edu)); touch(); }
-    public void removeEducation(UUID eduId) { educations.removeIf(e -> e.getId().equals(eduId)); touch(); }
+    public void removeEducation(UUID eduId) {
+        removeById(educations, e -> e.getId().equals(eduId), EducationNotFoundException::new);
+    }
 
     // ── Habilidades (CM-19) ──────────────────────────────────────────────
     public void addSkill(ProfileSkill skill) {
@@ -157,7 +168,15 @@ public final class ProfessionalProfile {
     private static String normalizarNombreHabilidad(String nombre) {
         return nombre.trim().replaceAll("\\s+", " ").toLowerCase(java.util.Locale.ROOT);
     }
-    public void removeSkill(UUID skillId) { profileSkills.removeIf(s -> s.getId().equals(skillId)); touch(); }
+    public void removeSkill(UUID skillId) {
+        removeById(profileSkills, s -> s.getId().equals(skillId), SkillNotFoundException::new);
+    }
+
+    /** Quita el elemento del perfil, o lanza el «no encontrado» si no es de este perfil (CA-2.4.58, 2.4.59, 2.5.23). */
+    private <T> void removeById(List<T> items, Predicate<T> matches, Supplier<? extends RuntimeException> notFound) {
+        if (!items.removeIf(matches)) throw notFound.get();
+        touch();
+    }
 
     // ── Transiciones de estado ───────────────────────────────────────────
 
