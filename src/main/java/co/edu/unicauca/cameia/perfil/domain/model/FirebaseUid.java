@@ -1,5 +1,7 @@
 package co.edu.unicauca.cameia.perfil.domain.model;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
+
 import java.util.Objects;
 
 /**
@@ -12,6 +14,18 @@ public record FirebaseUid(String value) {
 
     /** Longitud máxima de un UID de Firebase. */
     public static final int MAX_LENGTH = 128;
+
+    /**
+     * Convierte la identidad que llega del Gateway o rechaza la petición si falta o no es válida.
+     *
+     * @param raw valor del encabezado {@code X-User-Id}
+     * @return la identidad del Usuario
+     * @throws IdentityRequiredException si falta, está en blanco o mide más de 128 caracteres
+     */
+    public static FirebaseUid required(String raw) {
+        if (raw == null || raw.isBlank() || raw.length() > MAX_LENGTH) throw new IdentityRequiredException();
+        return new FirebaseUid(raw);
+    }
 
     public FirebaseUid {
         Objects.requireNonNull(value, "FirebaseUid no puede ser nulo");

@@ -4,13 +4,10 @@ import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
-import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
-import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
-import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
@@ -30,8 +27,6 @@ import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,23 +37,12 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class ProfileAppService {
 
-    private static final Logger log = LoggerFactory.getLogger(ProfileAppService.class);
     private final ProfessionalProfileRepository repository;
     private final ProfessionalRoleRepository roleRepository;
 
     ProfileAppService(ProfessionalProfileRepository repository, ProfessionalRoleRepository roleRepository) {
         this.repository = repository;
         this.roleRepository = roleRepository;
-    }
-
-    @Transactional
-    public ProfessionalProfile createProfile(CreateProfileCommand command) {
-        var uid = requireIdentity(command.firebaseUid());
-        if (repository.existsByFirebaseUid(uid)) throw new ProfileAlreadyExistsException();
-        var profile = ProfessionalProfile.create(uid);
-        repository.save(profile);
-        log.info("perfil creado id={}", profile.getId().value());
-        return profile;
     }
 
     @Transactional
@@ -172,15 +156,9 @@ public class ProfileAppService {
     }
 
     private ProfessionalProfile loadForUser(UUID profileId, String uid) {
-        var owner = requireIdentity(uid);
+        var owner = FirebaseUid.required(uid);
         var p = load(profileId);
         if (!p.getFirebaseUid().equals(owner)) throw new ProfileAccessDeniedException();
         return p;
-    }
-
-    /** Devuelve la identidad del Usuario, o rechaza la petición si falta o no es válida. */
-    private static FirebaseUid requireIdentity(String raw) {
-        if (raw == null || raw.isBlank() || raw.length() > FirebaseUid.MAX_LENGTH) throw new IdentityRequiredException();
-        return new FirebaseUid(raw);
     }
 }

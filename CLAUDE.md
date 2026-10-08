@@ -95,7 +95,7 @@ public class ProfessionalProfileEntity { }
 El servicio solo debe aceptar tráfico del API Gateway; la autenticidad la garantiza el despliegue (IAM con token OIDC), no la aplicación.
 
 - **Identidad.** Llega en el encabezado `X-User-Id` (el `firebaseUid`), nunca en el cuerpo ni en la ruta. No se confía en un encabezado enviado directamente por un cliente externo.
-- **Sin identidad: 401.** Sin `X-User-Id`, o con él en blanco, la ruta responde 401. Excepción actual: `POST /api/v1/profiles` declara el encabezado como obligatorio y sin él responde 400 (ver sección 10).
+- **Sin identidad: 401.** Sin `X-User-Id`, con él en blanco o con más de 128 caracteres, toda ruta responde 401 `IDENTITY_REQUIRED`.
 - **Recurso ajeno: 403.** Cada acceso a un perfil comprueba que su dueño sea el usuario del encabezado; un perfil ajeno responde 403.
 - **Una sola ruta sin identidad:** `GET /api/v1/profiles/professional-roles`, el catálogo de roles, que no lee datos de ningún usuario.
 - **Rutas.** Todo endpoint cuelga de `/api/v1/profiles/**`, porque el Gateway enruta hacia Perfil con un único predicado, `Path=/api/v1/profiles/**`. Un endpoint fuera de ese prefijo compila y pasa sus pruebas, pero es inalcanzable en el despliegue: el Gateway responde 404 antes de que la petición llegue. Si hace falta uno fuera del prefijo, se pide el predicado al Gateway y se espera.
@@ -104,7 +104,7 @@ El servicio solo debe aceptar tráfico del API Gateway; la autenticidad la garan
 
 - La versión va en la ruta: `/api/v1/...`. Los recursos van en inglés y en plural, y los nombres JSON en `camelCase`.
 - Los errores son `ProblemDetail` (RFC 9457) con `Content-Type: application/problem+json`, activado con `spring.mvc.problemdetails.enabled`. El formato y las reglas están en la [sección 6 del estándar](docs/estandar-backend.md#6-errores) y lo que el servicio emite hoy, en [docs/errores.md](docs/errores.md).
-- Excepción de forma: la finalización incompleta del perfil responde 422 con `CompletionErrorResponse`, `{"missingRequirements": [...]}`, que no es un `ProblemDetail`. Frontend ya la consume.
+- La finalización incompleta del perfil responde la forma común con `code` `PROFILE_INCOMPLETE` y, además, `missingRequirements`.
 - Los mensajes de las excepciones de negocio llegan al usuario tal cual; un fallo técnico no debe exponer su detalle.
 
 | Método | Ruta (bajo `/api/v1/profiles`) | Qué hace |
@@ -158,7 +158,7 @@ No hay claves foráneas hacia otros servicios. Las tablas y columnas van en `sna
 - Las pruebas nuevas se nombran `metodo_shouldResultado_whenCondicion`.
 - Toda prueba que levante el servidor usa puerto aleatorio (`RANDOM_PORT`), nunca el 8082.
 - Datos sintéticos, nunca reales. Cada regla de negocio tiene su prueba positiva y su prueba negativa.
-- Las pruebas de base de datos hoy corren contra el PostgreSQL de `docker-compose`; Testcontainers y Failsafe todavía no están (sección 10). Las reglas de pruebas y de cobertura están en la [sección 9 del estándar](docs/estandar-backend.md#9-pruebas-y-cobertura).
+- Las pruebas de base de datos (`*IT`) levantan PostgreSQL con Testcontainers y las corre Failsafe en `clean verify`; necesitan Docker encendido. Las reglas de pruebas y de cobertura están en la [sección 9 del estándar](docs/estandar-backend.md#9-pruebas-y-cobertura).
 
 ## 8. Verificación
 
@@ -185,13 +185,10 @@ Las specs nuevas viven en `specs/CM-NNN-Descripcion/` con `Descripcion` en Pasca
 
 | Pendiente | Responsable | Qué bloquea |
 |---|---|---|
-| Testcontainers y Failsafe: el `pom.xml` no los declara y `ProfessionalProfileRepositoryAdapterIT` no lo ejecuta ninguna fase | Backend (CM-283) | Pruebas de base de datos reproducibles y la cobertura de infraestructura |
 | API y consumidor de RabbitMQ en el mismo proceso | Backend (arranque, `Dockerfile`, `docker-compose.yml`) y DevOps (recursos de Cloud Run) | Escalar la API sin duplicar consumidores |
 | Consumidores y publicador de RabbitMQ son esqueletos con `TODO`: sin payload definido, idempotencia ni Outbox | Backend, con Cuentas | Reaccionar a cuenta eliminada y a cambios de plan; publicar cambios del perfil |
-| Un solo perfil por usuario, a la espera de la réplica del plan | Backend y Product Owner | Perfiles múltiples según el plan |
-| `ProfessionalRoleController` arma su propio 400 y repite el valor de `lang` en el `detail` | Backend (CM-283) | Que todo error pase por `ApiExceptionHandler` con código propio |
+| El cupo de perfiles es fijo en 1 (Plan Free), a la espera de la réplica del plan | Backend y Product Owner | Perfiles múltiples según el plan |
 | Swagger UI y OpenAPI sin bandera de apagado ni perfil `prod` | Backend (CM-283) | Cerrar la documentación en producción |
 | Cobertura por debajo de la meta del estándar | Backend (CM-283) | Cumplir el 70 % de la rúbrica y la meta del 90 % |
-| `POST /api/v1/profiles` responde 400, no 401, cuando falta `X-User-Id` | Backend | Uniformar la ausencia de identidad |
 | Lecturas que consume Entrevista (`GET /api/v1/profiles?status=COMPLETED`, con paginación, y las sugerencias de roles): no existen en el código | Backend, con Entrevista | Integración con Entrevista |
 | Extracción de CV, sugerencias y asistente de redacción con IA: sin implementar (`Resume`, `QuotaGuard`, adaptadores de LLM) | Backend y Product Owner | Todo lo que dependa de IA |

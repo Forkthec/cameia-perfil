@@ -23,6 +23,8 @@ import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.ProfileSk
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.ProfessionalProfileEntity;
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.TargetRoleEntity;
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.WorkExperienceEntity;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,9 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
 
     private final ProfessionalProfileJpaRepository jpa;
 
+    @PersistenceContext
+    private EntityManager em;
+
     ProfessionalProfileRepositoryAdapter(ProfessionalProfileJpaRepository jpa) {
         this.jpa = jpa;
     }
@@ -60,8 +65,25 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
 
     @Override
     @Transactional(readOnly = true)
-    public boolean existsByFirebaseUid(FirebaseUid firebaseUid) {
-        return jpa.existsByFirebaseUid(firebaseUid.value());
+    public long countByFirebaseUid(FirebaseUid firebaseUid) {
+        return jpa.countByFirebaseUid(firebaseUid.value());
+    }
+
+    /**
+     * Bloqueo de transacción de PostgreSQL por Usuario; se libera solo al confirmar o deshacer.
+     * Sin transacción abierta se liberaría de inmediato: la abre el servicio que crea el perfil.
+     */
+    @Override
+    public void lockCreationFor(FirebaseUid firebaseUid) {
+        em.createNativeQuery("select pg_advisory_xact_lock(hashtextextended(:uid, 0))")
+                .setParameter("uid", firebaseUid.value())
+                .getSingleResult();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ProfessionalProfile> findLatestByFirebaseUid(FirebaseUid firebaseUid) {
+        return jpa.findFirstByFirebaseUidOrderByCreatedAtDesc(firebaseUid.value()).map(this::toDomain);
     }
 
     // ── Domain → Entity ────────────────────────────────────────────────

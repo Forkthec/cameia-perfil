@@ -83,7 +83,7 @@ Fuera de alcance: sección 11.
 ### PR B — cupo del Plan Free y creación sin duplicados
 
 - **REQ-PE-20 (CA-2.2.3).** Cuando un Usuario que ya tenía 1 Perfil Profesional (en cualquier estado) antes de su petición llame a `POST /api/v1/profiles`, Perfil debe responder 409 `PROFILE_LIMIT_REACHED` con `detail` «Tu Plan Free permite 1 Perfil Profesional.» y no crear ningún perfil.
-- **REQ-PE-21 (CA-2.2.7, RT-06-CA02).** Cuando lleguen dos o más `POST /api/v1/profiles` del mismo Usuario mientras una creación suya está en proceso, Perfil debe crear exactamente un perfil y responder **201 con ese mismo perfil a todas**, sin 409.
+- **REQ-PE-21 (CA-2.2.7, RT-06-CA02).** Cuando lleguen dos o más `POST /api/v1/profiles` del mismo Usuario mientras una creación suya está en proceso, Perfil debe crear exactamente un perfil y responder **201 con ese mismo perfil a todas**, sin 409. Una petición que llega cuando la creación ya terminó no está «en proceso»: cumple REQ-PE-20 y recibe 409.
 - **REQ-PE-22 (CA-2.2.1 y 2.2.4).** El perfil creado debe tener `status` `IN_PROGRESS`, `name` y `summary` nulos y `workExperiences`, `educations`, `profileSkills` y `targetRoles` vacías, tanto en la respuesta 201 como en `GET /api/v1/profiles/{id}`.
 - **REQ-PE-23 (CA-2.2.4).** Perfil no debe recibir ni guardar el método de configuración elegido. El campo `provenance` del perfil indica el origen del nombre y el resumen (`MANUAL`, `AI_SUGGESTED`, `AI_EDITED`), nace en `MANUAL` y no representa el método.
 - **REQ-PE-24 (RT-03-CA04).** El cupo se cuenta por el `firebase_uid` de `X-User-Id`. Si la petición trae cuerpo, se ignora: no cambia el dueño ni el estado.
@@ -150,7 +150,8 @@ Cada código de campo tiene al menos una prueba que lo emite, con valor ausente,
 - **Cambia el estado:** validación del cuerpo 400 → 422 y cuerpo ilegible 400 → 422. `cameia-web` espera hoy 400 en «agregar experiencia» y «agregar educación». Comunicado a Frontend el 6-oct-2026 (documento de cambios de contrato, fila 12).
 - **Cambia el estado de un caso que no ocurre a través del Gateway:** `POST /api/v1/profiles` sin `X-User-Id` pasa de 400 a 401.
 - **Cambia un texto:** el `detail` del 409 de creación (CA-2.2.3). `cameia-web` muestra su propio texto ante este 409 («Ya tienes un perfil creado.»); para cumplir CA-2.2.3 debe mostrar «Tu Plan Free permite 1 Perfil Profesional.». Se solicita a Frontend en el canal `arquitectura`.
-- **Sin cambio para Frontend:** las creaciones simultáneas reciben 201 con el mismo perfil (REQ-PE-21); `cameia-web` ya trata el 201 como éxito.
+- **Doble clic (CA-2.2.7):** las creaciones que llegan mientras otra está en proceso reciben 201 con el mismo perfil (REQ-PE-21). La creación tarda pocos milisegundos y dos clics de una persona llegan con más separación, así que el segundo clic suele llegar con la creación ya terminada y recibe 409 (REQ-PE-20). Backend garantiza que nunca se crea un segundo perfil; para que el Usuario no vea el mensaje de cupo, `cameia-web` deshabilita «Llenado Manual» mientras la creación está en curso (D15). Se solicita a Frontend.
+- **Código nuevo:** 406 `ACCEPT_TYPE_NOT_ALLOWED` cuando el cliente pide una respuesta que no es JSON. Los demás errores del framework, que antes no tenían `code`, responden 422 `REQUEST_INVALID_VALUE` o 500 `INTERNAL_ERROR` (D13).
 - **OpenAPI de `POST /api/v1/profiles`:** 201 (perfil vacío, con ejemplo), 401 `IDENTITY_REQUIRED`, 409 `PROFILE_LIMIT_REACHED` (con ejemplo) y 500 `INTERNAL_ERROR`. La descripción del 201 aclara que una petición repetida mientras la creación está en proceso devuelve el mismo perfil.
 
 ## 7. Datos
@@ -188,7 +189,7 @@ Cada código de campo tiene al menos una prueba que lo emite, con valor ausente,
 | 11 | La primera creación falla y se deshace; la segunda esperaba | La segunda crea el perfil: 1 fila | integración |
 | 12 | Cuerpo `{"status":"ACTIVE","firebaseUid":"otro"}` | 201 `IN_PROGRESS` con dueño `uid-ana-001` | controlador |
 | 13 | La base falla al guardar | 500 `INTERNAL_ERROR`, sin SQL ni traza | controlador |
-| 14 | Script de la carrera: 15 rondas × 8 peticiones con la app real | En cada ronda: 8 respuestas 201 con el mismo `id` y 1 perfil en la base | manual, salida adjunta al PR |
+| 14 | Script de la carrera: 15 rondas × 8 peticiones con la app real | En cada ronda: 1 perfil en la base; cada respuesta es 201 con el `id` de ese perfil o 409 `PROFILE_LIMIT_REACHED` (la que llega cuando la creación ya terminó, REQ-PE-20) | manual, salida adjunta al PR |
 
 ### Identidad y formato de error (PR A)
 
@@ -230,6 +231,13 @@ Cobertura de lo nuevo o modificado: ≥ 90 % de líneas y de ramas con JaCoCo; c
 | D10 | Un código por causa también en los errores del framework; un identificador mal escrito en la ruta tiene su propio código por parámetro y responde 422 | Distingue «mal escrito» de «no existe» en el registro y para Frontend; el mensaje dice cuál identificador falló | UUID inválido → 404 del recurso (oculta la causa real); un solo `REQUEST_INVALID_VALUE` (no dice qué parámetro) | Paula, 7-oct-2026 («entre más claro, mejor») |
 | D11 | La finalización incompleta y el idioma no soportado del catálogo de roles adoptan la forma común en esta tarea | Al fusionar CM-271 todos los errores de Perfil tienen la misma forma. La finalización solo cambia de forma (los requisitos y `errors[]` siguen en CM-67, que depende del enumerado de requisitos) | Dejarlas en CM-67 y en CM-283 Parte 2: dos respuestas distintas hasta entonces | Paula, 7-oct-2026 |
 
+| D12 | El PR A se publica en tres PR apilados: T-A.1 a T-A.6, T-A.7 a T-A.12 y T-A.13 y T-A.14 con el respaldo del framework | Medido al terminar: 2.173 líneas, y el corte en dos del plan deja 1.145 en el primero. Es el único corte contiguo con cada PR bajo 1.000 | Un solo PR de más de 1.000 líneas; el corte A1/A2 del plan | Paula, 7-oct-2026 («soluciona usando los estándares») |
+| D13 | Toda respuesta de error lleva `code`: 406 `ACCEPT_TYPE_NOT_ALLOWED` propio; las demás excepciones del framework sin fila, 422 `REQUEST_INVALID_VALUE` (o 500 `INTERNAL_ERROR` si son del servidor), con el origen en el registro | El estándar pide `code` en toda respuesta de error y nunca el texto de Spring; un respaldo con origen permite darles código propio si aparecen | Conservar el estado y el texto de Spring sin `code`; un código por cada excepción de Spring que ningún endpoint produce | Paula, 7-oct-2026 |
+| D14 | Un encabezado obligatorio ausente distinto de `X-User-Id` responde 422 `REQUEST_INVALID_VALUE` | Un código tiene un solo estado | 400 con el mismo código | Paula, 7-oct-2026 |
+| D15 | Ante el doble clic, Backend garantiza un solo perfil y mantiene el 409 de la petición que llega con la creación terminada; `cameia-web` deshabilita el botón mientras la creación está en curso | Medido con la app real: en 30 rondas × 8 nunca hubo dos perfiles, pero 9 rondas tuvieron 409 tardíos. Distinguir en el servidor un segundo clic de un segundo intento exige una ventana de tiempo arbitraria o `Idempotency-Key`, ya descartados en D7; deshabilitar el botón es la práctica habitual y no cambia CA-2.2.3 | Ventana de tiempo; `Idempotency-Key`; devolver 201 con el borrador vacío existente (contradice CA-2.2.3) | Paula, 7-oct-2026 |
+| D16 | La creación vive en `ProfileCreationAppService` y la identidad del Gateway la valida `FirebaseUid.required` | Cada clase queda bajo 200 líneas y la regla de identidad está en un solo lugar | Dejar la creación en `ProfileAppService` (211 líneas) | Paula, 7-oct-2026 |
+| D17 | Los 404 de experiencia, formación, habilidad y rol objetivo inexistentes no se hacen en esta tarea | CM-274 (REQ-EF-02) y CM-66 (REQ-HB-07) ya los especifican con sus códigos y textos; hacerlos aquí duplicaría trabajo con mensajes distintos | Hacerlos en CM-271 | Paula, 7-oct-2026 |
+
 ## 11. Fuera de alcance y hallazgos con destino
 
 | Tema | Destino |
@@ -241,6 +249,11 @@ Cobertura de lo nuevo o modificado: ≥ 90 % de líneas y de ramas con JaCoCo; c
 | `package-info.java` por paquete y `@Schema` en cada campo de todos los DTO | CM-283, Parte 2 |
 | Filtro de `requestId` y `MDC` | CM-283, Parte 2 (P2-05) |
 | Textos de las demás excepciones | Cada tarea de Perfil (CM-54, CM-274, CM-66, CM-67) |
+| `DELETE` de experiencia y formación inexistentes (hoy 200) y `PATCH`/`DELETE` de rol objetivo inexistente (hoy 422 y 200) | CM-274, bloque 1 (REQ-EF-02, `TARGET_ROLE_NOT_FOUND`) |
+| `DELETE` de habilidad inexistente (hoy 200) | CM-66 (REQ-HB-07, `SKILL_NOT_FOUND`) |
+| Deshabilitar «Llenado Manual» mientras la creación está en curso (D15) | Frontend, por el documento de aclaraciones de Backend |
+| Lista de perfiles del Usuario (`GET /api/v1/profiles`, HU-4.2): sin ella el Usuario no vuelve a su perfil si el navegador no guardó su `id` | Product Owner: tarea nueva en Jira, por comunicación a Vela |
+| `ProfessionalProfile` (201 líneas) pasa del límite de 200 desde antes de esta tarea | Se parte en la primera tarea que cambie su estructura (CM-274, bloque 1) |
 
 **Entregables de documentación en esta tarea:** `docs/errores.md` (catálogo completo y los estados que difieren del mapa base), un ADR para el cambio a 422 y otro para el bloqueo de creación con la regla de REQ-PE-26, `README` (Docker necesario para las pruebas de integración) y `CLAUDE.md` del repositorio si lista estos puntos como pendientes. La carpeta de esta spec se renombra a `specs/CM-271-CupoPerfilPlanFree` (convención del estándar) en el PR B.
 

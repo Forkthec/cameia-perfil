@@ -7,6 +7,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.ReviewStatus;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -62,18 +63,34 @@ class ProfessionalProfileRepositoryAdapterIT {
     }
 
     @Test
-    void existsByFirebaseUid_returnsTrueAfterSave() {
-        var uid = new FirebaseUid("firebase-it-exists-002");
+    @DisplayName("El conteo incluye todos los perfiles del Usuario y solo los suyos")
+    void countByFirebaseUid_shouldCountOnlyOwnProfiles_whenSeveralExist() {
+        var uid = new FirebaseUid("firebase-it-count-002");
         repository.save(ProfessionalProfile.create(uid));
+        repository.save(ProfessionalProfile.create(uid));
+        repository.save(ProfessionalProfile.create(new FirebaseUid("firebase-it-count-otro")));
 
-        assertThat(repository.existsByFirebaseUid(uid)).isTrue();
+        assertThat(repository.countByFirebaseUid(uid)).isEqualTo(2);
     }
 
     @Test
-    void existsByFirebaseUid_returnsFalseForUnknownUid() {
+    @DisplayName("Un Usuario sin perfiles cuenta cero y no tiene perfil reciente")
+    void countAndLatest_shouldBeEmpty_whenUserHasNoProfiles() {
         var unknown = new FirebaseUid("firebase-it-unknown-9999");
 
-        assertThat(repository.existsByFirebaseUid(unknown)).isFalse();
+        assertThat(repository.countByFirebaseUid(unknown)).isZero();
+        assertThat(repository.findLatestByFirebaseUid(unknown)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("El perfil más reciente del Usuario se encuentra con su identificador")
+    void findLatestByFirebaseUid_shouldReturnProfile_whenUserHasOne() {
+        var uid = new FirebaseUid("firebase-it-latest-003");
+        var profile = ProfessionalProfile.create(uid);
+        repository.save(profile);
+
+        assertThat(repository.findLatestByFirebaseUid(uid)).get()
+                .extracting(ProfessionalProfile::getId).isEqualTo(profile.getId());
     }
 
     @Test

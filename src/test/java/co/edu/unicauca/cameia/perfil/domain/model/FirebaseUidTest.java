@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.domain.model;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,5 +39,25 @@ class FirebaseUidTest {
     void create_shouldThrow_whenNull() {
         assertThatThrownBy(() -> new FirebaseUid(null))
                 .isInstanceOf(NullPointerException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   ", "\t"})
+    @DisplayName("La identidad del Gateway en blanco se rechaza como identidad requerida")
+    void required_shouldThrowIdentityRequired_whenBlank(String raw) {
+        assertThatThrownBy(() -> FirebaseUid.required(raw)).isInstanceOf(IdentityRequiredException.class);
+    }
+
+    @Test
+    @DisplayName("La identidad del Gateway ausente o de 129 caracteres se rechaza como identidad requerida")
+    void required_shouldThrowIdentityRequired_whenNullOrTooLong() {
+        assertThatThrownBy(() -> FirebaseUid.required(null)).isInstanceOf(IdentityRequiredException.class);
+        assertThatThrownBy(() -> FirebaseUid.required("a".repeat(129))).isInstanceOf(IdentityRequiredException.class);
+    }
+
+    @Test
+    @DisplayName("La identidad del Gateway de 128 caracteres es válida")
+    void required_shouldReturnUid_whenLengthIsMax() {
+        assertThat(FirebaseUid.required("a".repeat(128)).value()).hasSize(128);
     }
 }

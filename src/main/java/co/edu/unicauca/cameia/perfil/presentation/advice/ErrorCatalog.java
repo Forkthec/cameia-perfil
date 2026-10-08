@@ -68,7 +68,7 @@ final class ErrorCatalog {
             // Errores de negocio: el mensaje lo pone la excepción.
             entry(PROFILE_NOT_FOUND, NOT_FOUND, "Perfil no encontrado", null),
             entry(PROFILE_NOT_ALLOWED, FORBIDDEN, "Acceso denegado", null),
-            entry(PROFILE_LIMIT_REACHED, CONFLICT, "Perfil ya existe", null),
+            entry(PROFILE_LIMIT_REACHED, CONFLICT, "Cupo del plan alcanzado", null),
             entry(PROFILE_ALREADY_COMPLETED, CONFLICT, "Perfil ya completado", null),
             entry(PROFILE_INCOMPLETE, UNPROCESSABLE_ENTITY, "Finalización incompleta", null),
             entry(PROFESSIONAL_ROLE_NOT_FOUND, NOT_FOUND, "Rol profesional no encontrado", null),
