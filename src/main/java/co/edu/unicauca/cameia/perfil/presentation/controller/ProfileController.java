@@ -77,6 +77,16 @@ class ProfileController {
               "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
             }""";
 
+    private static final String PROFILE_CREATION_TIMEOUT_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Creación en proceso",
+              "status": 503,
+              "detail": "Estamos creando tu perfil. Inténtalo de nuevo en unos segundos.",
+              "code": "PROFILE_CREATION_TIMEOUT",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
     private final ProfileAppService profileAppService;
     private final ProfileCreationAppService profileCreationAppService;
 
@@ -97,7 +107,10 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
                             examples = @ExampleObject(value = PROFILE_LIMIT_REACHED_EXAMPLE))),
             @ApiResponse(responseCode = "500", description = "Error interno (code INTERNAL_ERROR); el detalle nunca incluye el mensaje de la excepción",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "503", description = "Otra creación del mismo Usuario no terminó en 5 s; no se creó nada y se puede reintentar (code PROFILE_CREATION_TIMEOUT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = PROFILE_CREATION_TIMEOUT_EXAMPLE)))
     })
     @PostMapping
     ResponseEntity<ProfileResponse> createProfile(

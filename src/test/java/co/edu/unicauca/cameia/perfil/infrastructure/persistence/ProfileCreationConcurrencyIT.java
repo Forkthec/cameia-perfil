@@ -3,6 +3,7 @@ package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileLimitReachedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationTimeoutException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
@@ -12,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -189,7 +189,7 @@ class ProfileCreationConcurrencyIT {
         var started = System.nanoTime();
         var waiting = executor.submit(() -> profileCreationAppService.createProfile(new CreateProfileCommand(uid)));
 
-        assertThat(outcomeOf(waiting)).isInstanceOf(CannotAcquireLockException.class);
+        assertThat(outcomeOf(waiting)).isInstanceOf(ProfileCreationTimeoutException.class);
         assertThat(TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - started)).isBetween(4L, 15L);
         release.countDown();
         assertThat(holder).succeedsWithin(TIMEOUT_SECONDS, TimeUnit.SECONDS);
