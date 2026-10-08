@@ -15,6 +15,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.presentation.advice.ApiExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -408,6 +409,18 @@ class ProfileControllerTest {
                         UUID.randomUUID(), UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-delrole"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("PATCH de rol objetivo sin professionalRoleId responde 422 con su código y no llega al servicio")
+    void patchTargetRole_shouldReturn422_whenProfessionalRoleIdMissing() throws Exception {
+        mockMvc.perform(patch("/api/v1/profiles/{id}/target-roles/{roleId}", UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].field").value("professionalRoleId"))
+                .andExpect(jsonPath("$.errors[0].code").value("PROFESSIONAL_ROLE_ID_REQUIRED"));
     }
 
     // ── CM-22 ─────────────────────────────────────────────────────────────
