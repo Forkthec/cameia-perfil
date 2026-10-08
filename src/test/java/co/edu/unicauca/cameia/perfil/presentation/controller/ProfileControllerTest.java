@@ -272,12 +272,12 @@ class ProfileControllerTest {
     static Stream<Arguments> frameworkErrors() {
         var profileId = UUID.randomUUID();
         return Stream.of(
-                Arguments.of(get("/api/v1/no-existe"), 404, "ROUTE_NOT_FOUND", "La ruta solicitada no existe."),
+                Arguments.of(get("/api/v1/no-existe"), 404, "ROUTE_NOT_FOUND", "No existe la ruta solicitada."),
                 Arguments.of(delete("/api/v1/profiles"), 405, "METHOD_NOT_ALLOWED",
-                        "La operación no está permitida en esta ruta."),
+                        "Método no permitido."),
                 Arguments.of(patch("/api/v1/profiles/" + profileId).header("X-User-Id", "uid-ctrl-415")
                                 .contentType(MediaType.TEXT_PLAIN).content("x"),
-                        415, "CONTENT_TYPE_NOT_ALLOWED", "Envía los datos en formato JSON."),
+                        415, "MEDIA_TYPE_NOT_ALLOWED", "Tipo de contenido no admitido."),
                 Arguments.of(get("/api/v1/profiles/no-es-uuid").header("X-User-Id", "uid-ctrl-id"),
                         422, "PROFILE_ID_INVALID_FORMAT", "El identificador del perfil no es válido."),
                 Arguments.of(delete("/api/v1/profiles/" + profileId + "/skills/xyz").header("X-User-Id", "uid-ctrl-id"),
@@ -306,8 +306,8 @@ class ProfileControllerTest {
         mockMvc.perform(get("/api/v1/profiles/{id}", profile.getId().value())
                         .header("X-User-Id", "uid-ctrl-xml").accept(MediaType.APPLICATION_XML))
                 .andExpect(status().isNotAcceptable())
-                .andExpect(jsonPath("$.code").value("ACCEPT_TYPE_NOT_ALLOWED"))
-                .andExpect(jsonPath("$.detail").value("La respuesta solo está disponible en formato JSON."));
+                .andExpect(jsonPath("$.code").value("MEDIA_TYPE_NOT_ACCEPTABLE"))
+                .andExpect(jsonPath("$.detail").value("Tipo de respuesta no admitido."));
     }
 
     @Test

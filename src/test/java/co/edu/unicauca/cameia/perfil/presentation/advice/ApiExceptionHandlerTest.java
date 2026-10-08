@@ -397,8 +397,8 @@ class ApiExceptionHandlerTest {
 
         assertThat(handled).containsExactlyInAnyOrder(
                 HttpRequestMethodNotSupportedException.class,          // 405 METHOD_NOT_ALLOWED
-                HttpMediaTypeNotSupportedException.class,              // 415 CONTENT_TYPE_NOT_ALLOWED
-                HttpMediaTypeNotAcceptableException.class,             // 406 ACCEPT_TYPE_NOT_ALLOWED
+                HttpMediaTypeNotSupportedException.class,              // 415 MEDIA_TYPE_NOT_ALLOWED
+                HttpMediaTypeNotAcceptableException.class,             // 406 MEDIA_TYPE_NOT_ACCEPTABLE
                 MissingPathVariableException.class,                    // 500 INTERNAL_ERROR (error del servidor)
                 MissingServletRequestParameterException.class,         // 400 → 422 REQUEST_INVALID_VALUE
                 MissingServletRequestPartException.class,              // 400 → 422 REQUEST_INVALID_VALUE
@@ -425,7 +425,7 @@ class ApiExceptionHandlerTest {
 
         mockMvc.perform(get("/boom"))
                 .andExpect(status().isNotAcceptable())
-                .andExpect(jsonPath("$.code").value("ACCEPT_TYPE_NOT_ALLOWED"));
+                .andExpect(jsonPath("$.code").value("MEDIA_TYPE_NOT_ACCEPTABLE"));
     }
 
     @Test

@@ -33,14 +33,14 @@ public enum ErrorCode {
     SKILL_ALREADY_EXISTS,
     /** El idioma pedido al catálogo de roles profesionales no está disponible. */
     PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE,
-    /** La ruta solicitada no existe. */
+    /** No existe la ruta solicitada. */
     ROUTE_NOT_FOUND,
     /** El método HTTP no está permitido en la ruta. */
     METHOD_NOT_ALLOWED,
     /** El cuerpo llega en un formato distinto de JSON. */
-    CONTENT_TYPE_NOT_ALLOWED,
+    MEDIA_TYPE_NOT_ALLOWED,
     /** El cliente pide la respuesta en un formato distinto de JSON. */
-    ACCEPT_TYPE_NOT_ALLOWED,
+    MEDIA_TYPE_NOT_ACCEPTABLE,
     /** El identificador del perfil en la ruta no es un UUID. */
     PROFILE_ID_INVALID_FORMAT,
     /** El identificador de la experiencia laboral en la ruta no es un UUID. */
