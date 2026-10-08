@@ -71,7 +71,7 @@ Responden igual que Bean Validation: 422 `VALIDATION_FAILED` con «Revisa los ca
 | `INSTITUTION_TOO_LONG` | `POST …/educations` | `institution` | «La institución no puede superar los 500 caracteres.» | `Education` | La misma |
 | `DEGREE_TOO_LONG` | `POST …/educations` | `degree` | «El título obtenido no puede superar los 500 caracteres.» | `Education` | La misma |
 | `SKILL_NAME_TOO_LONG` | `POST …/skills` | `skillName` | «La habilidad no puede superar los 255 caracteres.» | `ProfileSkill` | La misma |
-| `DESCRIPTION_TOO_LONG` | `POST …/work-experiences` | `description` | «La descripción no puede superar los 2000 caracteres.» | `WorkExperience` | La misma |
+| `DESCRIPTION_TOO_LONG` | `POST …/work-experiences` | `description` | «La descripción no puede superar los 2000 caracteres.» (el criterio CA-2.4.12 pide 500, que llega con CM-274) | `WorkExperience` | La misma |
 | `FIELD_OF_STUDY_TOO_LONG` | `POST …/educations` | `fieldOfStudy` | «El área de estudio no puede superar los 500 caracteres.» | `Education` | La misma |
 | `END_DATE_REQUIRED` | `POST …/work-experiences` | `endDate` | «Ingresa la fecha de fin.» | `WorkExperience` (estado `ENDED`) | `WorkExperienceTest.ended_requiresEndDate` |
 | `END_DATE_NOT_ALLOWED` | `POST …/work-experiences`, `POST …/educations` | `endDate` | «La fecha de fin debe quedar vacía.» | `WorkExperience` (`CURRENT`, `UNKNOWN_END`), `Education` (en curso) | `WorkExperienceTest.current_throwsWhenEndDateIsProvided`, `ProfileValueRulesTest.constructor_shouldRejectField_whenRuleIsBroken` |
