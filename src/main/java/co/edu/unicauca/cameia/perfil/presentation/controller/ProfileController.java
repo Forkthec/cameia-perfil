@@ -282,7 +282,11 @@ class ProfileController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Oculto en Swagger: no tiene HU en el MVP y el estado IN_REVIEW no es alcanzable (hallazgo I-024 del backlog). */
+    /**
+     * Oculto en Swagger: no tiene HU en el MVP (hallazgo I-024 del backlog: {@code IN_REVIEW} no debería alcanzarse).
+     * La ruta sigue respondiendo: un perfil completo pasa a {@code IN_REVIEW} (201). D26 la deja hasta que CM-67
+     * decida si se borra.
+     */
     @Hidden
     @PostMapping("/{id}/review-requests")
     ResponseEntity<ProfileResponse> requestReview(@PathVariable UUID id,

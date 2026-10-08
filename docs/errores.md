@@ -50,6 +50,8 @@ Cada rechazo se registra en nivel `WARN` con `code`, `requestId` y `firebaseUid`
 | `EDUCATION_NOT_FOUND` | 404 | `DELETE …/educations/{eduId}` | — | «No encontramos lo que buscabas.» (CA-2.4.58) | `EducationNotFoundException` (ajena o inexistente) | `ProfessionalProfileTest.remove_shouldThrowNotFound_whenElementIsNotInProfile` |
 | `SKILL_NOT_FOUND` | 404 | `DELETE …/skills/{skillId}` | — | «No encontramos lo que buscabas.» (CA-2.5.23) | `SkillNotFoundException` (ajena o inexistente) | `ProfessionalProfileTest.remove_shouldThrowNotFound_whenElementIsNotInProfile` |
 
+**Pendiente con destino:** quitar la última formación o habilidad de un perfil `COMPLETED` responde hoy 204 y deja el perfil sin ellas. El backlog pide 422 (CA-2.4.37, 2.4.51 y 2.5.12): `EDUCATION_NOT_ALLOWED` es de CM-274 y `SKILL_NOT_ALLOWED`, de CM-66. Hasta entonces los `DELETE` responden 204 o 404.
+
 Un identificador de la ruta mal escrito tiene su propio código por parámetro y responde 422, no 404: así se distingue «mal escrito» de «no existe».
 
 ### Campos rechazados por el dominio (`errors[].code`)

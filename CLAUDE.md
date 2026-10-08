@@ -116,7 +116,7 @@ El servicio solo debe aceptar tráfico del API Gateway; la autenticidad la garan
 | `POST`, `DELETE` | `/{id}/educations`, `/{id}/educations/{eduId}` | Agrega o quita educación |
 | `PATCH` | `/{id}/salary-expectation` | Actualiza la expectativa salarial |
 | `POST`, `DELETE` | `/{id}/skills`, `/{id}/skills/{skillId}` | Agrega o quita una habilidad |
-| `POST` | `/{id}/review-requests` | Pide la revisión del perfil |
+| `POST` | `/{id}/review-requests` | Pide la revisión del perfil; oculta del OpenAPI y sin HU en el MVP, CM-67 decide si se borra (D26) |
 | `POST`, `PATCH`, `DELETE` | `/{id}/target-roles`, `/{id}/target-roles/{roleId}` | Gestiona los roles objetivo |
 | `POST` | `/{id}/completion` | Finaliza el perfil |
 | `GET` | `/professional-roles?lang=es\|en` | Catálogo de roles profesionales (sin identidad) |
