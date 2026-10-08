@@ -22,6 +22,7 @@ import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -48,6 +49,16 @@ import java.util.UUID;
 @RequestMapping("/api/v1/profiles")
 class ProfileController {
 
+    private static final String PROFILE_LIMIT_REACHED_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Perfil ya existe",
+              "status": 409,
+              "detail": "El usuario ya tiene un perfil profesional creado. El plan gratuito permite solo uno.",
+              "code": "PROFILE_LIMIT_REACHED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
     private final ProfileAppService profileAppService;
     ProfileController(ProfileAppService profileAppService) { this.profileAppService = profileAppService; }
 
@@ -55,7 +66,12 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Perfil creado exitosamente",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "409", description = "Ya existe un perfil con ese Firebase UID",
+            @ApiResponse(responseCode = "400", description = "Falta el encabezado X-User-Id (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "El usuario alcanzó el cupo de perfiles de su plan (code PROFILE_LIMIT_REACHED)",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class),
+                            examples = @ExampleObject(value = PROFILE_LIMIT_REACHED_EXAMPLE))),
+            @ApiResponse(responseCode = "500", description = "Error interno (code INTERNAL_ERROR); el detalle nunca incluye el mensaje de la excepción",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping
@@ -87,7 +103,7 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Perfil actualizado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]) o cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
@@ -108,15 +124,13 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Experiencia laboral agregada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "422", description = "Datos de fechas inconsistentes (ej: endDate anterior a startDate)",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]) o Datos de fechas inconsistentes (ej: endDate anterior a startDate)",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/{id}/work-experiences")
@@ -149,7 +163,7 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Educación agregada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]) o cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
@@ -198,7 +212,7 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Habilidad agregada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]) o cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
@@ -260,8 +274,6 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Rol objetivo agregado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "403", description = "El perfil no pertenece al usuario autenticado",
@@ -270,7 +282,7 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "422", description = "Se alcanzó el máximo de roles objetivo permitidos",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]) o Se alcanzó el máximo de roles objetivo permitidos",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/{id}/target-roles")
@@ -285,7 +297,7 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Rol objetivo actualizado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Campos inválidos en el cuerpo de la solicitud",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]) o cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "Header X-User-Id ausente",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),

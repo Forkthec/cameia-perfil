@@ -6,6 +6,7 @@ import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceComman
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
+import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyExistsException;
@@ -89,8 +90,8 @@ class ProfileAppServiceTest {
 
     @Test
     void createProfile_rejectsBlankFirebaseUid() {
-        assertThatThrownBy(() -> service.createProfile(new CreateProfileCommand("")))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.createProfile(new CreateProfileCommand("  ")))
+                .isInstanceOf(IdentityRequiredException.class);
         verify(repository, never()).existsByFirebaseUid(any());
     }
 
