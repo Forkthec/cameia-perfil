@@ -94,7 +94,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 - **Resultado (9-oct-2026):** rojo: `SingleLineTextTest` no compilaba (faltaba la clase). Verde: 24/24 (`./mvnw -B test -Dtest=SingleLineTextTest`). `hasControlCharacter` se escribió aquí porque las mismas pruebas la cubren; T-A3 ya no la crea. Los invisibles de la prueba están con escapes `\uXXXX` (la herramienta de edición los convertía en el carácter real).
 
-## [ ] T-A2 · Acumulador de errores en `InvalidFieldsException` — ≤ 20 min, ≈ 80 líneas
+## [x] T-A2 · Acumulador de errores en `InvalidFieldsException` — ≤ 20 min, ≈ 80 líneas
 
 - **Modificar** `domain/exception/InvalidFieldsException.java`: agregar la clase anidada
   ```java
@@ -124,6 +124,8 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
   El Javadoc de la clase ya está en español; el de lo nuevo también va en español.
 - **Pruebas** `domain/exception/InvalidFieldsExceptionTest.java`: `throwIfAny_shouldDoNothing_whenNoErrors`; `throwIfAny_shouldThrowEveryField_whenTwoFieldsFail` (`company`/`COMPANY_TOO_LONG`, `position`/`POSITION_TOO_LONG` → dos errores en ese orden); `add_shouldKeepFirstError_whenFieldFailsTwice` (`endDate` con `END_DATE_NOT_ALLOWED` y luego `END_DATE_IN_THE_FUTURE` → solo el primero); `constructor_shouldRejectEmptyList_whenNoErrors` (`IllegalArgumentException`); `getErrors_shouldBeUnmodifiable_whenReturned`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=InvalidFieldsExceptionTest" test`.
+
+- **Resultado (9-oct-2026):** rojo: `InvalidFieldsExceptionTest` no compilaba (faltaba `Collector`). Verde: 8/8 (`./mvnw -B test -Dtest=InvalidFieldsExceptionTest`). Se agregaron también `of(FieldError)` y `Collector.add(FieldError)`, que pide T-A3. La prueba del campo repetido usa `END_DATE_NOT_ALLOWED` y `END_DATE_BEFORE_START_DATE` porque `END_DATE_IN_THE_FUTURE` aún no existe.
 
 ## [ ] T-A3 · Restricciones de borde: largo y reglas del dominio — ≤ 30 min, ≈ 240 líneas
 
