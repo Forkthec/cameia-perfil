@@ -365,7 +365,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 - **Resultado (10-oct-2026):** verde en la primera corrida: `./mvnw -B "-Dit.test=ProfileWriteLockIT" verify` → Tests run: 5, Failures: 0, Errors: 0 (BUILD SUCCESS). La espera agotada responde `ProfileUpdateInProgressException` entre 1,5 s y 3,5 s con el perfil sin cambios; B espera con A reteniendo la fila (primera prueba) y la lectura no espera. La excepción de Spring Data que llega al adaptador es capturada (`PersistenceException | PessimisticLockingFailureException`); no hizo falta otra. Se agregaron dos pruebas: el bloqueo exige transacción (`IllegalTransactionStateException`) y el límite de espera vuelve a `0` tras tomarlo.
 
-## [ ] T-A7 · Catálogo documentado y probado — ≤ 20 min, ≈ 90 líneas
+## [x] T-A7 · Catálogo documentado y probado — ≤ 20 min, ≈ 90 líneas
 
 - **Crear** `domain/exception/ErrorCodeDocumentationTest.java`:
   - `everyCode_shouldBeDocumented_whenCatalogIsRead`: lee `docs/errores.md` (ruta relativa a la raíz del módulo, `Path.of("docs", "errores.md")`) y comprueba que cada `ErrorCode.name()` aparece entre comillas invertidas en alguna fila de tabla (línea que empieza con `| \``).
@@ -373,6 +373,8 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 - **Modificar** `docs/errores.md`: cambiar el libro citado a `09102026_01_Backlog_v6.xlsx`; agregar la fila de `PROFILE_UPDATE_IN_PROGRESS` (409, «todo `PATCH`, `POST` y `DELETE` sobre `/api/v1/profiles/{id}…`», «Estamos guardando otro cambio de tu perfil. Inténtalo de nuevo en unos segundos.», `ProfileUpdateInProgressException`, `ProfileWriteLockIT.write_shouldFailFast_whenProfileRowIsLockedLongerThanTimeout`) y las de los cinco `*_INVALID_CHARACTERS` de T-A3 (422, endpoint, campo, texto, `@DomainRule` y dominio, `DomainRuleValidatorTest`). Si la prueba encuentra códigos ya existentes sin documentar o sin probar, agrégalos (documentación o prueba) y lista cuáles en el PR.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ErrorCodeDocumentationTest" test`.
 - **Trampa:** la prueba lee archivos con rutas relativas al módulo; Surefire corre con el directorio del módulo como directorio de trabajo, así que `Path.of("docs", "errores.md")` funciona con `./mvnw.cmd` desde la raíz del repo. Lee con `Files.readString(path, StandardCharsets.UTF_8)`: el archivo tiene tildes.
+
+- **Resultado (10-oct-2026):** rojo: `ErrorCodeDocumentationTest` falló en sus dos pruebas. Sin fila en `docs/errores.md`: `PROFILE_UPDATE_IN_PROGRESS` y los cinco `*_INVALID_CHARACTERS`; sin prueba que los nombre: `PROFILE_UPDATE_IN_PROGRESS`, `WORK_EXPERIENCE_ID_INVALID_FORMAT`, `EDUCATION_ID_INVALID_FORMAT` y `TARGET_ROLE_ID_INVALID_FORMAT` (estos tres ya estaban documentados con una prueba que no los nombraba). Se agregaron las seis filas, `ApiExceptionHandlerTest.profileUpdateInProgress_shouldReturn409_whenThrown` y tres casos de `ProfileControllerTest.frameworkError_shouldReturnCommonShape_whenRequestIsRejected`. Verde: `ErrorCodeDocumentationTest, ApiExceptionHandlerTest, ProfileControllerTest, ErrorCatalogTest, ErrorCodeTest` → 172 pruebas, 0 fallos.
 
 ## [ ] T-A9 · Lectura de opciones y fechas en el dominio, vigilada por ArchUnit — ≤ 25 min, ≈ 90 líneas
 
