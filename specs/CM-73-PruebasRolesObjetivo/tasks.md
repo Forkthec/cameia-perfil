@@ -15,12 +15,13 @@
 
 # PR único (`CM-73-pruebas-roles-objetivo`, sobre la punta de CM-72)
 
-## [ ] T-73.0 · Copiar la spec — ≤ 5 min
+## [x] T-73.0 · Copiar la spec — ≤ 5 min
 
 Copiar `specs/CM-73-PruebasRolesObjetivo/` desde `C:\Users\paanm\Documents\cameia\cameia-worktrees\perfil-specs-v6`. Commit:
 `CM-73 | docs(spec): spec, plan y tarjetas de las pruebas de roles objetivo`.
 
-## [ ] T-73.1 · Medir — ≤ 15 min
+## [x] T-73.1 · Medir — ≤ 15 min
+- **Resultado (10-oct-2026):** medida sobre la punta de CM-72 (`verify-CM-72.log`): `TargetRole` 13/14 y 2/4; `ProfessionalRoleAppService` 3/5; `ProfessionalRoleRepositoryAdapter` 10/11 y 6/6; `ProfessionalProfile` 114/116 y 43/46; `ProfileAppService` 64/66 y 12/12; `ProfessionalProfileRepositoryAdapter` 36/36 y 20/22; `ProfessionalRole` 4/4 y 2/2; `ProfessionalRoleController` 6/6 y 2/2; `ErrorCatalog` 72/72 y 2/2; global 95,3 % líneas y 91,7 % ramas.
 
 `./mvnw.cmd -B clean verify` y el comando de extracción de abajo; pega la tabla (clase, líneas, ramas) en esta tarjeta junto con el global.
 ```
@@ -28,13 +29,15 @@ python -X utf8 -c "import csv;[print(r['CLASS'],r['LINE_COVERED'],int(r['LINE_CO
 ```
 Para ver las líneas sin cubrir de una clase: `target/site/jacoco/<paquete>/<Clase>.java.html` (líneas en rojo o amarillo).
 
-## [ ] T-73.2 · Borrar el código muerto del catálogo — ≤ 10 min
+## [x] T-73.2 · Borrar el código muerto del catálogo — ≤ 10 min
+- **Resultado (10-oct-2026):** `git grep` confirmó que solo ellos se llamaban; borrados `listAll`, `findAll` del puerto y `findAll` del adaptador. `./mvnw.cmd -q -B test` en verde (commit `9ce3fcb`).
 
 - Confirmar: `git grep -n "listAll()\|\.findAll()" -- src` solo muestra `ProfessionalRoleAppService.listAll`, el puerto y el adaptador.
 - Borrar `ProfessionalRoleAppService.listAll()`, `ProfessionalRoleRepository.findAll()` y `ProfessionalRoleRepositoryAdapter.findAll()`.
 - `./mvnw.cmd -q -B test` en verde. Commit: `CM-73 | refactor(perfil): quitar la lectura del catálogo sin idioma, que nadie usa`.
 
-## [ ] T-73.3 · Pruebas unitarias que faltan — ≤ 25 min, ≈ 120 líneas
+## [x] T-73.3 · Pruebas unitarias que faltan — ≤ 25 min, ≈ 120 líneas
+- **Resultado (10-oct-2026):** `TargetRoleTest` (7 casos), `ProfessionalProfileTest.updateTargetRole_shouldKeepPreviousValues_whenArgumentsAreNull` y `ProfessionalRoleAppServiceTest` en verde. Que pueden fallar: con `>=` en el largo del título falla `constructor_shouldAccept_whenTitleHas255Characters`; con `professionalRoleId` sin conservar el anterior falla la prueba de valores nulos (cambios revertidos).
 
 - `domain/model/TargetRoleTest` (`ROLE_ID = UUID.fromString("a0000001-0000-0000-0000-000000000002")`):
   - `constructor_shouldRejectTitle_whenBlankOrTooLong` con `@ParameterizedTest` y `""`, `"   "`, `"a".repeat(256)` → `IllegalArgumentException`.
@@ -49,7 +52,8 @@ Para ver las líneas sin cubrir de una clase: `target/site/jacoco/<paquete>/<Cla
 - `./mvnw.cmd -q -B "-Dtest=TargetRoleTest,ProfessionalProfileTest,ProfessionalRoleAppServiceTest" test`. Commit:
   `CM-73 | test(perfil): invariantes del rol objetivo y lectura del catálogo por idioma`.
 
-## [ ] T-73.4 · Una prueba de punta a punta por CA — ≤ 30 min, ≈ 300 líneas
+## [x] T-73.4 · Una prueba de punta a punta por CA — ≤ 30 min, ≈ 300 líneas
+- **Resultado (10-oct-2026):** `TargetRolesEndToEndIT` 12/12 (`e2e-CM-73.log`). Correcciones propias durante la ejecución: el id del rol sale de `targetRoles[0].id` y `completeProfile` envía `provenance` y comprueba cada paso. Que pueden fallar: con el catálogo sin filtro de activos falla CA-2.11.11; con el máximo en 6 falla CA-2.11.5 (revertidos).
 
 - **Crear** `presentation/TargetRolesEndToEndIT.java` con la forma de `ResponseCharsetIT` (`@SpringBootTest(webEnvironment = RANDOM_PORT)`,
   `@Testcontainers`, `HttpClient`, `@LocalServerPort`). Para leer JSON, el mapeador que ya usan las pruebas del repo
@@ -79,7 +83,8 @@ Para ver las líneas sin cubrir de una clase: `target/site/jacoco/<paquete>/<Cla
   `charset=UTF-8`, y que el cuerpo no contiene `Exception`, `org.` ni `co.edu`.
 - `./mvnw.cmd -B "-Dit.test=TargetRolesEndToEndIT" verify` → 12 en verde. Commit: `CM-73 | test(perfil): una prueba de punta a punta por criterio de HU-2.11`.
 
-## [ ] T-73.5 · Medir otra vez, autoverificación y cierre — ≤ 20 min
+## [x] T-73.5 · Medir otra vez, autoverificación y cierre — ≤ 20 min
+- **Resultado (10-oct-2026):** `clean verify` BUILD SUCCESS: 510 unitarias + 120 IT, 0 fallos (`verify-CM-73.log`; el primer reporte de JaCoCo salió incompleto y se repitió). Cobertura: `TargetRole` 14/14 y 4/4; `ProfessionalRoleAppService` 4/4; `ProfessionalRoleRepositoryAdapter` 10/10 y 6/6; `ProfessionalProfile` 114/116 y 45/46 (previas, Desvío 13); `ProfileAppService` 64/66 y 12/12 (previas); `ProfessionalProfileRepositoryAdapter` 36/36 y 20/22 (previas); `ProfessionalRoleController` 6/6 y 2/2; `ErrorCatalog` 72/72 y 2/2; `ProfileResponse` 16/16 y 7/8 (la rama sin cubrir es de salario o fecha de fin, ajena a roles); global 96,2 % líneas y 93,5 % ramas, por encima del 95,3 % y 91,7 % de la punta de CM-72. Capa de 628 líneas contra la punta de CM-72. Sin cambio de contrato: Newman no se repite. `/simplify` y `/code-review high` no se corren desde esta sesión.
 
 `./mvnw.cmd -B clean verify`; el comando de T-73.1; tabla final por clase (≥ 90 % líneas y ramas, o la razón de cada línea sin cubrir); global
 ≥ el de T-73.1; lista V1 a V7 de la spec §9; `git diff --shortstat <punta de CM-72>...HEAD` (≤ 800); `/simplify` y `/code-review high`.
