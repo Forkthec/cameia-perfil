@@ -4052,6 +4052,7 @@
                   "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
                   "pm.test('errors[0].field professionalRoleId', () => pm.expect(pm.response.json().errors[0].field).to.eql('professionalRoleId'));",
                   "pm.test('errors[0].code PROFESSIONAL_ROLE_DISABLED', () => pm.expect(pm.response.json().errors[0].code).to.eql('PROFESSIONAL_ROLE_DISABLED'));",
+                  "pm.test('errors[0].message del catálogo', () => pm.expect(pm.response.json().errors[0].message).to.eql('No encontramos ese rol en el catálogo.'));",
                   "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
                   "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
                 ]
@@ -4107,6 +4108,7 @@
                   "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
                   "pm.test('errors[0].field professionalRoleId', () => pm.expect(pm.response.json().errors[0].field).to.eql('professionalRoleId'));",
                   "pm.test('errors[0].code PROFESSIONAL_ROLE_DISABLED', () => pm.expect(pm.response.json().errors[0].code).to.eql('PROFESSIONAL_ROLE_DISABLED'));",
+                  "pm.test('errors[0].message del catálogo', () => pm.expect(pm.response.json().errors[0].message).to.eql('No encontramos ese rol en el catálogo.'));",
                   "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
                   "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
                 ]
@@ -4516,6 +4518,114 @@
                 "{{profile_c}}",
                 "target-roles"
               ]
+            }
+          }
+        },
+        {
+          "name": "ERR POST /target-roles — 415 Content-Type text/plain",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 415', () => pm.response.to.have.status(415));",
+                  "pm.test('Content-Type problem+json con charset', () => { const t = pm.response.headers.get('Content-Type').toLowerCase(); pm.expect(t).to.include('application/problem+json'); pm.expect(t).to.include('charset=utf-8'); });",
+                  "pm.test('code MEDIA_TYPE_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('MEDIA_TYPE_NOT_ALLOWED'));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_c}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "a0000001-0000-0000-0000-000000000005",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_c}}/target-roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_c}}",
+                "target-roles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR PATCH /target-roles/{roleId} — 403 perfil ajeno (CA-2.11.13)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Content-Type problem+json con charset', () => { const t = pm.response.headers.get('Content-Type').toLowerCase(); pm.expect(t).to.include('application/problem+json'); pm.expect(t).to.include('charset=utf-8'); });",
+                  "pm.test('code PROFILE_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('PROFILE_NOT_ALLOWED'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"No encontramos lo que buscabas.\"));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_c}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_d}}/target-roles/{{role_d}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_d}}",
+                "target-roles",
+                "{{role_d}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"professionalRoleId\": \"a0000001-0000-0000-0000-000000000005\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         },
