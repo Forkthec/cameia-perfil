@@ -1,6 +1,6 @@
 # Tareas — CM-54 (cameia-perfil)
 
-Estado: PR 1a ejecutado y verificado en local (10-oct-2026); PR 1b y PR 2 pendientes. Spec, plan y tarjetas aprobados por Paula el 9-oct-2026. Una tarjeta a la vez, con la salida real de las pruebas antes de marcar `[x]`.
+Estado: PR 1 ejecutado y verificado en local (10-oct-2026); PR 2 pendiente. Spec, plan y tarjetas aprobados por Paula el 9-oct-2026. Una tarjeta a la vez, con la salida real de las pruebas antes de marcar `[x]`.
 
 ## Reglas para todas las tarjetas
 
@@ -180,7 +180,7 @@ Las once reglas comunes de `specs/CM-274-experiencia-formacion-v4/tasks.md` («R
 
 **Resultado.** Rojo: `ProfileResponseTest` y las dos pruebas de `ProfileControllerTest` no compilaban (`summaryProvenance()` indefinido). Verde: `summaryProvenance` `MANUAL` con resumen y `null` sin él. `ProfileResponse` 17/17 líneas y 10/10 ramas.
 
-## [ ] T-5 · Integración — ≤ 30 min, ≈ 180 líneas
+## [x] T-5 · Integración — ≤ 30 min, ≈ 180 líneas
 
 - **Crear** `presentation/GeneralInfoEndToEndIT.java` con la misma forma que `presentation/WorkHistoryEndToEndIT.java` de CM-274 (`@SpringBootTest(webEnvironment = RANDOM_PORT)`, `@Testcontainers`, `postgres:16-alpine` con `@ServiceConnection`, `TestRestTemplate`, Usuario `uid-e2e-<UUID>`):
   - `updateProfileInfo_shouldSaveNameAndSummary_whenDraft`: «Analista de datos» y 300 `a` → 200, `status` `IN_PROGRESS`, `summaryProvenance` `MANUAL`.
@@ -197,11 +197,15 @@ Las once reglas comunes de `specs/CM-274-experiencia-formacion-v4/tasks.md` («R
 - **Agregar** a `ColumnLengthConsistencyIT` (la creó CM-274 PR 2): `perfil_profesional.nombre` = `ProfileName.MAX_LENGTH`, `resumen` = `ProfessionalSummary.MAX_LENGTH`. A `OpenApiDocumentIT`: `maxLength` 255 y 2000 en `UpdateProfileInfoRequest`, y que `provenance` ya no está.
 - **Comandos:** `./mvnw.cmd -B "-Dit.test=GeneralInfoEndToEndIT,ProfileWriteLockIT,ColumnLengthConsistencyIT,OpenApiDocumentIT" verify`.
 
-## [ ] T-6 · OpenAPI, catálogo y cierre — ≤ 25 min
+**Resultado.** `GeneralInfoEndToEndIT` (10 pruebas), dos carreras nuevas en `ProfileWriteLockIT` (`updateProfileInfo_shouldNeverLeaveActiveProfileWithoutSummary_whenCompletionRunsAtTheSameTime` y `updateProfileInfo_shouldRejectClear_whenCompletionHoldsTheLock`, el orden inverso), `ColumnLengthConsistencyIT.profileColumnLengths_shouldMatchDomainLimits_whenSchemaIsMigrated` y `OpenApiDocumentIT.updateProfileInfoRequest_shouldDocumentLimits_whenApiDocsAreGenerated`. Primera corrida con dos fallos reales (`verify-CM-54-1-primera.log`): (1) `createdAt` cambiaba en cada respuesta (defecto previo, Desvío 29) y (2) OpenAPI publicaba `maxLength` 2147483647 en `name` (Desvío 27). Corregidos ambos con su prueba. Verde: 207 pruebas de integración, 0 fallos.
+
+## [x] T-6 · OpenAPI, catálogo y cierre — ≤ 25 min
 
 - `ProfileController.updateProfileInfo`: `@ApiResponse` 200, 401, 403, 404, 415, 422 (códigos: `PROFILE_NAME_REQUIRED`, `PROFILE_NAME_INVALID_CHARACTERS`, `PROFILE_NAME_TOO_LONG`, `SUMMARY_NOT_ALLOWED`, `SUMMARY_INVALID_CHARACTERS`, `SUMMARY_TOO_LONG`, `PREFERRED_MODALITY_INVALID_VALUE`, `REQUEST_BODY_INVALID_FORMAT`, `PROFILE_ID_INVALID_FORMAT`), 409 `PROFILE_UPDATE_IN_PROGRESS`, con ejemplos con `code`; quitar `PROVENANCE_INVALID_VALUE` de la descripción del `PATCH`.
 - `docs/errores.md`: filas de los códigos de §8 de la spec (endpoints, campo, mensaje, origen, prueba); `PROVENANCE_INVALID_VALUE` ya no lista el `PATCH`.
 - **Cierre:** `./mvnw.cmd -B clean verify`; cobertura (≥ 90 % líneas y ramas) de `ProfileName`, `ProfessionalSummary`, `UpdateProfileInfoRequest`, `UpdateProfileInfoCommand`, `ProfileAppService`, `ProfessionalProfile`, `ProfileResponse`, `ErrorCatalog`, y global sin bajar; diff ≤ 1000.
+
+**Resultado.** `@ApiResponse` del `PATCH` con 200, 401, 403, 404, 409, 415 y 422 (con ejemplo con `code`); `docs/errores.md` con las filas de la sección 8 de la spec; `PROVENANCE_INVALID_VALUE` ya no lista el `PATCH`. Cierre: `./mvnw.cmd -B clean verify` → BUILD SUCCESS, 713 unitarias + 207 de integración, 0 fallos (`verify-CM-54-1.log`). Cobertura (`jacoco.csv`): `ProfileName` 12/12 y 6/6; `ProfessionalSummary` 12/12 y 6/6; `UpdateProfileInfoRequest` 5/5; `UpdateProfileInfoCommand` 3/3; `ProfileAppService` 93/94 y 32/32; `ProfessionalProfile` 129/131 y 55/56; `ProfileResponse` 17/17 y 10/10; `ErrorCatalog` 90/90 y 2/2; `NotEmptyIfPresentValidator` 2/2 y 4/4; `DomainRuleValidator` 17/18 y 5/6 (previa, Desvío 13). Global: 97,1 % de líneas y 97,6 % de ramas (antes 97,0 % y 97,1 %): no baja. Newman va en el PR 2.
 
 # PR 2 (`CM-54-postman-informacion-general`)
 

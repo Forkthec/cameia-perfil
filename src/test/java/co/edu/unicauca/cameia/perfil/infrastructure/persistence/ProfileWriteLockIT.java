@@ -11,6 +11,8 @@ import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
 import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotAllowedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileUpdateInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
@@ -266,6 +268,70 @@ class ProfileWriteLockIT {
                 .isEqualTo(2);
     }
 
+    @Test
+    @DisplayName("Vaciar el resumen mientras otra pestaña finaliza: la finalización espera, ve el resumen vacío y se rechaza")
+    void updateProfileInfo_shouldNeverLeaveActiveProfileWithoutSummary_whenCompletionRunsAtTheSameTime() throws Exception {
+        prepareCompletableProfile(1);
+        var locked = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var clearing = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+            profileAppService.updateProfileInfo(new UpdateProfileInfoCommand(profileId, uid, null, "", null));
+            locked.countDown();
+            awaitRelease(release);
+            return null;
+        }));
+        assertThat(locked.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+        var completion = executor.submit(() -> profileAppService.completeProfile(profileId, uid));
+        assertThatThrownBy(() -> completion.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+        release.countDown();
+
+        assertThat(clearing).succeedsWithin(10, TimeUnit.SECONDS);
+        assertThatThrownBy(() -> completion.get(10, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(IncompleteProfileException.class);
+        assertThat(jdbcTemplate.queryForObject("select estado from perfil_profesional where id = ?", String.class, profileId))
+                .isEqualTo("IN_PROGRESS");
+        assertThat(jdbcTemplate.queryForObject("select resumen from perfil_profesional where id = ?", String.class, profileId))
+                .isNull();
+    }
+
+    @Test
+    @DisplayName("Finalizar mientras otra pestaña vacía el resumen: el vaciado espera, ve el perfil activo y se rechaza")
+    void updateProfileInfo_shouldRejectClear_whenCompletionHoldsTheLock() throws Exception {
+        prepareCompletableProfile(1);
+        var locked = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var completing = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+            profileAppService.completeProfile(profileId, uid);
+            locked.countDown();
+            awaitRelease(release);
+            return null;
+        }));
+        assertThat(locked.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+        var clearing = executor.submit(
+                () -> profileAppService.updateProfileInfo(new UpdateProfileInfoCommand(profileId, uid, null, "", null)));
+        assertThatThrownBy(() -> clearing.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+        release.countDown();
+
+        assertThat(completing).succeedsWithin(10, TimeUnit.SECONDS);
+        assertThatThrownBy(() -> clearing.get(10, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(InvalidFieldsException.class);
+        assertThat(jdbcTemplate.queryForObject("select estado from perfil_profesional where id = ?", String.class, profileId))
+                .isEqualTo("COMPLETED");
+        assertThat(jdbcTemplate.queryForObject("select resumen from perfil_profesional where id = ?", String.class, profileId))
+                .isEqualTo("Resumen de prueba con más de diez caracteres.");
+    }
+
+    private static void awaitRelease(CountDownLatch release) {
+        try {
+            release.await(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        }
+    }
+
     /** Resultado de una baja que mantiene su transacción abierta: la futura baja y el cierre que la deja confirmar. */
     private record HeldRemoval(Future<?> result, CountDownLatch release) { }
 
@@ -290,6 +356,13 @@ class ProfileWriteLockIT {
 
     /** Deja el perfil activo con lo que pide finalizar y el número dado de formaciones. */
     private ProfessionalProfile completeProfileWithEducations(int educations) {
+        prepareCompletableProfile(educations);
+        profileAppService.completeProfile(profileId, uid);
+        return profileAppService.getProfile(profileId, uid);
+    }
+
+    /** Deja el perfil con todo lo que pide finalizar y el número dado de formaciones, sin finalizarlo. */
+    private void prepareCompletableProfile(int educations) {
         profileAppService.updateProfileInfo(new UpdateProfileInfoCommand(
                 profileId, uid, "Perfil de prueba", "Resumen de prueba con más de diez caracteres.", null));
         for (int i = 0; i < educations; i++) {
@@ -299,8 +372,6 @@ class ProfileWriteLockIT {
         profileAppService.addSkill(new AddSkillCommand(profileId, uid, "Java", "ADVANCED", "MANUAL"));
         profileAppService.addTargetRole(new AddTargetRoleCommand(profileId, uid,
                 UUID.fromString("a0000001-0000-0000-0000-000000000002")));
-        profileAppService.completeProfile(profileId, uid);
-        return profileAppService.getProfile(profileId, uid);
     }
 
     private AddWorkExperienceCommand command(String company) {

@@ -1,6 +1,8 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +46,16 @@ class ColumnLengthConsistencyIT {
                 "titulo", Education.MAX_DEGREE_LENGTH);
 
         assertColumnLengths("educacion", expected);
+    }
+
+    @Test
+    @DisplayName("Los largos de nombre y resumen del perfil en la base son los del dominio")
+    void profileColumnLengths_shouldMatchDomainLimits_whenSchemaIsMigrated() throws Exception {
+        var expected = Map.of(
+                "nombre", ProfileName.MAX_LENGTH,
+                "resumen", ProfessionalSummary.MAX_LENGTH);
+
+        assertColumnLengths("perfil_profesional", expected);
     }
 
     /** Migra la base y compara el largo de cada columna con el límite del dominio. */
