@@ -22,7 +22,8 @@ class TargetRoleTest {
     @DisplayName("El título vacío o en blanco se rechaza")
     void constructor_shouldRejectTitle_whenBlank(String title) {
         assertThatThrownBy(() -> new TargetRole(UUID.randomUUID(), ROLE_ID, title, DataProvenance.MANUAL))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("El título del rol debe tener entre 1 y 255 caracteres");
     }
 
     @Test
@@ -31,7 +32,8 @@ class TargetRoleTest {
         var title = "a".repeat(256);
 
         assertThatThrownBy(() -> new TargetRole(UUID.randomUUID(), ROLE_ID, title, DataProvenance.MANUAL))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("El título del rol debe tener entre 1 y 255 caracteres");
     }
 
     @Test
@@ -41,6 +43,19 @@ class TargetRoleTest {
 
         assertThatCode(() -> new TargetRole(UUID.randomUUID(), ROLE_ID, title, DataProvenance.MANUAL))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("El largo del título cuenta puntos de código: 255 emojis se aceptan y 256 se rechazan")
+    void constructor_shouldCountCodePoints_whenTitleHasEmoji() {
+        var accepted = "\uD83D\uDE00".repeat(255);
+        var rejected = "\uD83D\uDE00".repeat(256);
+
+        assertThatCode(() -> new TargetRole(UUID.randomUUID(), ROLE_ID, accepted, DataProvenance.MANUAL))
+                .doesNotThrowAnyException();
+        assertThatThrownBy(() -> new TargetRole(UUID.randomUUID(), ROLE_ID, rejected, DataProvenance.MANUAL))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("El título del rol debe tener entre 1 y 255 caracteres");
     }
 
     @Test
