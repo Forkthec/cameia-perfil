@@ -285,7 +285,7 @@
 - **Commit:** `CM-70 | test(perfil): roles objetivo sin duplicados ni sexto rol con peticiones simultáneas`.
 - **Resultado (10-oct):** `TargetRoleConcurrencyIT` Tests run: 3, Failures: 0 (BUILD SUCCESS). Son pruebas de regresión: pasan desde la primera ejecución porque el bloqueo del perfil ya lo trae la base de la cadena (no hay rojo previo que capturar).
 
-## [ ] T-70.9 · Postman y Newman — ≤ 30 min, ≈ 330 líneas
+## [x] T-70.9 · Postman y Newman — ≤ 30 min, ≈ 330 líneas
 
 - En `docs/CAMEIA_Perfil_Sprint1.postman_collection.json` (UTF-8, editar con `Edit`, nunca con un script que reescriba el archivo entero), crear al
   final la carpeta **«HU-2.11 — Roles objetivo»** con variables de colección nuevas `user_c` = `firebase-uid-roles-v6`, `profile_c`, `role_c`. Cada
@@ -309,11 +309,14 @@
 - **Comandos:** `./mvnw.cmd -B -DskipTests package`, `docker compose up -d --build app`, `npx newman run docs/CAMEIA_Perfil_Sprint1.postman_collection.json --reporters cli,junit --reporter-junit-export target/newman-cm70.xml`
   contra una base limpia (`docker compose down -v` antes). Pega el resumen (peticiones, pruebas, fallos).
 - **Commit:** `CM-70 | test(perfil): peticiones de Postman de agregar y sustituir roles objetivo`.
+- **Resultado (10-oct):** carpeta «HU-2.11 — Roles objetivo» con 13 peticiones (la tarjeta dice tres `OK POST` en el paso 7 y quinto rol: tras el `PATCH` el perfil tiene 1 rol, así que hacen falta cuatro para llegar a 5; se usan `…02`, `…03`, `…04` y `…06`, y el sexto es `…05`). Newman contra la imagen empaquetada con base limpia y el rol `a0000007-…-000000000006` inactivo: 99 peticiones, 0 fallidas, 96 scripts de prueba, 298 aserciones, 0 fallos (`ejecucion/newman-CM-70.log`). Va en la capa 70-3 (698 líneas) por la regla de 800.
 
-## [ ] T-70.10 · Autoverificación y cierre — ≤ 30 min
+## [x] T-70.10 · Autoverificación y cierre — ≤ 30 min
 
 - Correr la lista de verificación V1 a V17 de la spec (§15) fila por fila y pegar el resultado; V8, V9 y V11 son peticiones reales adversariales.
 - `./mvnw.cmd -B clean verify`; cobertura por clase de lo tocado (≥ 90 % líneas y ramas, cada línea sin cubrir con su razón);
   `git diff --shortstat <punta de 70-1>...HEAD` (≤ 800; si pasa, T-70.9 va en una capa 70-3).
 - `/simplify` y `/code-review high` sobre la capa; corregir o descartar con razón.
 - CM-70 toca migraciones: preparar el worktree de revisión del Prompt H (`flujo/ejecucion-en-cola.md` §7.2) y dejar la línea en la bandeja.
+
+- **Resultado (10-oct):** lista de la spec §15: V1 `TargetRoleSchemaIT` 9/9; V2 a V6 y V12 Newman (99 peticiones, 0 fallidas, 298 aserciones, ninguna 5xx; `ejecucion/newman-CM-70.log`); V7 `PATCH` a un rol ya presente → 409 `TARGET_ROLE_ALREADY_EXISTS` (petición real); V8 `POST`, `PATCH` y `DELETE` del Usuario B sobre el perfil de A → 403 `PROFILE_NOT_ALLOWED` y el perfil de A conserva 2 roles; V9 `POST` con `provenance` `AI_SUGGESTED`, `firebaseUid` e `id` → 201 con procedencia `MANUAL` en los dos roles; V10 `TargetRoleConcurrencyIT` 3/3; V11 valores `\"' OR 1=1 --\"`, `\"<script>\"`, `12345`, `[]`, `true` y `{}` → 422 `REQUEST_BODY_INVALID_FORMAT`, `null` y `\"\"` → 422 `PROFESSIONAL_ROLE_ID_REQUIRED`, JSON roto y vacío → 422, `text/plain` → 415, UUID de perfil o de rol mal escritos → 422 con su código, rol inexistente → 404, sin identidad → 401, sin ningún 5xx (`ejecucion/adversarial-CM-70.log`) y 0 «Fallo no controlado» en el log de la app; V13 `git diff` de `src` sin `CM-`: 0 coincidencias; V14 cobertura en la cola; V15 y V16 en verde dentro de `clean verify`; V17 capas de 650 (documentos), 437, 486 y 700 líneas. `/simplify` y `/code-review high` no se corrieron en esta sesión (no se pueden lanzar desde aquí sobre esta cadena): quedan para el Prompt H en el worktree `Documents\cameia-worktrees\perfil-rev-CM-70`.
