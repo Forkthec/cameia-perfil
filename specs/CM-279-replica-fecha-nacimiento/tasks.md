@@ -401,6 +401,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   API»), cada una con su comentario de una línea, y corrige la frase de la cabecera que dice que RabbitMQ queda fuera.
 - **Después:** la aplicación del compose arranca y declara las colas (`rabbitmqctl list_queues` o el API de administración). Pega la salida.
 
+- **Resultado (10-oct-2026):** Comprobado con `docker compose up -d --build db rabbitmq app`: la aplicación quedó `UP` (`/actuator/health/readiness`) y `docker logs cameia-perfil-app | grep -c ACCESS_REFUSED` dio `0`; `docker-compose.yml` no se modificó. `.env.example` declara las siete variables `SPRING_RABBITMQ_*` y ya no dice que RabbitMQ queda fuera. `rabbitmqctl list_queues` muestra `perfil.cuenta-creada`, `perfil.cuenta-eliminada` y sus dos `.dlq` (la cola antigua `cuenta-eliminada` que aparece en ese broker local viene de contenedores anteriores; la prueba `topology_shouldNotDeclareLegacyAccountDeletedQueue_whenStarted` confirma que el servicio ya no la declara en un broker limpio).
+
 ### T-P2.2 · Topología y convertidor
 
 - **Comprobado el 9-oct-2026 en `spring-amqp-4.1.1.jar`:** `org.springframework.amqp.support.converter.JacksonJsonMessageConverter`
@@ -490,6 +492,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   argumentos distintos y esperando `PRECONDITION_FAILED`, lo que sea posible con `RabbitAdmin`; documenta cuál usaste);
   `topology_shouldNotDeclareLegacyAccountDeletedQueue_whenStarted` (`getQueueInfo("cuenta-eliminada")` nulo).
 
+- **Resultado (10-oct-2026):** Comprobado el 10-oct-2026 con `javap` en los jars del repo: `RabbitListenerRetrySettingsCustomizer` está en `org.springframework.boot.amqp.autoconfigure`, `RetryPolicySettings.setExceptionExcludes(List)` existe, `AbstractJacksonMessageConverter.setAlwaysConvertToInferredType(boolean)` existe, `RabbitListenerErrorHandler.handleError` tiene la firma de la tarjeta y Boot toma un bean `MessageRecoverer` (`RabbitAnnotationDrivenConfiguration`). `AccountEventsTopologyIT` (3 pruebas) en verde; los argumentos de las colas se comprueban volviendo a declararlas: con los argumentos reales la declaración es idempotente y sin ellos el broker responde `PRECONDITION_FAILED`. Nota de ejecución: el logger del contenedor es `org.springframework.amqp.listener.ConditionalRejectingErrorHandler` (no `rabbit.listener`) y su nivel se sube a `ERROR` en `application.yml`: con la app empaquetada escribía un WARN con la traza y los mensajes de las causas por cada fallo, además de los registros propios.
+
 ### T-P2.3 · Cargas y consumidores
 
 - **Crear** `infrastructure/messaging/payload/AccountCreatedPayloadV1.java`:
@@ -560,6 +564,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   excepción sale); `onAccountCreated_shouldNotLogPayload_whenRejected` (captura de salida sin `2008-03-15`).
   `AccountEventsErrorHandlerTest`: conversión → rechazo y `WARN` con `PAYLOAD_INVALID_FORMAT`; técnica → relanza y `ERROR`.
 
+- **Resultado (10-oct-2026):** Verde: `AccountCreatedListenerTest` (7), `AccountDeletedListenerTest` (4), `AccountEventsErrorHandlerTest` (7), `AccountEventsRecovererTest` (2), `EventLogValuesTest` (13), `AccountCreatedPayloadV1Test` (4) y `AccountEventsRetryConfigTest` (1). Nota de ejecución (REQ-RF-12 sobre el texto de la tarjeta): el manejador de errores registra cada intento técnico en `WARN` sin traza y quien registra el `ERROR` con traza es el recuperador, una sola vez por mensaje; el recuperador también recibe los rechazos por contrato (el reintento los excluye, el recuperador no), así que los reconoce por su causa y no los vuelve a registrar. La traza va con `RedactedException` (movida a `domain/exception` y pública para reutilizarla), sin los mensajes de las excepciones. La fecha de nacimiento se lee en modo estricto (`@JsonFormat(lenient = OptBoolean.FALSE)`): sin eso Jackson aceptaba `"2008-03-15T00:00:00Z"` y la recortaba, contra la fila de la sección 10.
+
 ### T-P2.4 · Prueba de punta a punta con RabbitMQ y PostgreSQL
 
 - **Reproducir antes:** escribe primero `accountCreated_shouldStoreBirthDate_whenEventIsValid` sobre P1 y córrela: debe fallar (no hay
@@ -605,6 +611,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
     ni el cuerpo; contiene `6f1d2c3b4a5e4f60718293a4b5c6d7e8`.
 - **Verificar:** `.\mvnw.cmd clean verify` (corre todas las IT).
 
+- **Resultado (10-oct-2026):** Rojo antes de la implementación: `BirthDateReplicationIT` sobre P1 → `Tests run: 31, Failures: 0, Errors: 31` con `NOT_FOUND - no queue 'perfil.cuenta-creada' in vhost '/'`. Verde en P2: `BirthDateReplicationIT` 31/31 y `AccountEventsRetryIT` 3/3 (3 invocaciones exactas ante un fallo técnico, 1 ante un rechazo por contrato y 0 ante un cuerpo que no es JSON; un solo `ERROR` por mensaje agotado y ninguno por un rechazo). Resultados reales: `usuarioId` numérico `12345` se convierte a texto y se guarda (la fila de la sección 10 se corrigió); `"2008-03-15T00:00:00Z"` va a fallidos desde que la lectura es estricta; los 17 cuerpos inválidos terminan en `perfil.cuenta-creada.dlq` con la réplica y el Inbox vacíos. `clean verify` por capa: P2a 438 unitarias + 52 IT, P2b 471 + 52, P2c 471 + 86, todas sin fallos (`ejecucion/verify-CM-279-*.log`).
+
 ### T-P2.5 · Documentación
 
 - **Crear** `docs/adr/0004-replica-de-fecha-de-nacimiento-por-evento.md` (el `0005` es del bloqueo de escritura de CM-274): contexto (consulta síncrona descartada por el PO el 8-oct),
@@ -617,6 +625,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   sección de datos (tablas `fecha_nacimiento_usuario` y `evento_procesado`), variables `SPRING_RABBITMQ_*` y `SPRING_RABBITMQ_LISTENER_SIMPLE_AUTO_STARTUP`, y la
   fila de pendientes «Consumidores y publicador de RabbitMQ son esqueletos» reducida a lo que sigue pendiente (suscripción, consumo,
   publicador del perfil).
+
+- **Resultado (10-oct-2026):** `docs/adr/0004-replica-de-fecha-de-nacimiento-por-evento.md` creado (decisión humana de Paula, 9-oct-2026) y `CLAUDE.md` actualizado: componentes de mensajería, migración `V5`, variables `SPRING_RABBITMQ_*` y la fila de pendientes reducida a lo que sigue (suscripción, consumo y publicador del perfil).
 
 ### T-P2.6 · Postman y Newman
 
@@ -643,9 +653,13 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   `npx newman run docs\CAMEIA_Perfil_Sprint1.postman_collection.json -e docs\perfil-local.postman_environment.json --reporters cli,junit`
   (las 77 peticiones existentes y las nuevas) y pega la salida.
 
+- **Resultado (10-oct-2026):** Colección con la carpeta «CM-279 — Réplica de fecha de nacimiento (local)» (R-00 a R-07, con R-06b) y `docs/perfil-local.postman_environment.json` (`base_url`, `rabbitManagementUrl`, `rabbitUser` y `rabbitPassword` locales). Diferencias con la tarjeta: `usuarioId` = `pm{{$timestamp}}` sin guion, porque el esquema del contrato exige `^[A-Za-z0-9]+$`; la espera de las peticiones que cuentan mensajes es de 8 s y no de 5, porque la API de administración actualiza sus estadísticas cada 5 s; R-00 limpia la cola de fallidos antes de empezar para que la colección se pueda repetir. `npx newman run docs\CAMEIA_Perfil_Sprint1.postman_collection.json -e docs\perfil-local.postman_environment.json` contra la imagen empaquetada con PostgreSQL y RabbitMQ del compose: 86 peticiones, 0 fallidas, 232 aserciones, 0 fallidas (`ejecucion/newman-CM-279-P2.log`). La base quedó con la fila (`pm…`, `2008-03-15`) y las dos anotaciones del Inbox. Nota: Newman espera una base sin perfiles de otras corridas (el primer intento sobre una base usada dio 409 en todos los perfiles; se vació `perfil_profesional` del compose local y repitió en verde).
+
 ### T-P2.7 · Cierre de P2 y de la mitad Perfil
 
 - `.\mvnw.cmd clean verify`; cobertura por clase (P1 y P2: además `AccountCreatedListener`, `AccountDeletedListener`,
   `AccountEventsErrorHandler`, `AccountEventsRabbitConfig`, `RabbitConfig`, cargas, `ProcessedMessageInboxAdapter`); Newman completo;
   `git diff --stat` por bloque.
   Reporte con cada línea o rama sin cubrir y su razón.
+
+- **Resultado (10-oct-2026):** Cobertura de P2 (líneas · ramas, `jacoco.csv` de la capa P2c): `AccountCreatedListener` 14/14 · 2/2; `AccountDeletedListener` 14/14 · 2/2; `AccountEventsErrorHandler` 27/27 · 20/20; `AccountEventsRecoverer` 9/9 · 2/2; `EventLogValues` 5/5 · 8/8; `AccountEventsRabbitConfig` 12/12; `AccountEventsRetryConfig` 2/2; `RabbitConfig` 11/11; cargas 1/1 y 1/1; `RedactedException` 15/15 · 13/14; `ApiExceptionHandler` 64/64 · 27/28 (rama previa de P1a). Global del repo: 94,1 % de líneas (1237/1315) y 89,8 % de ramas (334/372), por encima de la línea base anterior (93,5 % y 88,8 %). Tamaño: P2a 536 líneas, P2b 753, P2c 394 y P2d 561 contra su base (el bloque P2 de la spec estimaba ~850 y se partió por capacidad: topología y contrato, consumidores y errores, pruebas de punta a punta y documentación, Postman).
