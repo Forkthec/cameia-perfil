@@ -5289,6 +5289,835 @@
         }
       ],
       "description": "Antes de correr esta carpeta, el rol del catálogo a0000007-0000-0000-0000-000000000006 debe estar inactivo; si no, las peticiones de rol inactivo responden 201 y el catálogo lo sigue ofreciendo. Ejecutar sobre la base de la prueba: UPDATE rol_profesional SET estado = 'INACTIVE' WHERE id = 'a0000007-0000-0000-0000-000000000006';"
+    },
+    {
+      "name": "HU-2.4 — Experiencia laboral y formación académica",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const now = new Date();",
+              "const month = (offset) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1)).toISOString().slice(0, 7);",
+              "pm.variables.set('hu24_month_current', month(0));",
+              "pm.variables.set('hu24_month_next', month(1));",
+              "[99, 100, 101, 499, 500, 501, 129].forEach((n) => pm.variables.set('hu24_a' + n, 'a'.repeat(n)));",
+              "pm.variables.set('hu24_emoji_company_100', '\\u00f1'.repeat(99) + '\\u{1F600}');",
+              "pm.variables.set('hu24_emoji_company_101', 'a'.repeat(100) + '\\u{1F600}');",
+              "pm.variables.set('hu24_emoji_description_501', 'a'.repeat(499) + '\\u{1F600}\\u{1F600}');"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "POST work-experiences",
+          "item": [
+            {
+              "name": "OK POST /profiles — crea el perfil del Usuario (guarda hu24_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_profile', pm.response.json().id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "OK POST /profiles — crea el perfil de otro Usuario (guarda hu24_other_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_other_profile', pm.response.json().id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "201 actual sin fecha de fin (CA-2.4.1)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {employmentStatus: \"CURRENT\", startDate: \"2024-01\", endDate: null, provenance: \"MANUAL\", company: \"Acme S.A.\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"CURRENT\", \"startDate\": \"2024-01\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "OK POST experiencia base de 2024 (sin limpiar)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.created();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Base S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 periodo solapado (CA-2.4.5)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {startDate: \"2024-06\", endDate: \"2025-03\", provenance: \"MANUAL\", company: \"Acme S.A.\"});"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-06\", \"endDate\": \"2025-03\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "OK limpia las experiencias de la prueba de solape",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test(\"Status 200\", () => pm.response.to.have.status(200));", "H.clean(2);"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}"]}
+              }
+            },
+            {
+              "name": "201 fin igual al inicio (CA-2.4.13)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {startDate: \"2024-05\", endDate: \"2024-05\", provenance: \"MANUAL\", company: \"Acme S.A.\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-05\", \"endDate\": \"2024-05\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 sin fechas ni descripción (CA-2.4.15)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {employmentStatus: \"UNKNOWN_END\", startDate: null, endDate: null, description: null, provenance: \"MANUAL\", company: \"Acme S.A.\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"UNKNOWN_END\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 sin fin conocido con inicio 2024-06",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {employmentStatus: \"UNKNOWN_END\", startDate: \"2024-06\", endDate: null, provenance: \"MANUAL\", company: \"Acme S.A.\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"UNKNOWN_END\", \"startDate\": \"2024-06\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 empresa y cargo de 99",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {company: pm.variables.get('hu24_a99'), position: pm.variables.get('hu24_a99'), provenance: \"MANUAL\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"{{hu24_a99}}\", \"position\": \"{{hu24_a99}}\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 empresa y cargo de 100 (CA-2.4.17)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {company: pm.variables.get('hu24_a100'), position: pm.variables.get('hu24_a100'), provenance: \"MANUAL\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"{{hu24_a100}}\", \"position\": \"{{hu24_a100}}\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 empresa de 100 puntos de código con emoji",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {company: pm.variables.get('hu24_emoji_company_100'), provenance: \"MANUAL\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"{{hu24_emoji_company_100}}\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 empresa con espacios en los extremos se guarda recortada",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {company: \"Acme S.A.\", provenance: \"MANUAL\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"  Acme S.A.  \", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 estado con espacio final se recorta",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {employmentStatus: \"ENDED\", provenance: \"MANUAL\", company: \"Acme S.A.\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED \", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 descripción de 499",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {description: pm.variables.get('hu24_a499'), provenance: \"MANUAL\", company: \"Acme S.A.\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\", \"description\": \"{{hu24_a499}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 descripción de 500 (CA-2.4.19)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {description: pm.variables.get('hu24_a500'), provenance: \"MANUAL\", company: \"Acme S.A.\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\", \"description\": \"{{hu24_a500}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 descripción con <script>",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {description: \"<script>alert(1)</script>\", provenance: \"MANUAL\", company: \"Acme S.A.\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\", \"description\": \"<script>alert(1)</script>\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 descripción vacía se guarda como null",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {description: null, provenance: \"MANUAL\", company: \"Acme S.A.\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\", \"description\": \"   \"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 inicio en el mes actual (CA-2.4.24)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {startDate: pm.variables.get('hu24_month_current'), provenance: \"MANUAL\", company: \"Acme S.A.\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"CURRENT\", \"startDate\": \"{{hu24_month_current}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 fin en el mes actual (CA-2.4.54)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {endDate: pm.variables.get('hu24_month_current'), provenance: \"MANUAL\", company: \"Acme S.A.\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-06\", \"endDate\": \"{{hu24_month_current}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 ignora id, profileId, status y firebaseUid",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {provenance: \"MANUAL\", company: \"Acme S.A.\"});", "H.clean();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\", \"id\": \"11111111-2222-4333-8444-555555555555\", \"profileId\": \"11111111-2222-4333-8444-555555555555\", \"status\": \"COMPLETED\", \"firebaseUid\": \"otro\", \"seniority\": \"JUNIOR\", \"provenance\": \"AI_SUGGESTED\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 empresa vacía",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"company\", \"COMPANY_REQUIRED\", \"Ingresa la empresa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 empresa solo espacios",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"company\", \"COMPANY_REQUIRED\", \"Ingresa la empresa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"   \", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 empresa ausente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"company\", \"COMPANY_REQUIRED\", \"Ingresa la empresa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 empresa null",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"company\", \"COMPANY_REQUIRED\", \"Ingresa la empresa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": null, \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 empresa de 101",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"company\", \"COMPANY_TOO_LONG\", \"La empresa no puede superar los 100 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"{{hu24_a101}}\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 empresa de 101 puntos de código con emoji",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"company\", \"COMPANY_TOO_LONG\", \"La empresa no puede superar los 100 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"{{hu24_emoji_company_101}}\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 empresa con carácter nulo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"company\", \"COMPANY_INVALID_CHARACTERS\", \"La empresa tiene caracteres no permitidos.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme\\u0000\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 cargo vacío",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"position\", \"POSITION_REQUIRED\", \"Ingresa el cargo.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 cargo ausente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"position\", \"POSITION_REQUIRED\", \"Ingresa el cargo.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 cargo de 101",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"position\", \"POSITION_TOO_LONG\", \"El cargo no puede superar los 100 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"{{hu24_a101}}\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 cargo con carácter nulo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"position\", \"POSITION_INVALID_CHARACTERS\", \"El cargo tiene caracteres no permitidos.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Dev\\u0000\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 descripción de 501 (CA-2.4.12)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"description\", \"DESCRIPTION_TOO_LONG\", \"La descripción no puede superar los 500 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\", \"description\": \"{{hu24_a501}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 descripción de 501 puntos de código con emoji",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"description\", \"DESCRIPTION_TOO_LONG\", \"La descripción no puede superar los 500 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\", \"description\": \"{{hu24_emoji_description_501}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 descripción con carácter nulo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"description\", \"DESCRIPTION_INVALID_CHARACTERS\", \"La descripción tiene caracteres no permitidos.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\", \"description\": \"Hola\\u0000\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 estado ausente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"employmentStatus\", \"EMPLOYMENT_STATUS_REQUIRED\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 estado vacío",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"employmentStatus\", \"EMPLOYMENT_STATUS_REQUIRED\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 estado FREELANCE (CA-2.4.57)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"employmentStatus\", \"EMPLOYMENT_STATUS_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"FREELANCE\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 estado current",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"employmentStatus\", \"EMPLOYMENT_STATUS_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"current\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 inicio 2024-13 (CA-2.4.43)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_INVALID_FORMAT\", \"Ingresa una fecha válida con el formato mm/aaaa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-13\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 inicio 13/2024",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_INVALID_FORMAT\", \"Ingresa una fecha válida con el formato mm/aaaa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"13/2024\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 inicio solo con el año",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_INVALID_FORMAT\", \"Ingresa una fecha válida con el formato mm/aaaa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 inicio con día",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_INVALID_FORMAT\", \"Ingresa una fecha válida con el formato mm/aaaa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 inicio en el mes siguiente (CA-2.4.25)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_IN_THE_FUTURE\", \"La fecha no puede ser posterior al mes actual.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"CURRENT\", \"startDate\": \"{{hu24_month_next}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 inicio en 9999-12",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_IN_THE_FUTURE\", \"La fecha no puede ser posterior al mes actual.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"CURRENT\", \"startDate\": \"9999-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 fin 13/2024 en experiencia (CA-2.4.60)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_INVALID_FORMAT\", \"Ingresa una fecha válida con el formato mm/aaaa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"13/2024\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 fin 2024-13",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_INVALID_FORMAT\", \"Ingresa una fecha válida con el formato mm/aaaa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-13\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 fin en el mes siguiente (CA-2.4.26)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_IN_THE_FUTURE\", \"La fecha no puede ser posterior al mes actual.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"{{hu24_month_next}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 terminada sin fecha de fin (CA-2.4.2)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_REQUIRED\", \"Ingresa la fecha de fin.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 actual con fecha de fin (CA-2.4.16)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_NOT_ALLOWED\", \"La fecha de fin debe quedar vacía.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"CURRENT\", \"startDate\": \"2024-01\", \"endDate\": \"2024-09\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 sin fin conocido con fecha de fin (CA-2.4.41)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_NOT_ALLOWED\", \"La fecha de fin debe quedar vacía.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"UNKNOWN_END\", \"startDate\": \"2024-01\", \"endDate\": \"2024-09\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 actual con fin en otro formato (el formato se informa primero)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_INVALID_FORMAT\", \"Ingresa una fecha válida con el formato mm/aaaa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"CURRENT\", \"startDate\": \"2024-01\", \"endDate\": \"09/2024\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 fin antes del inicio (CA-2.4.14)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_BEFORE_START_DATE\", \"La fecha de fin no puede ser anterior a la de inicio.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-05\", \"endDate\": \"2024-04\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 fin antes del inicio en otro año",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_BEFORE_START_DATE\", \"La fecha de fin no puede ser anterior a la de inicio.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2025-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 tres campos a la vez",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"company\", \"COMPANY_REQUIRED\", \"Ingresa la empresa.\"], [\"position\", \"POSITION_REQUIRED\", \"Ingresa el cargo.\"], [\"employmentStatus\", \"EMPLOYMENT_STATUS_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"\", \"position\": \"\", \"employmentStatus\": \"FREELANCE\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 cuerpo ilegible",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\":", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 cuerpo vacío",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 empresa como objeto",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": {}, \"position\": \"Dev\", \"employmentStatus\": \"CURRENT\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "415 Content-Type text/plain",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(415, \"MEDIA_TYPE_NOT_ALLOWED\", \"Tipo de contenido no admitido.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "text/plain"}],
+                "body": {"mode": "raw", "raw": "company=Acme", "options": {"raw": {"language": "text"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "401 sin X-User-Id",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(401, \"IDENTITY_REQUIRED\", \"Tu sesión expiró. Inicia sesión de nuevo.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "401 X-User-Id de 129 caracteres",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(401, \"IDENTITY_REQUIRED\", \"Tu sesión expiró. Inicia sesión de nuevo.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_a129}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "403 POST experiencia ajena",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(403, \"PROFILE_NOT_ALLOWED\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_other_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_other_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "OK GET perfil ajeno sin experiencias tras el 403",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('El perfil ajeno no recibió la experiencia', () => pm.expect(pm.response.json().workExperiences).to.eql([]));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_other_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_other_profile}}"]}
+              }
+            },
+            {
+              "name": "404 perfil inexistente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"PROFILE_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/00000000-0000-0000-0000-000000000000/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "00000000-0000-0000-0000-000000000000", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 id del perfil no es un UUID",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"PROFILE_ID_INVALID_FORMAT\", \"El identificador del perfil no es válido.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/no-es-uuid/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "no-es-uuid", "work-experiences"]}
+              }
+            },
+            {
+              "name": "OK POST experiencia actual sin inicio",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.created();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"CURRENT\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "200 GET perfil con experiencia sin inicio",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('startDate null sin error', () => pm.expect(pm.response.json().workExperiences[0].startDate).to.eql(null));", "H.clean(1);"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}"]}
+              }
+            },
+            {
+              "name": "OK POST experiencia 1 de 4 (sin limpiar)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.created();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Uno S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "OK POST experiencia 2 de 4 (sin limpiar)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.created();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Dos S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "OK POST experiencia 3 de 4 (sin limpiar)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.created();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Tres S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 cuarta experiencia (CA-2.4.47)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {provenance: \"MANUAL\", company: \"Cuatro S.A.\"});"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Cuatro S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "409 quinta experiencia (CA-2.4.48)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, 'WORK_EXPERIENCE_LIMIT_REACHED', 'Ya tienes el máximo de 4 experiencias laborales.');", "H.clean(4);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Cinco S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Utilidades de las pruebas de HU-2.4. Se guardan como texto en pm.globals y cada petición las carga con eval.",
+          "const factory = () => {",
+          "    const base = () => pm.variables.get('base_url') + '/api/v1/profiles/';",
+          "    const headers = (uid) => ({ 'X-User-Id': uid });",
+          "    // Tipo de contenido esperado y charset UTF-8 en toda respuesta con cuerpo",
+          "    const typeOk = (type) => pm.test('Content-Type ' + type + ' con charset UTF-8', () => {",
+          "        const t = (pm.response.headers.get('Content-Type') || '').toLowerCase();",
+          "        pm.expect(t).to.include(type);",
+          "        pm.expect(t).to.include('charset=utf-8');",
+          "    });",
+          "    const fast = () => pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+          "    const noLeaks = () => pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL|org[.]/));",
+          "    // Error de negocio o de infraestructura: estado, tipo, code, detail y requestId",
+          "    const problem = (status, code, detail) => {",
+          "        pm.test('Status ' + status, () => pm.response.to.have.status(status));",
+          "        typeOk('application/problem+json');",
+          "        const b = pm.response.json();",
+          "        pm.test('code ' + code, () => pm.expect(b.code).to.eql(code));",
+          "        pm.test('detail del backlog', () => pm.expect(b.detail).to.eql(detail));",
+          "        pm.test('requestId presente', () => pm.expect(b.requestId).to.be.a('string').and.not.empty);",
+          "        noLeaks();",
+          "        fast();",
+          "    };",
+          "    // Un elemento de errors[] con ese campo, code y message",
+          "    const fieldError = (field, code, message) => pm.test('errors[] ' + field + ' ' + code, () => {",
+          "        const e = (pm.response.json().errors || []).find((x) => x.field === field);",
+          "        pm.expect(e, 'elemento de ' + field).to.exist;",
+          "        pm.expect(e.code).to.eql(code);",
+          "        pm.expect(e.message).to.eql(message);",
+          "    });",
+          "    // 422 de validación: todos los campos a la vez y ninguno de más",
+          "    const fields = (list) => {",
+          "        problem(422, 'VALIDATION_FAILED', 'Revisa los campos marcados.');",
+          "        pm.test('un elemento por campo rechazado', () => pm.expect(pm.response.json().errors.length).to.eql(list.length));",
+          "        list.forEach(([field, code, message]) => fieldError(field, code, message));",
+          "    };",
+          "    const created = () => {",
+          "        pm.test('Status 201', () => pm.response.to.have.status(201));",
+          "        typeOk('application/json');",
+          "        noLeaks();",
+          "        fast();",
+          "        return pm.response.json();",
+          "    };",
+          "    const noContent = () => {",
+          "        pm.test('Status 204', () => pm.response.to.have.status(204));",
+          "        pm.test('Sin cuerpo', () => pm.expect(pm.response.text()).to.eql(''));",
+          "        fast();",
+          "    };",
+          "    // La experiencia (buscada por empresa) está en el perfil con esos campos",
+          "    const experience = (body, expected) => {",
+          "        const found = (body.workExperiences || []).find((x) => x.company === expected.company);",
+          "        pm.test('La experiencia está en el perfil', () => pm.expect(found).to.exist);",
+          "        pm.test('Campos devueltos', () => pm.expect(found).to.deep.include(expected));",
+          "        return found;",
+          "    };",
+          "    // Borra las experiencias del perfil de la carpeta, una a una, y comprueba cuántas había",
+          "    const clean = (expected) => {",
+          "        const uid = pm.variables.get('hu24_uid');",
+          "        const url = base() + pm.variables.get('hu24_profile');",
+          "        pm.sendRequest({ url, method: 'GET', header: headers(uid) }, (err, res) => {",
+          "            pm.test('Lectura del perfil para la limpieza', () => pm.expect(err).to.eql(null));",
+          "            const list = err ? [] : res.json().workExperiences;",
+          "            if (expected !== undefined) pm.test('El perfil conserva ' + expected + ' experiencias', () => pm.expect(list.length).to.eql(expected));",
+          "            const next = (i) => i < list.length && pm.sendRequest({ url: url + '/work-experiences/' + list[i].id, method: 'DELETE', header: headers(uid) }, (e, r) => {",
+          "                pm.test('Limpieza de la experiencia ' + (i + 1), () => {",
+          "                    pm.expect(e).to.eql(null);",
+          "                    pm.expect(r.code).to.eql(204);",
+          "                });",
+          "                next(i + 1);",
+          "            });",
+          "            next(0);",
+          "        });",
+          "    };",
+          "    return { typeOk, fast, noLeaks, problem, fieldError, fields, created, noContent, experience, clean };",
+          "};",
+          "pm.globals.set('hu24Helpers', '(' + factory.toString() + ')()');"
+        ]
+      }
     }
   ]
 }
