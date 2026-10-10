@@ -5302,9 +5302,11 @@
               "const month = (offset) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1)).toISOString().slice(0, 7);",
               "pm.variables.set('hu24_month_current', month(0));",
               "pm.variables.set('hu24_month_next', month(1));",
-              "[99, 100, 101, 499, 500, 501, 129].forEach((n) => pm.variables.set('hu24_a' + n, 'a'.repeat(n)));",
+              "[99, 100, 101, 129, 149, 150, 151, 499, 500, 501].forEach((n) => pm.variables.set('hu24_a' + n, 'a'.repeat(n)));",
               "pm.variables.set('hu24_emoji_company_100', '\\u00f1'.repeat(99) + '\\u{1F600}');",
               "pm.variables.set('hu24_emoji_company_101', 'a'.repeat(100) + '\\u{1F600}');",
+              "pm.variables.set('hu24_emoji_150', '\\u00f1'.repeat(149) + '\\u{1F600}');",
+              "pm.variables.set('hu24_emoji_151', 'a'.repeat(149) + '\\u{1F600}\\u{1F600}');",
               "pm.variables.set('hu24_emoji_description_501', 'a'.repeat(499) + '\\u{1F600}\\u{1F600}');"
             ]
           }
@@ -6240,6 +6242,598 @@
               }
             }
           ]
+        },
+        {
+          "name": "POST educations",
+          "item": [
+            {
+              "name": "OK POST /profiles — crea el perfil del Usuario (guarda hu24_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_profile', pm.response.json().id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "OK POST /profiles — crea el perfil de otro Usuario (guarda hu24_other_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_other_profile', pm.response.json().id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "201 formación en curso (CA-2.4.7)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {inProgress: true, endDate: null, provenance: \"MANUAL\", institution: \"Universidad del Cauca\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"inProgress\": true}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 formación sin fecha de fin (CA-2.4.8)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {inProgress: false, endDate: null, provenance: \"MANUAL\", institution: \"Universidad del Cauca\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 formación sin inProgress cuenta como false",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {inProgress: false, provenance: \"MANUAL\", institution: \"Universidad del Cauca\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 formación con inProgress null cuenta como false",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {inProgress: false, provenance: \"MANUAL\", institution: \"Universidad del Cauca\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": null}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 formación fin igual al inicio (CA-2.4.29)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {startDate: \"2020-05\", endDate: \"2020-05\", provenance: \"MANUAL\", institution: \"Universidad del Cauca\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2020-05\", \"endDate\": \"2020-05\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 institución y título de 149",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {institution: pm.variables.get('hu24_a149'), degree: pm.variables.get('hu24_a149'), provenance: \"MANUAL\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"{{hu24_a149}}\", \"degree\": \"{{hu24_a149}}\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 institución y título de 150 (CA-2.4.27)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {institution: pm.variables.get('hu24_a150'), degree: pm.variables.get('hu24_a150'), provenance: \"MANUAL\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"{{hu24_a150}}\", \"degree\": \"{{hu24_a150}}\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 institución de 150 puntos de código con emoji",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {institution: pm.variables.get('hu24_emoji_150'), provenance: \"MANUAL\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"{{hu24_emoji_150}}\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 institución con espacios en los extremos se guarda recortada",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {institution: \"Universidad del Cauca\", provenance: \"MANUAL\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"  Universidad del Cauca  \", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 formación que inicia este mes (CA-2.4.33)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {startDate: pm.variables.get('hu24_month_current'), provenance: \"MANUAL\", institution: \"Universidad del Cauca\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"{{hu24_month_current}}\", \"inProgress\": true}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 formación que termina este mes (CA-2.4.55)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {endDate: pm.variables.get('hu24_month_current'), provenance: \"MANUAL\", institution: \"Universidad del Cauca\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2024-01\", \"endDate\": \"{{hu24_month_current}}\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 nivel TECHNICAL",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {level: \"TECHNICAL\", provenance: \"MANUAL\", institution: \"Universidad del Cauca\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"TECHNICAL\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 nivel POSTGRADUATE",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {level: \"POSTGRADUATE\", provenance: \"MANUAL\", institution: \"Universidad del Cauca\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"POSTGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 institución con <script>",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {institution: \"<script>alert(1)</script>\", provenance: \"MANUAL\"});", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"<script>alert(1)</script>\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 ignora id, profileId, provenance y fieldOfStudy",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const e = H.education(b, {institution: 'Universidad del Cauca', provenance: 'MANUAL'});", "pm.test('El área de estudio no es parte del contrato', () => pm.expect(e).to.not.have.property('fieldOfStudy'));", "pm.test('El id lo asigna el servicio', () => pm.expect(e.id).to.not.eql('11111111-2222-4333-8444-555555555555'));", "H.clean(undefined, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false, \"id\": \"11111111-2222-4333-8444-555555555555\", \"profileId\": \"11111111-2222-4333-8444-555555555555\", \"provenance\": \"AI_SUGGESTED\", \"fieldOfStudy\": \"Sistemas\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 formación sin los cuatro obligatorios (CA-2.4.6)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"institution\", \"INSTITUTION_REQUIRED\", \"Ingresa la institución.\"], [\"degree\", \"DEGREE_REQUIRED\", \"Ingresa el título obtenido.\"], [\"level\", \"EDUCATION_LEVEL_REQUIRED\", \"Elige un nivel educativo.\"], [\"startDate\", \"START_DATE_REQUIRED\", \"Ingresa la fecha de inicio.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 institución vacía",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"institution\", \"INSTITUTION_REQUIRED\", \"Ingresa la institución.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 institución solo espacios",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"institution\", \"INSTITUTION_REQUIRED\", \"Ingresa la institución.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"   \", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 institución null",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"institution\", \"INSTITUTION_REQUIRED\", \"Ingresa la institución.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": null, \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 institución de 151",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"institution\", \"INSTITUTION_TOO_LONG\", \"La institución no puede superar los 150 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"{{hu24_a151}}\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 institución de 151 puntos de código con emoji",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"institution\", \"INSTITUTION_TOO_LONG\", \"La institución no puede superar los 150 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"{{hu24_emoji_151}}\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 institución con carácter nulo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"institution\", \"INSTITUTION_INVALID_CHARACTERS\", \"La institución tiene caracteres no permitidos.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"U\\u0000\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 título vacío",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"degree\", \"DEGREE_REQUIRED\", \"Ingresa el título obtenido.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 título ausente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"degree\", \"DEGREE_REQUIRED\", \"Ingresa el título obtenido.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 título de 151",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"degree\", \"DEGREE_TOO_LONG\", \"El título obtenido no puede superar los 150 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"{{hu24_a151}}\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 título con carácter nulo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"degree\", \"DEGREE_INVALID_CHARACTERS\", \"El título obtenido tiene caracteres no permitidos.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"T\\u0000\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 nivel ausente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"level\", \"EDUCATION_LEVEL_REQUIRED\", \"Elige un nivel educativo.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 nivel vacío",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"level\", \"EDUCATION_LEVEL_REQUIRED\", \"Elige un nivel educativo.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 nivel DOCTORATE (CA-2.4.9)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"level\", \"EDUCATION_LEVEL_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"DOCTORATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 nivel undergraduate",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"level\", \"EDUCATION_LEVEL_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"undergraduate\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 formación sin inicio",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_REQUIRED\", \"Ingresa la fecha de inicio.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 formación inicio 2024-13 (CA-2.4.44)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_INVALID_FORMAT\", \"Ingresa una fecha válida con el formato mm/aaaa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2024-13\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 formación inicio 2024",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_INVALID_FORMAT\", \"Ingresa una fecha válida con el formato mm/aaaa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2024\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 formación inicio 13/2024",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_INVALID_FORMAT\", \"Ingresa una fecha válida con el formato mm/aaaa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"13/2024\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 formación que inicia el mes siguiente (CA-2.4.34)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_IN_THE_FUTURE\", \"La fecha no puede ser posterior al mes actual.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"{{hu24_month_next}}\", \"inProgress\": true}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 fin 13/2024 en formación",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_INVALID_FORMAT\", \"Ingresa una fecha válida con el formato mm/aaaa.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"13/2024\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 formación que termina el mes siguiente (CA-2.4.35)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_IN_THE_FUTURE\", \"La fecha no puede ser posterior al mes actual.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"{{hu24_month_next}}\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 en curso con fecha de fin (CA-2.4.40)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_NOT_ALLOWED\", \"La fecha de fin debe quedar vacía.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2024-09\", \"inProgress\": true}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 formación fin antes del inicio (CA-2.4.30)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_BEFORE_START_DATE\", \"La fecha de fin no puede ser anterior a la de inicio.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2025-02\", \"endDate\": \"2025-01\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 tres campos a la vez",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"institution\", \"INSTITUTION_REQUIRED\", \"Ingresa la institución.\"], [\"degree\", \"DEGREE_REQUIRED\", \"Ingresa el título obtenido.\"], [\"level\", \"EDUCATION_LEVEL_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"\", \"degree\": \"\", \"level\": \"DOCTORATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 inProgress abc",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": \"abc\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 inProgress como objeto",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"U\", \"degree\": \"T\", \"level\": \"TECHNICAL\", \"startDate\": \"2020-01\", \"inProgress\": {}}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 cuerpo ilegible",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\":", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 cuerpo vacío",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "415 Content-Type text/plain",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(415, \"MEDIA_TYPE_NOT_ALLOWED\", \"Tipo de contenido no admitido.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "text/plain"}],
+                "body": {"mode": "raw", "raw": "institution=U", "options": {"raw": {"language": "text"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "401 sin X-User-Id",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(401, \"IDENTITY_REQUIRED\", \"Tu sesión expiró. Inicia sesión de nuevo.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "401 X-User-Id de 129 caracteres",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(401, \"IDENTITY_REQUIRED\", \"Tu sesión expiró. Inicia sesión de nuevo.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_a129}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "403 POST formación ajena",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(403, \"PROFILE_NOT_ALLOWED\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_other_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_other_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "OK GET perfil ajeno sin formaciones tras el 403",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('El perfil ajeno no recibió la formación', () => pm.expect(pm.response.json().educations).to.eql([]));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_other_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_other_profile}}"]}
+              }
+            },
+            {
+              "name": "404 perfil inexistente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"PROFILE_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/00000000-0000-0000-0000-000000000000/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "00000000-0000-0000-0000-000000000000", "educations"]}
+              }
+            },
+            {
+              "name": "422 id del perfil no es un UUID",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"PROFILE_ID_INVALID_FORMAT\", \"El identificador del perfil no es válido.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/no-es-uuid/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "no-es-uuid", "educations"]}
+              }
+            },
+            {
+              "name": "OK POST formación 1 de 4 (sin limpiar)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.created();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Uno\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "OK POST formación 2 de 4 (sin limpiar)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.created();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Dos\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "OK POST formación 3 de 4 (sin limpiar)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.created();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Tres\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "OK POST formación 4 de 4 (sin limpiar)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.created();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Cuatro\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "201 quinta formación (CA-2.4.10)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {provenance: \"MANUAL\", institution: \"Cinco\"});"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Cinco\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "409 sexta formación (CA-2.4.49)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, 'EDUCATION_LIMIT_REACHED', 'Ya tienes el máximo de 5 formaciones académicas.');", "H.clean(5, 'educations');"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Seis\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            }
+          ]
         }
       ]
     }
@@ -6305,16 +6899,24 @@
           "        pm.test('Campos devueltos', () => pm.expect(found).to.deep.include(expected));",
           "        return found;",
           "    };",
-          "    // Borra las experiencias del perfil de la carpeta, una a una, y comprueba cuántas había",
-          "    const clean = (expected) => {",
+          "    // La formación (buscada por institución) está en el perfil con esos campos",
+          "    const education = (body, expected) => {",
+          "        const found = (body.educations || []).find((x) => x.institution === expected.institution);",
+          "        pm.test('La formación está en el perfil', () => pm.expect(found).to.exist);",
+          "        pm.test('Campos devueltos', () => pm.expect(found).to.deep.include(expected));",
+          "        return found;",
+          "    };",
+          "    const KEYS = { 'work-experiences': 'workExperiences', educations: 'educations' };",
+          "    // Borra las experiencias (o las formaciones) del perfil de la carpeta, una a una, y comprueba cuántas había",
+          "    const clean = (expected, path = 'work-experiences') => {",
           "        const uid = pm.variables.get('hu24_uid');",
           "        const url = base() + pm.variables.get('hu24_profile');",
           "        pm.sendRequest({ url, method: 'GET', header: headers(uid) }, (err, res) => {",
           "            pm.test('Lectura del perfil para la limpieza', () => pm.expect(err).to.eql(null));",
-          "            const list = err ? [] : res.json().workExperiences;",
-          "            if (expected !== undefined) pm.test('El perfil conserva ' + expected + ' experiencias', () => pm.expect(list.length).to.eql(expected));",
-          "            const next = (i) => i < list.length && pm.sendRequest({ url: url + '/work-experiences/' + list[i].id, method: 'DELETE', header: headers(uid) }, (e, r) => {",
-          "                pm.test('Limpieza de la experiencia ' + (i + 1), () => {",
+          "            const list = err ? [] : res.json()[KEYS[path]];",
+          "            if (expected !== undefined) pm.test('El perfil conserva ' + expected + ' elementos', () => pm.expect(list.length).to.eql(expected));",
+          "            const next = (i) => i < list.length && pm.sendRequest({ url: url + '/' + path + '/' + list[i].id, method: 'DELETE', header: headers(uid) }, (e, r) => {",
+          "                pm.test('Limpieza del elemento ' + (i + 1), () => {",
           "                    pm.expect(e).to.eql(null);",
           "                    pm.expect(r.code).to.eql(204);",
           "                });",
@@ -6323,7 +6925,7 @@
           "            next(0);",
           "        });",
           "    };",
-          "    return { typeOk, fast, noLeaks, problem, fieldError, fields, created, noContent, experience, clean };",
+          "    return { typeOk, fast, noLeaks, problem, fieldError, fields, created, noContent, experience, education, clean };",
           "};",
           "pm.globals.set('hu24Helpers', '(' + factory.toString() + ')()');"
         ]
