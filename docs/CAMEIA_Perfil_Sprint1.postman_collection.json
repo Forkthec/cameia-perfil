@@ -4597,7 +4597,7 @@
             "header": [
               {
                 "key": "X-User-Id",
-                "value": "{{user_c}}"
+                "value": "{{user_id}}"
               },
               {
                 "key": "Content-Type",
@@ -4605,7 +4605,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/profiles/{{profile_d}}/target-roles/{{role_d}}",
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_c}}/target-roles/{{role_c}}",
               "host": [
                 "{{base_url}}"
               ],
@@ -4613,9 +4613,9 @@
                 "api",
                 "v1",
                 "profiles",
-                "{{profile_d}}",
+                "{{profile_c}}",
                 "target-roles",
-                "{{role_d}}"
+                "{{role_c}}"
               ]
             },
             "body": {
