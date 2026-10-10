@@ -353,7 +353,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 - **Resultado (10-oct-2026):** rojo: `ProfileAppServiceTest` no compilaba (el puerto no tenía `findByIdForUpdate`). Verde: `./mvnw -q -B "-Dtest=ProfileAppServiceTest,ErrorCatalogTest" test` sin fallos. `getProfile` sigue con `loadForUser` (sin bloqueo); los 13 casos de uso que modifican usan `loadForUserForUpdate`. El adaptador captura `PersistenceException` y `PessimisticLockingFailureException`; si la integración de T-A6 muestra otra excepción, se reporta aquí.
 
-## [ ] T-A6 · Prueba de integración del bloqueo — ≤ 30 min, ≈ 160 líneas
+## [x] T-A6 · Prueba de integración del bloqueo — ≤ 30 min, ≈ 160 líneas
 
 - **Crear** `infrastructure/persistence/ProfileWriteLockIT.java` con la forma de `ProfileCreationConcurrencyIT` (`@SpringBootTest`, `@Testcontainers`, `@Container @ServiceConnection static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine")`, `ExecutorService`, limpieza de `firebase_uid like 'uid-lock-%'`).
 - **Pruebas:**
@@ -362,6 +362,8 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
   - `read_shouldNotWait_whenProfileIsLocked`: con A reteniendo el bloqueo, `profileAppService.getProfile(...)` responde en < 1 s.
 - **Comandos:** `./mvnw.cmd -B "-Dit.test=ProfileWriteLockIT" verify` (Docker encendido).
 - **Detente si** B no espera en la primera prueba: el bloqueo no se está tomando.
+
+- **Resultado (10-oct-2026):** verde en la primera corrida: `./mvnw -B "-Dit.test=ProfileWriteLockIT" verify` → Tests run: 5, Failures: 0, Errors: 0 (BUILD SUCCESS). La espera agotada responde `ProfileUpdateInProgressException` entre 1,5 s y 3,5 s con el perfil sin cambios; B espera con A reteniendo la fila (primera prueba) y la lectura no espera. La excepción de Spring Data que llega al adaptador es capturada (`PersistenceException | PessimisticLockingFailureException`); no hizo falta otra. Se agregaron dos pruebas: el bloqueo exige transacción (`IllegalTransactionStateException`) y el límite de espera vuelve a `0` tras tomarlo.
 
 ## [ ] T-A7 · Catálogo documentado y probado — ≤ 20 min, ≈ 90 líneas
 
