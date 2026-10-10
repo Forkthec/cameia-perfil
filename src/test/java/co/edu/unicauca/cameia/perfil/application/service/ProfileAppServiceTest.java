@@ -22,7 +22,9 @@ import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationDraft;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
+import co.edu.unicauca.cameia.perfil.domain.exception.BirthDateUnavailableException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
+import co.edu.unicauca.cameia.perfil.infrastructure.persistence.InMemoryBirthDateReplica;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileSkill;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus;
@@ -43,6 +45,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.Instant;
 import java.time.Clock;
@@ -56,6 +59,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -68,12 +73,17 @@ class ProfileAppServiceTest {
     @Mock ProfessionalProfileRepository repository;
     @Mock ProfessionalRoleRepository roleRepository;
 
+    /** Réplica en memoria: las pruebas deciden qué Usuarios tienen fecha de nacimiento. */
+    final InMemoryBirthDateReplica replica = spy(new InMemoryBirthDateReplica());
+
     ProfileAppService service;
 
     @BeforeEach
     void setUp() {
+        replica.saveIfAbsent(new FirebaseUid(SVC_UID), LocalDate.of(1990, 1, 1));
+        replica.saveIfAbsent(new FirebaseUid(COMPLETE_UID), LocalDate.of(1990, 1, 1));
         service = new ProfileAppService(repository, roleRepository,
-                Clock.fixed(Instant.parse("2026-10-15T12:00:00Z"), ZoneOffset.UTC));
+                Clock.fixed(Instant.parse("2026-10-15T12:00:00Z"), ZoneOffset.UTC), replica);
     }
 
     @Test
@@ -143,7 +153,7 @@ class ProfileAppServiceTest {
     @DisplayName("El mes actual sale del reloj en UTC: el 31 de octubre a las 23:59:59 octubre se acepta y noviembre no")
     void addWorkExperience_shouldUseUtcClockMonth_whenStartIsCurrentMonth() {
         var lateOctober = new ProfileAppService(repository, roleRepository,
-                Clock.fixed(Instant.parse("2026-10-31T23:59:59Z"), ZoneOffset.UTC));
+                Clock.fixed(Instant.parse("2026-10-31T23:59:59Z"), ZoneOffset.UTC), replica);
         var profile = freshProfile();
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
 
@@ -724,6 +734,179 @@ class ProfileAppServiceTest {
             profile.addTargetRole(new TargetRole(UUID.randomUUID(), UUID.randomUUID(), "Rol " + i, DataProvenance.MANUAL));
         }
         return profile;
+    }
+
+    // ---- Fecha de nacimiento (réplica local)
+
+    /** Usuario sin fila en la réplica. */
+    static final String NO_BIRTH_UID = "firebase-sin-nacimiento";
+    /** Usuaria nacida el 15 de marzo de 2008: cumple 15 años en marzo de 2023. */
+    static final String BORN_UID = "firebase-nacida-2008";
+
+    @Test
+    @DisplayName("Un registro sin ninguna fecha no lee la réplica y se guarda aunque no haya fecha de nacimiento")
+    void addWorkExperience_shouldNotReadReplica_whenRecordHasNoDates() {
+        var profile = ProfessionalProfile.create(new FirebaseUid(NO_BIRTH_UID));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), NO_BIRTH_UID, "ACME", "Dev", null, null, null, "UNKNOWN_END"));
+
+        assertThat(profile.getWorkExperiences()).hasSize(1);
+        verify(replica, never()).findBirthDate(any());
+        verify(repository).save(profile);
+    }
+
+    @Test
+    @DisplayName("Con fechas y sin fecha de nacimiento replicada responde 503 y no guarda")
+    void addWorkExperience_shouldThrowBirthDateUnavailable_whenReplicaIsEmptyAndRecordHasDates() {
+        var profile = ProfessionalProfile.create(new FirebaseUid(NO_BIRTH_UID));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), NO_BIRTH_UID, "ACME", "Dev", null, "2020-01", null, "CURRENT")))
+                .isInstanceOf(BirthDateUnavailableException.class);
+
+        assertThat(profile.getWorkExperiences()).isEmpty();
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Una experiencia solo con fecha de fin también necesita la fecha de nacimiento")
+    void addWorkExperience_shouldThrowBirthDateUnavailable_whenOnlyEndDateIsPresent() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(ProfessionalProfile.create(new FirebaseUid(NO_BIRTH_UID))));
+
+        assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), NO_BIRTH_UID, "ACME", "Dev", null, null, "2020-05", "ENDED")))
+                .isInstanceOf(BirthDateUnavailableException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Una formación sin fecha de nacimiento replicada responde 503 y no guarda")
+    void addEducation_shouldThrowBirthDateUnavailable_whenReplicaIsEmpty() {
+        var profile = ProfessionalProfile.create(new FirebaseUid(NO_BIRTH_UID));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        assertThatThrownBy(() -> service.addEducation(new AddEducationCommand(
+                UUID.randomUUID(), NO_BIRTH_UID, "Unicauca", "Ingeniería", "UNDERGRADUATE", "2018-01", null, true)))
+                .isInstanceOf(BirthDateUnavailableException.class);
+
+        assertThat(profile.getEducations()).isEmpty();
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Las reglas del registro se informan antes que la falta de la fecha de nacimiento (422 antes que 503)")
+    void addWorkExperience_shouldReportFieldErrors_whenRecordIsInvalidAndReplicaIsEmpty() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(ProfessionalProfile.create(new FirebaseUid(NO_BIRTH_UID))));
+
+        assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), NO_BIRTH_UID, "", "Dev", null, "2020-01", null, "CURRENT")))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("company", ErrorCode.COMPANY_REQUIRED)));
+    }
+
+    @Test
+    @DisplayName("Una formación con solo fecha de fin y sin réplica responde el inicio requerido (422) y no el 503")
+    void addEducation_shouldReportStartRequired_whenOnlyEndDateIsPresentAndReplicaIsEmpty() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(ProfessionalProfile.create(new FirebaseUid(NO_BIRTH_UID))));
+
+        assertThatThrownBy(() -> service.addEducation(new AddEducationCommand(
+                UUID.randomUUID(), NO_BIRTH_UID, "Unicauca", "Ingeniería", "UNDERGRADUATE", null, "2022-12", false)))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("startDate", ErrorCode.START_DATE_REQUIRED)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("La réplica se lee una sola vez por petición")
+    void addWorkExperience_shouldReadReplicaOnce_whenRecordHasDates() {
+        replica.saveIfAbsent(new FirebaseUid(BORN_UID), LocalDate.of(2008, 3, 15));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(ProfessionalProfile.create(new FirebaseUid(BORN_UID))));
+
+        service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), BORN_UID, "ACME", "Dev", null, "2023-03", "2024-01", "ENDED"));
+
+        verify(replica, times(1)).findBirthDate(new FirebaseUid(BORN_UID));
+    }
+
+    @Test
+    @DisplayName("Un inicio antes del mes en que se cumplen 15 años se rechaza y el mes de los 15 años se acepta")
+    void addWorkExperience_shouldApplyMinimumAge_whenBirthDateIsReplicated() {
+        replica.saveIfAbsent(new FirebaseUid(BORN_UID), LocalDate.of(2008, 3, 15));
+        var profile = ProfessionalProfile.create(new FirebaseUid(BORN_UID));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), BORN_UID, "ACME", "Dev", null, "2023-02", null, "CURRENT")))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("startDate", ErrorCode.START_DATE_BEFORE_MINIMUM_AGE)));
+        service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), BORN_UID, "ACME", "Dev", null, "2023-03", null, "CURRENT"));
+
+        assertThat(profile.getWorkExperiences()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Una regla de nacimiento y otra del registro se informan a la vez")
+    void addWorkExperience_shouldReportEveryField_whenBirthRuleAndAnotherRuleFail() {
+        replica.saveIfAbsent(new FirebaseUid(BORN_UID), LocalDate.of(2008, 3, 15));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(ProfessionalProfile.create(new FirebaseUid(BORN_UID))));
+
+        assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), BORN_UID, "", "Dev", null, "2023-02", null, "CURRENT")))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactlyInAnyOrder(tuple("company", ErrorCode.COMPANY_REQUIRED),
+                                tuple("startDate", ErrorCode.START_DATE_BEFORE_MINIMUM_AGE)));
+    }
+
+    @Test
+    @DisplayName("Una formación que empieza antes del mes de nacimiento se rechaza y la del mes de nacimiento se acepta")
+    void addEducation_shouldRejectStartBeforeBirth_whenBirthDateIsReplicated() {
+        replica.saveIfAbsent(new FirebaseUid(BORN_UID), LocalDate.of(2008, 3, 15));
+        var profile = ProfessionalProfile.create(new FirebaseUid(BORN_UID));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        assertThatThrownBy(() -> service.addEducation(new AddEducationCommand(
+                UUID.randomUUID(), BORN_UID, "Unicauca", "Curso", "TECHNICAL", "2008-02", null, true)))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("startDate", ErrorCode.START_DATE_BEFORE_BIRTH)));
+        service.addEducation(new AddEducationCommand(
+                UUID.randomUUID(), BORN_UID, "Unicauca", "Curso", "TECHNICAL", "2008-03", null, true));
+
+        assertThat(profile.getEducations()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("La fecha de nacimiento no aparece en ningún log, ni al guardar ni al responder 503")
+    void addWorkExperience_shouldNeverLogBirthDate_whenReplicaIsRead() {
+        var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start();
+        var root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        root.addAppender(appender);
+        try {
+            replica.saveIfAbsent(new FirebaseUid(BORN_UID), LocalDate.of(2008, 3, 15));
+            when(repository.findByIdForUpdate(any()))
+                    .thenReturn(Optional.of(ProfessionalProfile.create(new FirebaseUid(BORN_UID))))
+                    .thenReturn(Optional.of(ProfessionalProfile.create(new FirebaseUid(NO_BIRTH_UID))));
+
+            service.addWorkExperience(new AddWorkExperienceCommand(
+                    UUID.randomUUID(), BORN_UID, "ACME", "Dev", null, "2023-03", null, "CURRENT"));
+            assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
+                    UUID.randomUUID(), NO_BIRTH_UID, "ACME", "Dev", null, "2023-03", null, "CURRENT")))
+                    .isInstanceOf(BirthDateUnavailableException.class);
+        } finally {
+            root.detachAppender(appender);
+        }
+
+        assertThat(appender.list).extracting(ch.qos.logback.classic.spi.ILoggingEvent::getFormattedMessage)
+                .noneMatch(message -> message.contains("2008"));
     }
 
     private static ProfessionalProfile freshProfile() {

@@ -108,11 +108,15 @@ public final class Education {
         }
     }
 
+    /** Gana la primera regla que falla: requerida, futura y anterior al nacimiento, en ese orden. */
     private static void checkStartDate(Collector collector, YearMonth start, DateBounds bounds) {
         if (start == null) {
             collector.add("startDate", ErrorCode.START_DATE_REQUIRED, "Ingresa la fecha de inicio.");
         } else if (start.isAfter(bounds.currentMonth())) {
             collector.add("startDate", ErrorCode.START_DATE_IN_THE_FUTURE, FUTURE_DATE);
+        } else if (bounds.isBeforeBirth(start)) {
+            collector.add("startDate", ErrorCode.START_DATE_BEFORE_BIRTH,
+                    "La fecha no puede ser anterior a tu fecha de nacimiento.");
         }
     }
 

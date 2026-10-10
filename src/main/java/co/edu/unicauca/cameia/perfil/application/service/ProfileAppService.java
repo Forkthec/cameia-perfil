@@ -7,6 +7,7 @@ import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceComman
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
+import co.edu.unicauca.cameia.perfil.domain.exception.BirthDateUnavailableException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
@@ -30,6 +31,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
+import co.edu.unicauca.cameia.perfil.domain.port.BirthDateReplica;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
 import org.springframework.stereotype.Service;
@@ -38,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.YearMonth;
 import java.util.UUID;
+import java.util.function.Function;
 
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.EDUCATION_LEVEL_INVALID_VALUE;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.EMPLOYMENT_STATUS_INVALID_VALUE;
@@ -55,11 +58,15 @@ public class ProfileAppService {
     private final ProfessionalRoleRepository roleRepository;
     /** Reloj en UTC; las reglas de fechas de la experiencia y la formación lo usan para saber qué mes es hoy. */
     private final Clock clock;
+    /** Réplica local de la fecha de nacimiento: es la única fuente de la fecha; Perfil no llama a Cuentas. */
+    private final BirthDateReplica birthDateReplica;
 
-    ProfileAppService(ProfessionalProfileRepository repository, ProfessionalRoleRepository roleRepository, Clock clock) {
+    ProfileAppService(ProfessionalProfileRepository repository, ProfessionalRoleRepository roleRepository, Clock clock,
+            BirthDateReplica birthDateReplica) {
         this.repository = repository;
         this.roleRepository = roleRepository;
         this.clock = clock;
+        this.birthDateReplica = birthDateReplica;
     }
 
     @Transactional
@@ -81,14 +88,38 @@ public class ProfileAppService {
         var draft = new WorkExperienceDraft(cmd.company(), cmd.position(), cmd.description(),
                 startDate(cmd.startDate()), endDate(cmd.endDate()),
                 employmentStatus(cmd.employmentStatus()));
-        profile.addWorkExperience(WorkExperience.create(draft, dateBounds()));
+        boolean hasDates = draft.startDate() != null || draft.endDate() != null;
+        profile.addWorkExperience(createWithBirthMonth(cmd.uid(), hasDates, bounds -> WorkExperience.create(draft, bounds)));
         repository.save(profile);
         return profile;
     }
 
-    /** Mes actual en UTC; el mes de nacimiento se suma cuando exista la lectura de la réplica de la fecha de nacimiento. */
-    private DateBounds dateBounds() {
-        return new DateBounds(YearMonth.now(clock), null);
+    /**
+     * Crea un registro con fechas aplicando también las reglas del mes de nacimiento.
+     *
+     * <p>Un registro sin ninguna fecha no lee la réplica. Con fechas, las reglas del registro corren primero con el
+     * mes de nacimiento que haya (así todos los errores de campo salen a la vez, incluidos los de edad); solo si el
+     * registro es válido y la réplica no tiene la fecha del Usuario se responde 503, porque entonces no se pueden
+     * comprobar las reglas de nacimiento y guardarlo sería aceptar algo sin verificar. La fecha nunca se registra.</p>
+     *
+     * @param uid      identidad del dueño del perfil
+     * @param hasDates si el registro trae fecha de inicio o de fin
+     * @param factory  fábrica del dominio que aplica las reglas con los límites recibidos
+     * @param <T>      experiencia o formación
+     * @return el registro válido
+     * @throws BirthDateUnavailableException si el registro es válido, trae fechas y la réplica no tiene la fecha
+     */
+    private <T> T createWithBirthMonth(String uid, boolean hasDates, Function<DateBounds, T> factory) {
+        var currentMonth = YearMonth.now(clock);
+        if (!hasDates) {
+            return factory.apply(new DateBounds(currentMonth, null));
+        }
+        var birthMonth = birthDateReplica.findBirthDate(FirebaseUid.required(uid)).map(YearMonth::from);
+        var created = factory.apply(new DateBounds(currentMonth, birthMonth.orElse(null)));
+        if (birthMonth.isEmpty()) {
+            throw new BirthDateUnavailableException();
+        }
+        return created;
     }
 
     /** Estado ausente → {@code null}, que el dominio informa como requerido; un valor desconocido se rechaza aquí con su código. */
@@ -107,7 +138,8 @@ public class ProfileAppService {
         var profile = loadForUserForUpdate(cmd.profileId(), cmd.uid());
         var draft = new EducationDraft(cmd.institution(), cmd.degree(), educationLevel(cmd.level()),
                 startDate(cmd.startDate()), endDate(cmd.endDate()), cmd.inProgress());
-        profile.addEducation(Education.create(draft, dateBounds()));
+        boolean hasDates = draft.startDate() != null || draft.endDate() != null;
+        profile.addEducation(createWithBirthMonth(cmd.uid(), hasDates, bounds -> Education.create(draft, bounds)));
         repository.save(profile);
         return profile;
     }

@@ -112,6 +112,12 @@ public enum ErrorCode {
     START_DATE_IN_THE_FUTURE,
     /** La fecha de fin es posterior al mes actual en UTC. */
     END_DATE_IN_THE_FUTURE,
+    /** La experiencia empieza antes del mes en que el Usuario cumplió 15 años. */
+    START_DATE_BEFORE_MINIMUM_AGE,
+    /** La experiencia sin inicio termina antes del mes en que el Usuario cumplió 15 años. */
+    END_DATE_BEFORE_MINIMUM_AGE,
+    /** La formación empieza antes del mes de nacimiento del Usuario. */
+    START_DATE_BEFORE_BIRTH,
     /** La empresa supera su largo máximo. */
     COMPANY_TOO_LONG,
     /** El cargo supera su largo máximo. */

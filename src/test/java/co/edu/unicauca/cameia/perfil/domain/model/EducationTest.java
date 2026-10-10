@@ -136,6 +136,37 @@ class EducationTest {
         assertThat(education.getProvenance()).isEqualTo(DataProvenance.AI_SUGGESTED);
     }
 
+    @Test
+    @DisplayName("Un inicio en el mes de nacimiento se acepta")
+    void create_shouldAccept_whenStartIsBirthMonth() {
+        assertThatCode(() -> createBorn(ym(2008, 3), null, true)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Un inicio un mes antes del nacimiento se rechaza")
+    void create_shouldRejectStart_whenBeforeBirthMonth() {
+        assertRejected(() -> createBorn(ym(2008, 2), null, true),
+                "startDate", ErrorCode.START_DATE_BEFORE_BIRTH, "La fecha no puede ser anterior a tu fecha de nacimiento.");
+    }
+
+    @Test
+    @DisplayName("Una formación no tiene edad mínima: empieza el mes de nacimiento aunque no tenga 15 años")
+    void create_shouldNotApplyMinimumAge_whenStartIsAfterBirthMonth() {
+        assertThatCode(() -> createBorn(ym(2008, 4), null, true)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Un inicio futuro se informa como futuro y no como anterior al nacimiento")
+    void create_shouldReportFuture_whenStartIsAfterCurrentMonth() {
+        assertRejected(() -> createBorn(ym(2026, 11), null, true),
+                "startDate", ErrorCode.START_DATE_IN_THE_FUTURE, FUTURE);
+    }
+
+    private static Education createBorn(YearMonth start, YearMonth end, boolean inProgress) {
+        var born = new DateBounds(YearMonth.of(2026, 10), YearMonth.of(2008, 3));
+        return Education.create(new EducationDraft("Unicauca", "Curso", EducationLevel.UNDERGRADUATE, start, end, inProgress), born);
+    }
+
     private static Education create(String institution, String degree, YearMonth start, YearMonth end, boolean inProgress) {
         return Education.create(new EducationDraft(institution, degree, EducationLevel.UNDERGRADUATE, start, end, inProgress), BOUNDS);
     }

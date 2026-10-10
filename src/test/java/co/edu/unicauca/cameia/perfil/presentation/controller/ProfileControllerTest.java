@@ -406,6 +406,21 @@ class ProfileControllerTest {
     }
 
     @Test
+    @DisplayName("Agregar una experiencia sin fecha de nacimiento replicada responde 503 con el texto del criterio")
+    void addWorkExperience_shouldReturn503_whenBirthDateIsUnavailable() throws Exception {
+        when(profileAppService.addWorkExperience(any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.BirthDateUnavailableException());
+
+        postExperience(EXPERIENCE_BASE + "}")
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.code").value("BIRTH_DATE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.detail").value("Ocurrió un error. Inténtalo de nuevo."))
+                .andExpect(jsonPath("$.requestId").isNotEmpty())
+                .andExpect(jsonPath("$.errors").doesNotExist());
+    }
+
+    @Test
     @DisplayName("Actualizar un rol objetivo sin professionalRoleId responde 422 con su campo, no 500")
     void updateTargetRole_shouldReturnRoleIdRequired_whenBodyIsEmpty() throws Exception {
         mockMvc.perform(patch("/api/v1/profiles/{id}/target-roles/{roleId}", UUID.randomUUID(), UUID.randomUUID())

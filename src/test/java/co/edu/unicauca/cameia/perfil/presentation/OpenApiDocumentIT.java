@@ -47,6 +47,9 @@ class OpenApiDocumentIT {
                 .contains("\"ApiError\"", "\"ApiFieldError\"", "\"requestId\"", "\"missingRequirements\"")
                 .contains("IDENTITY_REQUIRED", "PROFILE_ID_INVALID_FORMAT", "PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE")
                 .contains("WORK_EXPERIENCE_NOT_FOUND", "TARGET_ROLE_NOT_FOUND", "END_DATE_BEFORE_START_DATE")
+                // Fecha de nacimiento: el 503 y las reglas de los 15 años y del nacimiento están en el contrato.
+                .contains("BIRTH_DATE_UNAVAILABLE", "START_DATE_BEFORE_MINIMUM_AGE", "END_DATE_BEFORE_MINIMUM_AGE",
+                        "START_DATE_BEFORE_BIRTH")
                 // Sin HU en el MVP (hallazgo I-024): no se publica para que Frontend no lo integre.
                 .doesNotContain("/review-requests", "/salary-expectation");
     }

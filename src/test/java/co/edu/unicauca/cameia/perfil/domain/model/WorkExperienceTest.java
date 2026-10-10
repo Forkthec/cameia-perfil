@@ -18,6 +18,10 @@ class WorkExperienceTest {
 
     private static final DateBounds BOUNDS = new DateBounds(YearMonth.of(2026, 10), null);
     private static final String FUTURE = "La fecha no puede ser posterior al mes actual.";
+    /** Nacimiento el 15 de marzo de 2008: cumple 15 años en marzo de 2023. */
+    private static final DateBounds BORN_MARCH_2008 = new DateBounds(YearMonth.of(2026, 10), YearMonth.of(2008, 3));
+    private static final String MINIMUM_AGE_START = "La experiencia laboral no puede iniciar antes del mes en que cumpliste 15 años.";
+    private static final String MINIMUM_AGE_END = "La fecha de fin no puede ser anterior al mes en que cumpliste 15 años.";
 
     @Test
     @DisplayName("Un inicio en el mes actual se acepta")
@@ -142,6 +146,65 @@ class WorkExperienceTest {
 
         assertThat(experience.getCompany()).hasSize(150);
         assertThat(experience.getProvenance()).isEqualTo(DataProvenance.AI_SUGGESTED);
+    }
+
+    @Test
+    @DisplayName("Un inicio en el mes en que se cumplen 15 años se acepta")
+    void create_shouldAccept_whenStartIsMonthOfFifteenthBirthday() {
+        assertThatCode(() -> createBorn(BORN_MARCH_2008, ym(2023, 3), null, EmploymentStatus.CURRENT)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Un inicio un mes antes de cumplir 15 años se rechaza")
+    void create_shouldRejectStart_whenBeforeFifteenthBirthday() {
+        assertRejected(() -> createBorn(BORN_MARCH_2008, ym(2023, 2), null, EmploymentStatus.CURRENT),
+                "startDate", ErrorCode.START_DATE_BEFORE_MINIMUM_AGE, MINIMUM_AGE_START);
+    }
+
+    @Test
+    @DisplayName("Sin inicio, un fin en el mes en que se cumplen 15 años se acepta")
+    void create_shouldAcceptEnd_whenNoStartAndEndIsMonthOfFifteenthBirthday() {
+        assertThatCode(() -> createBorn(BORN_MARCH_2008, null, ym(2023, 3), EmploymentStatus.ENDED)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Sin inicio, un fin un mes antes de cumplir 15 años se rechaza")
+    void create_shouldRejectEnd_whenNoStartAndEndIsBeforeFifteenthBirthday() {
+        assertRejected(() -> createBorn(BORN_MARCH_2008, null, ym(2023, 2), EmploymentStatus.ENDED),
+                "endDate", ErrorCode.END_DATE_BEFORE_MINIMUM_AGE, MINIMUM_AGE_END);
+    }
+
+    @Test
+    @DisplayName("Con inicio válido, el fin no se compara con la edad mínima")
+    void create_shouldNotCompareEndWithMinimumAge_whenStartIsPresent() {
+        assertThatCode(() -> createBorn(BORN_MARCH_2008, ym(2023, 3), ym(2023, 3), EmploymentStatus.ENDED)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Con inicio y fin antes de los 15 años solo se informa el inicio")
+    void create_shouldReportOnlyStart_whenStartAndEndAreBeforeFifteenthBirthday() {
+        assertRejected(() -> createBorn(BORN_MARCH_2008, ym(2022, 1), ym(2022, 12), EmploymentStatus.ENDED),
+                "startDate", ErrorCode.START_DATE_BEFORE_MINIMUM_AGE, MINIMUM_AGE_START);
+    }
+
+    @Test
+    @DisplayName("Quien nació el 29 de febrero puede empezar en febrero de los 15 años")
+    void create_shouldUseFebruary_whenBornOnLeapDay() {
+        var bornOnLeapDay = new DateBounds(YearMonth.of(2026, 10), YearMonth.of(2008, 2));
+
+        assertThatCode(() -> WorkExperience.create(new WorkExperienceDraft("ACME", "Dev", null, ym(2023, 2), null,
+                EmploymentStatus.CURRENT), bornOnLeapDay)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Un inicio futuro se informa como futuro y no como edad mínima")
+    void create_shouldReportFuture_whenStartIsAfterCurrentMonth() {
+        assertRejected(() -> createBorn(BORN_MARCH_2008, ym(2026, 11), null, EmploymentStatus.CURRENT),
+                "startDate", ErrorCode.START_DATE_IN_THE_FUTURE, FUTURE);
+    }
+
+    private static WorkExperience createBorn(DateBounds bounds, YearMonth start, YearMonth end, EmploymentStatus status) {
+        return WorkExperience.create(new WorkExperienceDraft("ACME", "Dev", null, start, end, status), bounds);
     }
 
     private static WorkExperience create(String company, String position, YearMonth start, YearMonth end,

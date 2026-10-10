@@ -133,13 +133,20 @@ public final class WorkExperience {
         }
     }
 
+    /** Gana la primera regla que falla: futura y anterior a la edad mínima, en ese orden. */
     private static void checkStartDate(Collector collector, YearMonth start, DateBounds bounds) {
-        if (start != null && start.isAfter(bounds.currentMonth())) {
+        if (start == null) {
+            return;
+        }
+        if (start.isAfter(bounds.currentMonth())) {
             collector.add("startDate", ErrorCode.START_DATE_IN_THE_FUTURE, FUTURE_DATE);
+        } else if (bounds.isBeforeMinimumAge(start)) {
+            collector.add("startDate", ErrorCode.START_DATE_BEFORE_MINIMUM_AGE,
+                    "La experiencia laboral no puede iniciar antes del mes en que cumpliste 15 años.");
         }
     }
 
-    /** Gana la primera regla que falla: no permitida, requerida, futura y anterior al inicio, en ese orden. */
+    /** Gana la primera regla que falla: no permitida, requerida, futura, anterior al inicio y anterior a la edad mínima sin inicio, en ese orden. */
     private static void checkEndDate(Collector collector, WorkExperienceDraft draft, DateBounds bounds) {
         var status = draft.employmentStatus();
         var end = draft.endDate();
@@ -155,6 +162,10 @@ public final class WorkExperience {
         } else if (end != null && draft.startDate() != null && end.isBefore(draft.startDate())) {
             collector.add("endDate", ErrorCode.END_DATE_BEFORE_START_DATE,
                     "La fecha de fin no puede ser anterior a la de inicio.");
+        } else if (end != null && draft.startDate() == null && bounds.isBeforeMinimumAge(end)) {
+            // Sin inicio, el fin es la única fecha que puede delatar una experiencia anterior a los 15 años.
+            collector.add("endDate", ErrorCode.END_DATE_BEFORE_MINIMUM_AGE,
+                    "La fecha de fin no puede ser anterior al mes en que cumpliste 15 años.");
         }
     }
 

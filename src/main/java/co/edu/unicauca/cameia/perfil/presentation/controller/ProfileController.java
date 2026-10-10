@@ -123,6 +123,18 @@ class ProfileController {
               ]
             }""";
 
+    private static final String BIRTH_DATE_UNAVAILABLE_DESCRIPTION = "El registro trae fechas y la fecha de nacimiento del Usuario aún no está replicada (code BIRTH_DATE_UNAVAILABLE): no se guardó nada; el cliente puede reintentar en unos segundos. Un registro sin ninguna fecha no la necesita";
+
+    private static final String BIRTH_DATE_UNAVAILABLE_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Servicio no disponible",
+              "status": 503,
+              "detail": "Ocurrió un error. Inténtalo de nuevo.",
+              "code": "BIRTH_DATE_UNAVAILABLE",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
     private static final String PLAN_LIMIT_EXAMPLE = """
             {
               "type": "about:blank",
@@ -267,10 +279,14 @@ class ProfileController {
                     + "COMPANY_TOO_LONG, COMPANY_INVALID_CHARACTERS, POSITION_REQUIRED, POSITION_TOO_LONG, POSITION_INVALID_CHARACTERS, "
                     + "DESCRIPTION_TOO_LONG, DESCRIPTION_INVALID_CHARACTERS, START_DATE_INVALID_FORMAT, START_DATE_IN_THE_FUTURE, "
                     + "END_DATE_INVALID_FORMAT, END_DATE_REQUIRED, END_DATE_NOT_ALLOWED, END_DATE_IN_THE_FUTURE, END_DATE_BEFORE_START_DATE, "
+                    + "START_DATE_BEFORE_MINIMUM_AGE, END_DATE_BEFORE_MINIMUM_AGE, "
                     + "EMPLOYMENT_STATUS_REQUIRED, EMPLOYMENT_STATUS_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) "
                     + "o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
-                            examples = @ExampleObject(name = "Empresa vacía", value = WORK_EXPERIENCE_INVALID_EXAMPLE)))
+                            examples = @ExampleObject(name = "Empresa vacía", value = WORK_EXPERIENCE_INVALID_EXAMPLE))),
+            @ApiResponse(responseCode = "503", description = BIRTH_DATE_UNAVAILABLE_DESCRIPTION,
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Fecha de nacimiento no disponible", value = BIRTH_DATE_UNAVAILABLE_EXAMPLE)))
     })
     @PostMapping("/{id}/work-experiences")
     ResponseEntity<ProfileResponse> addWorkExperience(@PathVariable UUID id,
@@ -324,10 +340,13 @@ class ProfileController {
                     + "INSTITUTION_TOO_LONG, INSTITUTION_INVALID_CHARACTERS, DEGREE_REQUIRED, DEGREE_TOO_LONG, DEGREE_INVALID_CHARACTERS, "
                     + "EDUCATION_LEVEL_REQUIRED, EDUCATION_LEVEL_INVALID_VALUE, START_DATE_REQUIRED, START_DATE_INVALID_FORMAT, "
                     + "START_DATE_IN_THE_FUTURE, END_DATE_INVALID_FORMAT, END_DATE_NOT_ALLOWED, END_DATE_IN_THE_FUTURE, "
-                    + "END_DATE_BEFORE_START_DATE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) "
+                    + "END_DATE_BEFORE_START_DATE, START_DATE_BEFORE_BIRTH). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) "
                     + "o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
-                            examples = @ExampleObject(name = "Institución vacía", value = EDUCATION_INVALID_EXAMPLE)))
+                            examples = @ExampleObject(name = "Institución vacía", value = EDUCATION_INVALID_EXAMPLE))),
+            @ApiResponse(responseCode = "503", description = BIRTH_DATE_UNAVAILABLE_DESCRIPTION,
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Fecha de nacimiento no disponible", value = BIRTH_DATE_UNAVAILABLE_EXAMPLE)))
     })
     @PostMapping("/{id}/educations")
     ResponseEntity<ProfileResponse> addEducation(@PathVariable UUID id,
