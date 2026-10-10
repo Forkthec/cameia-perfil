@@ -113,7 +113,6 @@ public final class ProfessionalProfile {
         this.summary = summary; touch();
     }
     public void updatePreferredModality(WorkModality modality) { this.preferredModality = modality; touch(); }
-    public void updateProvenance(DataProvenance provenance) { this.provenance = Objects.requireNonNull(provenance); touch(); }
 
     // ── Expectativa salarial (CM-19 — dormido en MVP, ver BE-14) ────────
     public void updateSalaryExpectation(SalaryExpectation expectation) { this.salaryExpectation = expectation; touch(); }

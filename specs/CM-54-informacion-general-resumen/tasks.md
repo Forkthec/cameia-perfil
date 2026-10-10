@@ -1,6 +1,6 @@
 # Tareas — CM-54 (cameia-perfil)
 
-Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Una tarjeta a la vez, con la salida real de las pruebas antes de marcar `[x]`.
+Estado: PR 1a ejecutado y verificado en local (10-oct-2026); PR 1b y PR 2 pendientes. Spec, plan y tarjetas aprobados por Paula el 9-oct-2026. Una tarjeta a la vez, con la salida real de las pruebas antes de marcar `[x]`.
 
 ## Reglas para todas las tarjetas
 
@@ -22,13 +22,18 @@ Las once reglas comunes de `specs/CM-274-experiencia-formacion-v4/tasks.md` («R
 
 # PR 1 (`CM-54-informacion-general-resumen`, desde `origin/develop` con CM-274 completo fusionado)
 
-## [ ] T-0 · Comprobar la base y reproducir — ≤ 15 min
+> **Nota de ejecución (10-oct-2026):** con T-0 a T-6 el PR 1 medía 1 308 líneas contra su base. Se parte por capacidad: **PR 1a** (rama `CM-54-informacion-general-resumen-cola`) = T-0 a T-4, el OpenAPI del `PATCH` y `docs/errores.md` de T-6; **PR 1b** (rama `CM-54-integracion-informacion-general`) = T-5 y el cierre de T-6. Además se corrigió `ProfessionalProfile.reconstitute` (la fecha de creación no se conservaba) y `@Size(min = 1)` se sustituyó por `@NotEmptyIfPresent`; ver los Desvíos de la cola.
+
+
+## [x] T-0 · Comprobar la base y reproducir — ≤ 15 min
 
 - `git grep -n "class SingleLineText\|hasControlCharacter\|@interface CodePointSize\|@interface DomainRule\|findByIdForUpdate\|class FieldValues" origin/develop -- src/main` debe encontrar las seis piezas, y `git ls-tree --name-only origin/develop src/test/java/co/edu/unicauca/cameia/perfil/infrastructure/persistence/` debe listar `ColumnLengthConsistencyIT.java` y `ProfileWriteLockIT.java`. Si falta alguna, detente.
 - **Línea base:** corre la sección 20 de la spec (`./mvnw.cmd -B clean verify` y Newman de la colección completa) y pega la salida antes de editar.
 - Con `docker compose up -d --build`: `PATCH` con `{"name":"","summary":"<2001 a>"}` → anotar que hoy sale un solo error; `{"name":"Analista\u0000"}` → 500; `{"provenance":"AI_SUGGESTED"}` → la procedencia cambia. Pegar en `specs/CM-54-informacion-general-resumen/evidencia-antes.md`.
 
-## [ ] T-1 · Petición normalizada y validada en el borde — ≤ 30 min, ≈ 130 líneas
+**Resultado (10-oct-2026).** Las seis piezas y los dos archivos de prueba existen en la cadena (`SingleLineText`, `hasControlCharacter`, `CodePointSize`, `DomainRule`, `FieldValues`, `findByIdForUpdate`; `ColumnLengthConsistencyIT` y `ProfileWriteLockIT`), y el enumerado `WorkModality` sigue con `REMOTE`, `HYBRID` y `ON_SITE`. Línea base: la punta de CM-274 (6b) pasó `clean verify` (631 unitarias + 193 de integración, `verify-CM-274-6b.log`); esta capa solo agrega documentos encima. Estado «antes» con la aplicación empaquetada en `evidencia-antes.md`: un solo error con nombre vacío y resumen de 2001; 500 con U+0000 en el nombre; la procedencia del perfil pasa a `AI_SUGGESTED`.
+
+## [x] T-1 · Petición normalizada y validada en el borde — ≤ 30 min, ≈ 130 líneas
 
 - **Modificar** `presentation/dto/UpdateProfileInfoRequest.java`:
   ```java
@@ -77,7 +82,9 @@ Las once reglas comunes de `specs/CM-274-experiencia-formacion-v4/tasks.md` («R
   - Cada una comprueba `Content-Type` y la ausencia de `trace`, `exception`, `co.edu`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileControllerTest,ErrorCatalogTest" test`.
 
-## [ ] T-2 · Objetos de valor con fábrica — ≤ 25 min, ≈ 110 líneas
+**Resultado.** Rojo: `ProfileControllerTest` con las pruebas nuevas, 21 fallos de 198 (`Status expected:<422> but was:<500>`; el servicio simulado devolvía `null` porque el borde no rechazaba nada). Verde: `ProfileControllerTest`, `ErrorCatalogTest` y `DomainRuleValidatorTest` completos dentro de `clean verify` (713 unitarias, 0 fallos, `verify-CM-54-1.log`). Se hizo después de T-2 porque `DomainRule` necesita las constantes `ProfileName.CHARACTERS` y `ProfessionalSummary.CHARACTERS` (Desvío 26). `@Size(min = 1)` se cambió por `@NotEmptyIfPresent` (Desvío 27). `DomainRuleValidatorTest` agrega las tres reglas. `ProfileControllerTest` queda con 200 casos y `DomainRuleValidatorTest` con 40.
+
+## [x] T-2 · Objetos de valor con fábrica — ≤ 25 min, ≈ 110 líneas
 
 - **Modificar** `domain/model/ProfileName.java`:
   ```java
@@ -114,7 +121,9 @@ Las once reglas comunes de `specs/CM-274-experiencia-formacion-v4/tasks.md` («R
 - **Pruebas** `ProfileValueRulesTest` (o `ProfileNameTest` y `ProfessionalSummaryTest` nuevas): `of_shouldTrimAndCompose_whenNameHasSpacesAndDecomposedLetters`; `of_shouldRejectRequired_whenNameIsBlank`; límites 254/255/256 con `a`, `ñ` y emoji; `of_shouldRejectControlCharacter_whenNameHasBell`; `constructor_shouldNotValidate_whenRebuildingStoredValue` (256 `a` → sin excepción); para el resumen: 1999/2000/2001, saltos internos conservados, `"\n\nTexto\n"` → `"Texto"`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileValueRulesTest" test`.
 
-## [ ] T-3 · Servicio: bloqueo, errores a la vez y sin `provenance` — ≤ 25 min, ≈ 90 líneas
+**Resultado.** Rojo: `ProfileNameTest` y `ProfessionalSummaryTest` no compilaban (`of(String)` y `CHARACTERS` indefinidos). Verde: 34 casos entre las dos clases (19 de `ProfileNameTest` y 15 de `ProfessionalSummaryTest`) más los de `ProfileValueRulesTest`, que pasó a llamar `ProfileName.of(" ")`, `ProfileName.of("a" × 256)` y `ProfessionalSummary.of("a" × 2001)`. Cobertura: `ProfileName` 12/12 líneas y 6/6 ramas; `ProfessionalSummary` 12/12 y 6/6.
+
+## [x] T-3 · Servicio: bloqueo, errores a la vez y sin `provenance` — ≤ 25 min, ≈ 90 líneas
 
 - **Modificar** `ProfileAppService.updateProfileInfo`:
   ```java
@@ -162,10 +171,14 @@ Las once reglas comunes de `specs/CM-274-experiencia-formacion-v4/tasks.md` («R
 - El texto se guarda literal (RT-01-CA08; la nota técnica de HU-2.3 «Sanitización XSS en el backend» cita ese mismo CA). No se agrega ningún saneamiento de HTML.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileAppServiceTest,ProfessionalProfileTest" test`.
 
-## [ ] T-4 · `summaryProvenance` en la respuesta — ≤ 15 min, ≈ 40 líneas
+**Resultado.** Rojo: las pruebas del servicio no compilaban (el comando aún llevaba `provenance`). Verde: `ProfileAppServiceTest` (siete pruebas nuevas: sin procedencia, tres campos inválidos a la vez, caracteres de control, vaciar el resumen de un perfil activo sin guardar, renombrar un perfil activo, bloqueo de la fila). La prueba `updateProfileInfo_shouldApplyModalityAndProvenance_whenBothAreOptions` fijaba la procedencia `AI_EDITED`; la decisión D5 la retira y se reemplazó por `updateProfileInfo_shouldApplyModalityAndKeepProvenance_whenModalityIsAnOption` (Desvío 28). `ProfessionalProfile.updateProvenance` se borró: ya nadie lo llama. Cobertura: `ProfileAppService` 93/94 líneas y 32/32 ramas (la línea sin cubrir es previa, Desvío 13); `ProfessionalProfile` 129/131 y 55/56 (previas).
+
+## [x] T-4 · `summaryProvenance` en la respuesta — ≤ 15 min, ≈ 40 líneas
 
 - **Modificar** `ProfileResponse`: componente `String summaryProvenance` después de `summary`, con `@Schema(description = "Procedencia del resumen; MANUAL en el MVP, null sin resumen", allowableValues = {"MANUAL"}, nullable = true)`; en `from`: `p.getSummary() != null ? DataProvenance.MANUAL.name() : null`. Comentario de línea: «Derivado mientras no haya resúmenes escritos por la IA; entonces saldrá de una columna.» No agregar ningún campo de «origen de ejecución de IA» (decisión de Paula: lo define HU-2.8).
 - **Pruebas** `ProfileControllerTest.getProfile_shouldReturnManualSummaryProvenance_whenSummaryExists` y `…_shouldReturnNullSummaryProvenance_whenSummaryIsAbsent`.
+
+**Resultado.** Rojo: `ProfileResponseTest` y las dos pruebas de `ProfileControllerTest` no compilaban (`summaryProvenance()` indefinido). Verde: `summaryProvenance` `MANUAL` con resumen y `null` sin él. `ProfileResponse` 17/17 líneas y 10/10 ramas.
 
 ## [ ] T-5 · Integración — ≤ 30 min, ≈ 180 líneas
 

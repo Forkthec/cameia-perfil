@@ -27,11 +27,11 @@ class ProfileValueRulesTest {
 
     static Stream<Arguments> violations() {
         return Stream.of(
-                Arguments.of("nombre en blanco", (Executable) () -> new ProfileName(" "),
+                Arguments.of("nombre en blanco", (Executable) () -> ProfileName.of(" "),
                         "name", ErrorCode.PROFILE_NAME_REQUIRED, "Ingresa un nombre para el perfil."),
-                Arguments.of("nombre de 256", (Executable) () -> new ProfileName("a".repeat(256)),
+                Arguments.of("nombre de 256", (Executable) () -> ProfileName.of("a".repeat(256)),
                         "name", ErrorCode.PROFILE_NAME_TOO_LONG, "El nombre no puede superar los 255 caracteres."),
-                Arguments.of("resumen de 2001", (Executable) () -> new ProfessionalSummary("a".repeat(2001)),
+                Arguments.of("resumen de 2001", (Executable) () -> ProfessionalSummary.of("a".repeat(2001)),
                         "summary", ErrorCode.SUMMARY_TOO_LONG, "El resumen no puede superar los 2000 caracteres."),
                 Arguments.of("salario negativo", (Executable) () -> new SalaryExpectation(new BigDecimal("-1")),
                         "amount", ErrorCode.SALARY_EXPECTATION_OUT_OF_RANGE,

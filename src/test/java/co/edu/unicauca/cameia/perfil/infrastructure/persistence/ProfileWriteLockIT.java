@@ -111,7 +111,7 @@ class ProfileWriteLockIT {
 
     private Future<?> renameInBackground(String name) {
         return executor.submit(() -> profileAppService.updateProfileInfo(
-                new UpdateProfileInfoCommand(profileId, uid, name, null, null, null)));
+                new UpdateProfileInfoCommand(profileId, uid, name, null, null)));
     }
 
     private String storedName() {
@@ -291,7 +291,7 @@ class ProfileWriteLockIT {
     /** Deja el perfil activo con lo que pide finalizar y el número dado de formaciones. */
     private ProfessionalProfile completeProfileWithEducations(int educations) {
         profileAppService.updateProfileInfo(new UpdateProfileInfoCommand(
-                profileId, uid, "Perfil de prueba", "Resumen de prueba con más de diez caracteres.", null, null));
+                profileId, uid, "Perfil de prueba", "Resumen de prueba con más de diez caracteres.", null));
         for (int i = 0; i < educations; i++) {
             profileAppService.addEducation(new AddEducationCommand(profileId, uid, "Universidad " + i,
                     "Ingeniería de Sistemas", "UNDERGRADUATE", "2018-01", "2022-12", false));

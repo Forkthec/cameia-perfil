@@ -32,7 +32,10 @@ class DomainRuleValidatorTest {
             @DomainRule(Rule.EMPLOYMENT_STATUS) String employmentStatus,
             @DomainRule(Rule.EDUCATION_LEVEL) String level,
             @DomainRule(Rule.START_DATE) String startDate,
-            @DomainRule(Rule.END_DATE) String endDate) {
+            @DomainRule(Rule.END_DATE) String endDate,
+            @DomainRule(Rule.PROFILE_NAME) String name,
+            @DomainRule(Rule.SUMMARY) String summary,
+            @DomainRule(Rule.PREFERRED_MODALITY) String preferredModality) {
     }
 
     private static Validator validator;
@@ -66,6 +69,38 @@ class DomainRuleValidatorTest {
         assertRejected("company", "Acme\u0000", ErrorCode.COMPANY_INVALID_CHARACTERS,
                 "La empresa tiene caracteres no permitidos.");
         assertThat(validate("company", "Acme")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Un nombre con carácter de control, incluido el salto de línea, se rechaza con su código y su mensaje")
+    void name_shouldReject_whenTextHasControlCharacter() {
+        assertRejected("name", "Analista\u0000", ErrorCode.PROFILE_NAME_INVALID_CHARACTERS,
+                "El nombre tiene caracteres no permitidos.");
+        assertRejected("name", "A\nB", ErrorCode.PROFILE_NAME_INVALID_CHARACTERS,
+                "El nombre tiene caracteres no permitidos.");
+        assertThat(validate("name", "Analista de datos")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Un resumen con carácter de control se rechaza, pero admite tabulador, salto de línea y retorno")
+    void summary_shouldReject_whenTextHasControlCharacter() {
+        assertRejected("summary", "Hola\u0000", ErrorCode.SUMMARY_INVALID_CHARACTERS,
+                "El resumen tiene caracteres no permitidos.");
+        assertThat(validate("summary", "Línea 1\nLínea 2\r\n\tfin")).isEmpty();
+    }
+
+    @ParameterizedTest(name = "modalidad {0}")
+    @ValueSource(strings = {"hybrid", "PRESENCIAL", "ON SITE"})
+    @DisplayName("Una modalidad fuera de las opciones se rechaza con su código y su mensaje")
+    void preferredModality_shouldReject_whenValueIsNotAnOption(String value) {
+        assertRejected("preferredModality", value, ErrorCode.PREFERRED_MODALITY_INVALID_VALUE, "Selecciona una opción.");
+    }
+
+    @ParameterizedTest(name = "modalidad {0}")
+    @ValueSource(strings = {"REMOTE", "HYBRID", "ON_SITE"})
+    @DisplayName("Cada modalidad de la lista se acepta")
+    void preferredModality_shouldAccept_whenValueIsAnOption(String value) {
+        assertThat(validate("preferredModality", value)).isEmpty();
     }
 
     @Test

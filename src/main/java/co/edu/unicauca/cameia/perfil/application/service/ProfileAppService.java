@@ -8,6 +8,7 @@ import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoComman
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.domain.exception.BirthDateUnavailableException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
@@ -41,6 +42,7 @@ import java.time.Clock;
 import java.time.YearMonth;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.EDUCATION_LEVEL_INVALID_VALUE;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.EMPLOYMENT_STATUS_INVALID_VALUE;
@@ -69,17 +71,57 @@ public class ProfileAppService {
         this.birthDateReplica = birthDateReplica;
     }
 
+    /**
+     * Actualiza el nombre, el resumen y la modalidad preferida del perfil; lo que no llega no cambia.
+     *
+     * <p>Primero se juntan las reglas de cada campo, para informar todos los rechazados a la vez; la regla de
+     * estado del resumen (un perfil activo no puede quedarse sin él) corre solo si la forma pasó. El perfil se
+     * carga con su fila bloqueada, de modo que una finalización simultánea no deje un perfil activo sin resumen.
+     * Un resumen en blanco lo borra. Si algo se rechaza no se guarda nada de la petición.</p>
+     *
+     * @param cmd campos a cambiar; {@code null} significa «no cambiar»
+     * @return el perfil ya guardado
+     * @throws co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException con un elemento por campo rechazado
+     */
     @Transactional
     public ProfessionalProfile updateProfileInfo(UpdateProfileInfoCommand cmd) {
-        var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
-        if (cmd.name() != null) p.updateName(new ProfileName(cmd.name()));
-        // Un resumen en blanco lo borra (CA-2.3.4).
-        if (cmd.summary() != null) p.updateSummary(cmd.summary().isBlank() ? null : new ProfessionalSummary(cmd.summary()));
-        if (cmd.preferredModality() != null) p.updatePreferredModality(
-                FieldValues.option(WorkModality.class, cmd.preferredModality(), PREFERRED_MODALITY_INVALID_VALUE,
-                        "preferredModality"));
-        if (cmd.provenance() != null) p.updateProvenance(provenance(cmd.provenance()));
-        repository.save(p); return p;
+        var profile = loadForUserForUpdate(cmd.profileId(), cmd.uid());
+        var errors = new InvalidFieldsException.Collector();
+        var name = cmd.name() == null ? null : collect(errors, () -> ProfileName.of(cmd.name()));
+        var summary = readSummary(cmd.summary(), errors);
+        var modality = cmd.preferredModality() == null ? null : collect(errors, () -> FieldValues.option(
+                WorkModality.class, cmd.preferredModality(), PREFERRED_MODALITY_INVALID_VALUE, "preferredModality"));
+        errors.throwIfAny();
+        if (name != null) profile.updateName(name);
+        if (cmd.summary() != null) profile.updateSummary(summary);
+        if (modality != null) profile.updatePreferredModality(modality);
+        repository.save(profile);
+        return profile;
+    }
+
+    /**
+     * Lee el resumen recibido.
+     *
+     * @param raw    resumen recibido; {@code null} si no llegó
+     * @param errors acumulador de los errores de campo
+     * @return {@code null} si no llegó o llegó en blanco (quien llama distingue los dos casos con el comando), o el
+     *         resumen validado; si es inválido, anota el error y devuelve {@code null}
+     */
+    private static ProfessionalSummary readSummary(String raw, InvalidFieldsException.Collector errors) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        return collect(errors, () -> ProfessionalSummary.of(raw));
+    }
+
+    /** Ejecuta una fábrica del dominio y, si rechaza el valor, pasa sus errores al acumulador en lugar de cortar. */
+    private static <T> T collect(InvalidFieldsException.Collector errors, Supplier<T> factory) {
+        try {
+            return factory.get();
+        } catch (InvalidFieldsException rejection) {
+            rejection.getErrors().forEach(errors::add);
+            return null;
+        }
     }
 
     @Transactional

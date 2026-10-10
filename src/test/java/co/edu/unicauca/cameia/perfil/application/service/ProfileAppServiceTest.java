@@ -98,7 +98,7 @@ class ProfileAppServiceTest {
     void updateProfileInfo_appliesNameAndSummary() {
         var profile = freshProfile();
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
-        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, "Ana Sofía", "Dev backend", null, null));
+        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, "Ana Sofía", "Dev backend", null));
         assertThat(profile.getName().value()).isEqualTo("Ana Sofía");
         assertThat(profile.getSummary().value()).isEqualTo("Dev backend");
         verify(repository).save(profile);
@@ -108,7 +108,7 @@ class ProfileAppServiceTest {
     void updateProfileInfo_throwsNotFoundWhenProfileMissing() {
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.updateProfileInfo(
-                new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, null, null, null)))
+                new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, null, null)))
                 .isInstanceOf(ProfileNotFoundException.class);
     }
 
@@ -117,7 +117,7 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         profile.updateName(new ProfileName("Nombre original"));
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
-        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, "nuevo resumen", null, null));
+        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, "nuevo resumen", null));
         assertThat(profile.getName().value()).isEqualTo("Nombre original");
         assertThat(profile.getSummary().value()).isEqualTo("nuevo resumen");
     }
@@ -277,22 +277,109 @@ class ProfileAppServiceTest {
         profile.updateSummary(new ProfessionalSummary("Resumen anterior"));
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
 
-        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, "   ", null, null));
+        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, "   ", null));
 
         assertThat(profile.getSummary()).isNull();
         verify(repository).save(profile);
     }
 
     @Test
-    @DisplayName("Una modalidad y una procedencia de la lista se guardan en el perfil")
-    void updateProfileInfo_shouldApplyModalityAndProvenance_whenBothAreOptions() {
+    @DisplayName("Una modalidad de la lista se guarda en el perfil y la procedencia del perfil no cambia")
+    void updateProfileInfo_shouldApplyModalityAndKeepProvenance_whenModalityIsAnOption() {
         var profile = freshProfile();
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.updateProfileInfo(new UpdateProfileInfoCommand(
-                UUID.randomUUID(), SVC_UID, null, null, "REMOTE", "AI_EDITED"));
+                UUID.randomUUID(), SVC_UID, null, null, "REMOTE"));
         assertThat(profile.getPreferredModality()).isEqualTo(WorkModality.REMOTE);
-        assertThat(profile.getProvenance()).isEqualTo(DataProvenance.AI_EDITED);
+        assertThat(profile.getProvenance()).isEqualTo(DataProvenance.MANUAL);
         verify(repository).save(profile);
+    }
+
+    @Test
+    @DisplayName("El comando no lleva procedencia: un perfil MANUAL sigue MANUAL tras editar la información general")
+    void updateProfileInfo_shouldIgnoreProvenance_whenCommandHasNone() {
+        var profile = freshProfile();
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, "Ana", "Resumen", "HYBRID"));
+
+        assertThat(profile.getProvenance()).isEqualTo(DataProvenance.MANUAL);
+        assertThat(UpdateProfileInfoCommand.class.getRecordComponents())
+                .extracting(java.lang.reflect.RecordComponent::getName).doesNotContain("provenance");
+    }
+
+    @Test
+    @DisplayName("Un nombre vacío, un resumen demasiado largo y una modalidad inválida se informan a la vez y no guardan nada")
+    void updateProfileInfo_shouldReportAllFields_whenSeveralAreInvalid() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
+
+        assertThatThrownBy(() -> service.updateProfileInfo(new UpdateProfileInfoCommand(
+                UUID.randomUUID(), SVC_UID, "", "a".repeat(2001), "PRESENCIAL")))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactlyInAnyOrder(
+                                tuple("name", ErrorCode.PROFILE_NAME_REQUIRED),
+                                tuple("summary", ErrorCode.SUMMARY_TOO_LONG),
+                                tuple("preferredModality", ErrorCode.PREFERRED_MODALITY_INVALID_VALUE)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Un carácter de control en el nombre o el resumen se rechaza con su código y no guarda nada")
+    void updateProfileInfo_shouldRejectControlCharacters_whenNameAndSummaryHaveThem() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
+
+        assertThatThrownBy(() -> service.updateProfileInfo(new UpdateProfileInfoCommand(
+                UUID.randomUUID(), SVC_UID, "Analista\0", "Hola\0", null)))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::code)
+                        .containsExactlyInAnyOrder(ErrorCode.PROFILE_NAME_INVALID_CHARACTERS,
+                                ErrorCode.SUMMARY_INVALID_CHARACTERS));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Vaciar el resumen de un perfil activo se rechaza, no guarda nada y conserva el resumen y el estado")
+    void updateProfileInfo_shouldNotSave_whenSummaryClearIsRejected() {
+        var profile = completeProfile();
+        profile.complete();
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        assertThatThrownBy(() -> service.updateProfileInfo(new UpdateProfileInfoCommand(
+                UUID.randomUUID(), COMPLETE_UID, null, "", null)))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("summary", ErrorCode.SUMMARY_NOT_ALLOWED)));
+
+        assertThat(profile.getSummary()).isNotNull();
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Renombrar un perfil activo lo guarda y lo deja activo")
+    void updateProfileInfo_shouldRenameAndKeepActive_whenProfileIsCompleted() {
+        var profile = completeProfile();
+        profile.complete();
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        service.updateProfileInfo(new UpdateProfileInfoCommand(
+                UUID.randomUUID(), COMPLETE_UID, "  Analista de datos senior ", null, null));
+
+        assertThat(profile.getName().value()).isEqualTo("Analista de datos senior");
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
+        verify(repository).save(profile);
+    }
+
+    @Test
+    @DisplayName("La edición bloquea la fila del perfil y no usa la lectura sin bloqueo")
+    void updateProfileInfo_shouldLoadForUpdate_whenCalled() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
+
+        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, "Ana", null, null));
+
+        verify(repository).findByIdForUpdate(any());
+        verify(repository, never()).findById(any());
     }
 
     @Test
@@ -330,7 +417,7 @@ class ProfileAppServiceTest {
     void updateProfileInfo_shouldThrowModalityInvalid_whenModalityIsUnknown() {
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.updateProfileInfo(new UpdateProfileInfoCommand(
-                UUID.randomUUID(), SVC_UID, null, null, "PRESENCIAL", null)))
+                UUID.randomUUID(), SVC_UID, null, null, "PRESENCIAL")))
                 .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
                         .extracting(FieldError::field, FieldError::code)
                         .containsExactly(tuple("preferredModality", ErrorCode.PREFERRED_MODALITY_INVALID_VALUE)));
@@ -447,7 +534,7 @@ class ProfileAppServiceTest {
     static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> writeUseCases() {
         var id = UUID.randomUUID();
         return java.util.stream.Stream.of(
-                use("updateProfileInfo", s -> s.updateProfileInfo(new UpdateProfileInfoCommand(id, SVC_UID, null, null, null, null))),
+                use("updateProfileInfo", s -> s.updateProfileInfo(new UpdateProfileInfoCommand(id, SVC_UID, null, null, null))),
                 use("addWorkExperience", s -> s.addWorkExperience(new AddWorkExperienceCommand(
                         id, SVC_UID, "ACME", "Dev", null, "2022-01", null, "CURRENT"))),
                 use("removeWorkExperience", s -> s.removeWorkExperience(id, SVC_UID, UUID.randomUUID())),
