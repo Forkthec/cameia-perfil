@@ -56,6 +56,22 @@ class TargetRolesEndToEndIT {
     }
 
     @Test
+    @DisplayName("Un rol objetivo ya guardado sigue en el perfil cuando su rol del catálogo se desactiva, y se puede quitar")
+    void profile_shouldKeepRole_whenCatalogRoleBecomesInactive() throws Exception {
+        var profileId = createProfile("uid-e2e-keep");
+        var roleId = json(addRole("uid-e2e-keep", profileId, INACTIVE_ROLE)).get("targetRoles").get(0).get("id").asString();
+        jdbc.update("UPDATE rol_profesional SET estado = 'INACTIVE' WHERE id = ?::uuid", INACTIVE_ROLE);
+
+        var profile = get(profileId, "uid-e2e-keep");
+
+        assertThat(profile.statusCode()).isEqualTo(200);
+        assertThat(json(profile).get("targetRoles")).hasSize(1);
+        assertThat(json(profile).get("targetRoles").get(0).get("roleTitle").asString()).isNotBlank();
+        var removed = send("DELETE", "/api/v1/profiles/" + profileId + "/target-roles/" + roleId, "uid-e2e-keep", null);
+        assertThat(removed.statusCode()).isEqualTo(204);
+    }
+
+    @Test
     @DisplayName("CA-2.11.1: sustituir un rol conserva el Rol Objetivo, su id y su procedencia")
     void replace_shouldKeepTargetRole_whenCatalogRoleChanges() throws Exception {
         var profileId = createProfile("uid-e2e-1");
