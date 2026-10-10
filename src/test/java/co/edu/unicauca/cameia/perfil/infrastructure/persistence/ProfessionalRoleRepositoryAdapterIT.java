@@ -78,6 +78,20 @@ class ProfessionalRoleRepositoryAdapterIT {
         assertThat(all).extracting(ProfessionalRole::categoria).isSorted();
     }
 
+    @org.junit.jupiter.params.ParameterizedTest(name = "idioma {0}")
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"es", "en"})
+    @DisplayName("El catálogo no ofrece un rol inactivo y ofrece todos los activos")
+    void findAllByLang_shouldExcludeInactive_whenCatalogHasInactiveRole(String lang) {
+        var inactive = UUID.fromString("a0000007-0000-0000-0000-000000000006");
+        jdbc.update("UPDATE rol_profesional SET estado = 'INACTIVE' WHERE id = ?", inactive);
+        var active = jdbc.queryForObject("SELECT count(*) FROM rol_profesional WHERE estado = 'ACTIVE'", Integer.class);
+
+        var all = roles.findAllByLang(lang);
+
+        assertThat(all).extracting(ProfessionalRole::id).doesNotContain(inactive);
+        assertThat(all).hasSize(active).allMatch(ProfessionalRole::active);
+    }
+
     @Test
     @DisplayName("En inglés el catálogo sale con los nombres en inglés")
     void findAllByLang_shouldUseEnglish_whenLangIsEn() {

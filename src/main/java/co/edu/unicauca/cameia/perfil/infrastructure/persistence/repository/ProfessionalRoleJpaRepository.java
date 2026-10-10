@@ -9,9 +9,11 @@ import java.util.UUID;
 
 interface ProfessionalRoleJpaRepository extends JpaRepository<ProfessionalRoleEntity, UUID> {
 
-    @Query("SELECT r FROM ProfessionalRoleEntity r ORDER BY r.categoria ASC, r.nombre ASC")
+    /** Roles que el catálogo ofrece hoy, en español, por categoría y nombre. Los inactivos no se ofrecen. */
+    @Query("SELECT r FROM ProfessionalRoleEntity r WHERE r.estado = 'ACTIVE' ORDER BY r.categoria ASC, r.nombre ASC")
     List<ProfessionalRoleEntity> findAllOrderedEs();
 
-    @Query("SELECT r FROM ProfessionalRoleEntity r ORDER BY r.categoriaEn ASC, r.nombreEn ASC")
+    /** Roles que el catálogo ofrece hoy, en inglés, por categoría y nombre. Los inactivos no se ofrecen. */
+    @Query("SELECT r FROM ProfessionalRoleEntity r WHERE r.estado = 'ACTIVE' ORDER BY r.categoriaEn ASC, r.nombreEn ASC")
     List<ProfessionalRoleEntity> findAllOrderedEn();
 }

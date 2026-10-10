@@ -16,12 +16,12 @@
 
 # PR único (`CM-72-catalogo-activos-y-orden-roles`, sobre la punta de CM-71)
 
-## [ ] T-72.0 · Copiar la spec — ≤ 5 min
+## [x] T-72.0 · Copiar la spec — ≤ 5 min
 
 Copiar `specs/CM-72-RolesObjetivoEnElPerfil/` desde `C:\Users\paanm\Documents\cameia\cameia-worktrees\perfil-specs-v6`. Commit:
 `CM-72 | docs(spec): spec, plan y tarjetas del catálogo de roles activos y el orden de los roles objetivo`.
 
-## [ ] T-72.1 · El catálogo ofrece solo roles activos — ≤ 20 min, ≈ 80 líneas
+## [x] T-72.1 · El catálogo ofrece solo roles activos — ≤ 20 min, ≈ 80 líneas
 
 - **Prueba que falla primero** en `ProfessionalRoleRepositoryAdapterIT`: `findAllByLang_shouldExcludeInactive_whenCatalogHasInactiveRole`
   (parametrizada con `"es"` y `"en"`): `UPDATE rol_profesional SET estado = 'INACTIVE' WHERE id = 'a0000007-0000-0000-0000-000000000006'` (restaurar en
@@ -41,6 +41,7 @@ Copiar `specs/CM-72-RolesObjetivoEnElPerfil/` desde `C:\Users\paanm\Documents\ca
 - **Modificar** `ProfessionalRoleController`: `@Operation(summary = "Listar catálogo de roles profesionales TI", description = "Devuelve solo los roles activos, que son los que se pueden elegir como rol objetivo. Sin coincidencias, la lista vacía.")`.
 - **Comandos:** `./mvnw.cmd -B "-Dit.test=ProfessionalRoleRepositoryAdapterIT" verify`; `./mvnw.cmd -q -B "-Dtest=ProfessionalRoleControllerTest" test`.
 - **Commit:** `CM-72 | feat(perfil): el catálogo de roles ofrece solo los roles activos`.
+- **Resultado (10-oct-2026):** rojo antes del cambio: `ProfessionalRoleRepositoryAdapterIT` 7 pruebas, 2 fallos (`findAllByLang_shouldExcludeInactive_whenCatalogHasInactiveRole[1]` y `[2]`, línea 91, el rol inactivo seguía en la lista). Verde después: `ProfessionalRoleRepositoryAdapterIT` 7/7 y `ProfessionalRoleControllerTest` 7/7, BUILD SUCCESS.
 
 ## [ ] T-72.2 · Los Roles Objetivo conservan su orden — ≤ 25 min, ≈ 120 líneas
 
