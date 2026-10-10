@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
@@ -31,10 +32,13 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 /**
@@ -84,6 +88,21 @@ class ProfessionalProfileRepositoryAdapterIT {
         assertThat(loaded.getWorkExperiences()).isEmpty();
         assertThat(loaded.getEducations()).isEmpty();
         assertThat(loaded.getProfileSkills()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Dos Roles Objetivo con el mismo rol del catálogo se traducen a la excepción de negocio de duplicado")
+    void save_shouldTranslateUniqueViolation_whenRoleRepeats() {
+        var targetRoles = List.of(
+                new TargetRole(UUID.randomUUID(), CATALOG_ROLE_ID, "Desarrollador", DataProvenance.MANUAL),
+                new TargetRole(UUID.randomUUID(), CATALOG_ROLE_ID, "Desarrollador", DataProvenance.MANUAL));
+        var profile = ProfessionalProfile.reconstitute(
+                ProfileId.generate(), new FirebaseUid("firebase-it-dup-role"), null, null, null, null,
+                DataProvenance.MANUAL, ProfileStatus.IN_PROGRESS, ReviewStatus.PENDING_REVIEW,
+                Instant.parse("2026-10-10T00:00:00Z"), Instant.parse("2026-10-10T00:00:00Z"),
+                targetRoles, List.of(), List.of(), List.of());
+
+        assertThatThrownBy(() -> repository.save(profile)).isInstanceOf(DuplicateTargetRoleException.class);
     }
 
     @Test

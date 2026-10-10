@@ -3,6 +3,8 @@ package co.edu.unicauca.cameia.perfil.infrastructure.persistence.repository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import org.hibernate.exception.ConstraintViolationException;
+
 import java.sql.SQLException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,5 +42,25 @@ class ProfessionalProfileRepositoryAdapterTest {
         first.initCause(second);
 
         assertThat(ProfessionalProfileRepositoryAdapter.isLockNotAvailable(first)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Reconoce la restricción de unicidad aunque venga envuelta y con otras mayúsculas")
+    void violates_shouldBeTrue_whenConstraintNameMatchesInTheCause() {
+        var hibernate = new ConstraintViolationException("x", new SQLException("x", "23505"),
+                ProfessionalProfileRepositoryAdapter.UNIQUE_TARGET_ROLE.toUpperCase());
+
+        assertThat(ProfessionalProfileRepositoryAdapter.violates(
+                new RuntimeException("envoltorio", hibernate), ProfessionalProfileRepositoryAdapter.UNIQUE_TARGET_ROLE)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Otra restricción o una cadena sin la excepción de Hibernate no se toma por la de unicidad")
+    void violates_shouldBeFalse_whenConstraintIsAnotherOrMissing() {
+        var other = new ConstraintViolationException("x", new SQLException("x", "23503"), "fk_otra");
+
+        assertThat(ProfessionalProfileRepositoryAdapter.violates(other, ProfessionalProfileRepositoryAdapter.UNIQUE_TARGET_ROLE)).isFalse();
+        assertThat(ProfessionalProfileRepositoryAdapter.violates(
+                new RuntimeException("sin causa"), ProfessionalProfileRepositoryAdapter.UNIQUE_TARGET_ROLE)).isFalse();
     }
 }

@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence.repository;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileUpdateInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
@@ -10,6 +11,8 @@ import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.Professio
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
@@ -36,6 +39,9 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
     /** Estado SQL de PostgreSQL cuando se agota {@code lock_timeout}. */
     private static final String LOCK_NOT_AVAILABLE = "55P03";
 
+    /** Restricción que impide repetir un rol del catálogo dentro de un perfil. */
+    static final String UNIQUE_TARGET_ROLE = "uq_rol_objetivo_perfil_rol_profesional";
+
     /** Máximo de causas que se recorren, para no girar en una cadena con ciclo. */
     private static final int MAX_CAUSES = 32;
 
@@ -51,7 +57,12 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
     @Override
     @Transactional
     public void save(ProfessionalProfile profile) {
-        jpa.save(ProfessionalProfileMapping.toEntity(profile));
+        try {
+            // Se escribe ya para que una violación de restricción se traduzca aquí y no al confirmar, fuera del adaptador.
+            jpa.saveAndFlush(ProfessionalProfileMapping.toEntity(profile));
+        } catch (DataIntegrityViolationException e) {
+            throw violates(e, UNIQUE_TARGET_ROLE) ? new DuplicateTargetRoleException() : e;
+        }
     }
 
     @Override
@@ -109,6 +120,23 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
         }
         // El límite era para esperar el bloqueo: las demás sentencias de la transacción no lo heredan.
         em.createNativeQuery("set local lock_timeout to default").executeUpdate();
+    }
+
+    /**
+     * Indica si alguna causa del fallo es la violación de la restricción indicada.
+     *
+     * @param failure    excepción recibida, con sus causas
+     * @param constraint nombre de la restricción, sin distinguir mayúsculas
+     * @return {@code true} si Hibernate informa esa restricción
+     */
+    static boolean violates(Throwable failure, String constraint) {
+        for (var seen = 0; failure != null && seen < MAX_CAUSES; failure = failure.getCause(), seen++) {
+            if (failure instanceof ConstraintViolationException violation
+                    && constraint.equalsIgnoreCase(violation.getConstraintName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Indica si la causa del fallo es el estado 55P03 de PostgreSQL: se agotó la espera por un bloqueo. */

@@ -139,7 +139,7 @@
 - **Commit:** `CM-70 | feat(perfil): el rol del catálogo conoce su estado y rechaza su elección si está inactivo`.
 - **Resultado (10-oct):** `ProfessionalRoleTest`, `ProfileAppServiceTest`, `ProfessionalRoleControllerTest`, `ErrorCatalogTest`, `ErrorCodeDocumentationTest` en verde; `ProfessionalRoleRepositoryAdapterIT`: Tests run: 5, Failures: 0 (BUILD SUCCESS). No se capturó la salida roja previa: el código se escribió antes que las pruebas (desvío de proceso anotado en la cola). El código `PROFESSIONAL_ROLE_DISABLED` se documentó aquí (fila en `docs/errores.md` y `ErrorCatalogTest`) y no en T-70.5, porque `ErrorCodeDocumentationTest` y `ErrorCatalogTest` fallan en la capa sin eso.
 
-## [ ] T-70.3 · La unicidad del Rol Objetivo responde 409 — ≤ 25 min, ≈ 80 líneas
+## [x] T-70.3 · La unicidad del Rol Objetivo responde 409 — ≤ 25 min, ≈ 80 líneas
 
 - **Modificar** `ProfessionalProfileRepositoryAdapter.save`:
   ```java
@@ -170,6 +170,7 @@
   contiene la excepción de Hibernate con otro nombre → `false`).
 - **Comandos:** `./mvnw.cmd -B "-Dit.test=ProfessionalProfileRepositoryAdapterIT,ProfileWriteLockIT,ProfileCreationConcurrencyIT" verify`.
 - **Commit:** `CM-70 | fix(perfil): la violación de unicidad del rol objetivo responde 409 y no 500`.
+- **Resultado (10-oct):** rojo: `ProfessionalProfileRepositoryAdapterTest` Tests run: 6, Errors: 2 (`violates` y `UNIQUE_TARGET_ROLE` no existían). Verde: `ProfessionalProfileRepositoryAdapterTest` 6/6; ITs `ProfessionalProfileRepositoryAdapterIT`, `ProfileWriteLockIT`, `ProfileCreationConcurrencyIT`: Tests run: 22, Failures: 0 (BUILD SUCCESS). La prueba del duplicado no comprueba «sin filas»: la clase IT es `@Transactional` con rollback y la transacción queda abortada; la atomicidad queda cubierta por `TargetRoleConcurrencyIT` (T-70.8).
 
 ## [ ] T-70.4 · Cierre del PR 70-1 — ≤ 20 min
 
