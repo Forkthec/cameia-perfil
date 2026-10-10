@@ -6922,6 +6922,267 @@
       ]
     },
     {
+      "name": "HU-2.5 — Finalización",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.variables.set('hu25f_a2000', 'a'.repeat(2000));"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "POST profiles/{id}/completion",
+          "item": [
+            {
+              "name": "OK POST /profiles — crea el perfil del Usuario (guarda hu25f_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu25f_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu25f_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu25f_profile', pm.response.json().id);", "H.replicated();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "OK POST /profiles — crea el perfil de otro Usuario (guarda hu25f_other_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu25f_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu25f_other_profile', pm.response.json().id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "422 perfil recién creado: los cinco requisitos en orden",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"PROFILE_INCOMPLETE\", \"Todavía no cumples estos requisitos:\");", "const b = pm.response.json();", "pm.test('missingRequirements en orden', () => pm.expect(b.missingRequirements).to.eql([\"NAME\", \"SUMMARY\", \"EDUCATION\", \"SKILLS\", \"TARGET_ROLES\"]));", "pm.test('errors[] en el mismo orden con campo, code y message', () => pm.expect(b.errors).to.eql([{\"field\": \"name\", \"code\": \"COMPLETION_NAME_REQUIRED\", \"message\": \"Nombre del perfil\"}, {\"field\": \"summary\", \"code\": \"COMPLETION_SUMMARY_REQUIRED\", \"message\": \"Resumen profesional\"}, {\"field\": \"education\", \"code\": \"COMPLETION_EDUCATION_REQUIRED\", \"message\": \"Formación académica\"}, {\"field\": \"skills\", \"code\": \"COMPLETION_SKILLS_REQUIRED\", \"message\": \"Habilidades\"}, {\"field\": \"targetRoles\", \"code\": \"COMPLETION_TARGET_ROLES_REQUIRED\", \"message\": \"Roles objetivo\"}]));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_profile}}/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_profile}}", "completion"]}
+              }
+            },
+            {
+              "name": "OK PATCH /profiles/{id} — solo el nombre",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"Perfil de prueba HU-2.5\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_profile}}"]}
+              }
+            },
+            {
+              "name": "OK POST /educations — agrega una formación",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "OK POST /target-roles — agrega un rol objetivo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"professionalRoleId\": \"a0000001-0000-0000-0000-000000000002\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_profile}}/target-roles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_profile}}", "target-roles"]}
+              }
+            },
+            {
+              "name": "422 faltan resumen y habilidades (CA-2.5.4)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"PROFILE_INCOMPLETE\", \"Todavía no cumples estos requisitos:\");", "const b = pm.response.json();", "pm.test('missingRequirements en orden', () => pm.expect(b.missingRequirements).to.eql([\"SUMMARY\", \"SKILLS\"]));", "pm.test('errors[] en el mismo orden con campo, code y message', () => pm.expect(b.errors).to.eql([{\"field\": \"summary\", \"code\": \"COMPLETION_SUMMARY_REQUIRED\", \"message\": \"Resumen profesional\"}, {\"field\": \"skills\", \"code\": \"COMPLETION_SKILLS_REQUIRED\", \"message\": \"Habilidades\"}]));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_profile}}/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_profile}}", "completion"]}
+              }
+            },
+            {
+              "name": "401 sin X-User-Id",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(401, \"IDENTITY_REQUIRED\", \"Tu sesión expiró. Inicia sesión de nuevo.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_profile}}/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_profile}}", "completion"]}
+              }
+            },
+            {
+              "name": "403 perfil de otro Usuario",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(403, \"PROFILE_NOT_ALLOWED\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_other_profile}}/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_other_profile}}", "completion"]}
+              }
+            },
+            {
+              "name": "422 el cuerpo mal formado se ignora: decide el perfil",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"PROFILE_INCOMPLETE\", \"Todavía no cumples estos requisitos:\");", "const b = pm.response.json();", "pm.test('missingRequirements en orden', () => pm.expect(b.missingRequirements).to.eql([\"NAME\", \"SUMMARY\", \"EDUCATION\", \"SKILLS\", \"TARGET_ROLES\"]));", "pm.test('errors[] en el mismo orden con campo, code y message', () => pm.expect(b.errors).to.eql([{\"field\": \"name\", \"code\": \"COMPLETION_NAME_REQUIRED\", \"message\": \"Nombre del perfil\"}, {\"field\": \"summary\", \"code\": \"COMPLETION_SUMMARY_REQUIRED\", \"message\": \"Resumen profesional\"}, {\"field\": \"education\", \"code\": \"COMPLETION_EDUCATION_REQUIRED\", \"message\": \"Formación académica\"}, {\"field\": \"skills\", \"code\": \"COMPLETION_SKILLS_REQUIRED\", \"message\": \"Habilidades\"}, {\"field\": \"targetRoles\", \"code\": \"COMPLETION_TARGET_ROLES_REQUIRED\", \"message\": \"Roles objetivo\"}]));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_other_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"x\":", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_other_profile}}/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_other_profile}}", "completion"]}
+              }
+            },
+            {
+              "name": "OK GET perfil ajeno sigue en Borrador",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_other_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_other_profile}}"]}
+              }
+            },
+            {
+              "name": "404 perfil inexistente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"PROFILE_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/00000000-0000-0000-0000-000000000000/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "00000000-0000-0000-0000-000000000000", "completion"]}
+              }
+            },
+            {
+              "name": "422 id del perfil no es un UUID",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"PROFILE_ID_INVALID_FORMAT\", \"El identificador del perfil no es válido.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/no-es-uuid/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "no-es-uuid", "completion"]}
+              }
+            },
+            {
+              "name": "405 GET sobre la finalización",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 405', () => pm.response.to.have.status(405));", "pm.test('Allow: POST', () => pm.expect(pm.response.headers.get('Allow')).to.include('POST'));", "pm.test('code METHOD_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('METHOD_NOT_ALLOWED'));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_profile}}/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_profile}}", "completion"]}
+              }
+            },
+            {
+              "name": "OK PATCH /profiles/{id} — resumen de 2000 caracteres",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"{{hu25f_a2000}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_profile}}"]}
+              }
+            },
+            {
+              "name": "OK POST /skills — agrega una habilidad (guarda hu25f_skill)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu25f_skill', pm.response.json().profileSkills[0].id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"ADVANCED\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "200 perfil activo con resumen de 2000 y sin experiencia (CA-2.5.1)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk(\"application/json\");", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('status COMPLETED', () => pm.expect(b.status).to.eql('COMPLETED'));", "pm.test('resumen de 2000', () => pm.expect(Array.from(b.summary).length).to.eql(2000));", "pm.test('sin experiencia laboral', () => pm.expect(b.workExperiences).to.eql([]));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_profile}}/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_profile}}", "completion"]}
+              }
+            },
+            {
+              "name": "409 finalizar otra vez",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"PROFILE_ALREADY_COMPLETED\", \"Este perfil ya está activo.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_profile}}/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_profile}}", "completion"]}
+              }
+            },
+            {
+              "name": "409 eliminar la única habilidad de un perfil Activo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"SKILL_NOT_ALLOWED\", \"No puedes quedarte sin habilidades con el perfil activo. Agrega otra antes de eliminar esta.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu25f_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25f_profile}}/skills/{{hu25f_skill}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25f_profile}}", "skills", "{{hu25f_skill}}"]}
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "DES-02 — HU-2.5 finalización",
+      "item": [
+        {
+          "name": "OK POST /profiles — crea el perfil (guarda des25f_profile)",
+          "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('des25f_uid', 'uid-des-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('des25f_uid'), '1990-01-01', 400);"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('des25f_profile', pm.response.json().id);", "H.replicated();"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "X-User-Id", "value": "{{des25f_uid}}"}],
+            "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+          }
+        },
+        {
+          "name": "OK PATCH /profiles/{id} — nombre y resumen",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));"]}}],
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "X-User-Id", "value": "{{des25f_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"name\": \"Perfil de medición\", \"summary\": \"Analista con tres años en banca.\"}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{base_url}}/api/v1/profiles/{{des25f_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{des25f_profile}}"]}
+          }
+        },
+        {
+          "name": "OK POST /educations — agrega una formación",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "X-User-Id", "value": "{{des25f_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{base_url}}/api/v1/profiles/{{des25f_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{des25f_profile}}", "educations"]}
+          }
+        },
+        {
+          "name": "OK POST /skills — agrega una habilidad",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "X-User-Id", "value": "{{des25f_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"skillName\": \"Python\", \"level\": \"INTERMEDIATE\"}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{base_url}}/api/v1/profiles/{{des25f_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{des25f_profile}}", "skills"]}
+          }
+        },
+        {
+          "name": "OK POST /target-roles — agrega un rol objetivo",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "X-User-Id", "value": "{{des25f_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"professionalRoleId\": \"a0000001-0000-0000-0000-000000000002\"}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{base_url}}/api/v1/profiles/{{des25f_profile}}/target-roles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{des25f_profile}}", "target-roles"]}
+          }
+        },
+        {
+          "name": "OK POST /completion — finaliza el perfil",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "X-User-Id", "value": "{{des25f_uid}}"}],
+            "url": {"raw": "{{base_url}}/api/v1/profiles/{{des25f_profile}}/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{des25f_profile}}", "completion"]}
+          }
+        }
+      ]
+    },
+    {
       "name": "HU-2.4 — Experiencia laboral y formación académica",
       "event": [
         {
