@@ -38,9 +38,9 @@ class ProfessionalRoleRepositoryAdapter implements ProfessionalRoleRepository {
     @Transactional(readOnly = true)
     public List<ProfessionalRole> findAllByLang(String lang) {
         if ("en".equals(lang)) {
-            return jpa.findAllOrderedEn().stream().map(e -> toDomain(e, "en")).toList();
+            return jpa.findAllOrderedEn(ACTIVE).stream().map(e -> toDomain(e, "en")).toList();
         }
-        return jpa.findAllOrderedEs().stream().map(e -> toDomain(e, "es")).toList();
+        return jpa.findAllOrderedEs(ACTIVE).stream().map(e -> toDomain(e, "es")).toList();
     }
 
     private ProfessionalRole toDomain(ProfessionalRoleEntity e, String lang) {

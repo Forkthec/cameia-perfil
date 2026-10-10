@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 /**
  * Agregado raíz del contexto de Perfil Profesional (glosario §6.2).
@@ -138,8 +139,10 @@ public final class ProfessionalProfile {
      */
     public void updateTargetRole(UUID roleId, UUID professionalRoleId, String roleTitle) {
         Objects.requireNonNull(roleId);
-        TargetRole existing = targetRoles.stream().filter(r -> r.getId().equals(roleId))
+        int index = IntStream.range(0, targetRoles.size())
+                .filter(i -> targetRoles.get(i).getId().equals(roleId))
                 .findFirst().orElseThrow(TargetRoleNotFoundException::new);
+        TargetRole existing = targetRoles.get(index);
         var replacement = new TargetRole(roleId,
                 professionalRoleId != null ? professionalRoleId : existing.getProfessionalRoleId(),
                 roleTitle != null ? roleTitle : existing.getRoleTitle(),
@@ -149,7 +152,7 @@ public final class ProfessionalProfile {
             throw new DuplicateTargetRoleException();
         }
         // Sustituir conserva el Rol Objetivo y su lugar en la lista: el backlog no permite reordenar.
-        targetRoles.set(targetRoles.indexOf(existing), replacement);
+        targetRoles.set(index, replacement);
         touch();
     }
 
