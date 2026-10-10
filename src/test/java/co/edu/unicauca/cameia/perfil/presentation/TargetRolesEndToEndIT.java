@@ -52,7 +52,7 @@ class TargetRolesEndToEndIT {
     @AfterEach
     void cleanUp() {
         jdbc.update("DELETE FROM perfil_profesional WHERE firebase_uid LIKE 'uid-e2e-%'");
-        jdbc.update("UPDATE rol_profesional SET estado = 'ACTIVE'");
+        jdbc.update("UPDATE rol_profesional SET estado = 'ACTIVE' WHERE id = ?::uuid", INACTIVE_ROLE);
     }
 
     @Test
@@ -150,10 +150,11 @@ class TargetRolesEndToEndIT {
 
         var response = addRole("uid-e2e-7", profileId, INACTIVE_ROLE);
 
-        assertThat(response.statusCode()).isEqualTo(422);
+        assertError(response, 422, "VALIDATION_FAILED", "Revisa los campos marcados.");
         var error = json(response).get("errors").get(0);
         assertThat(error.get("field").asString()).isEqualTo("professionalRoleId");
         assertThat(error.get("code").asString()).isEqualTo("PROFESSIONAL_ROLE_DISABLED");
+        assertThat(error.get("message").asString()).isEqualTo("No encontramos ese rol en el catálogo.");
         assertThat(json(get(profileId, "uid-e2e-7")).get("targetRoles")).isEmpty();
     }
 
@@ -167,8 +168,7 @@ class TargetRolesEndToEndIT {
         var response = send("PATCH", "/api/v1/profiles/" + profileId + "/target-roles/" + analystId, "uid-e2e-8",
                 "{\"professionalRoleId\":\"" + DATA_SCIENTIST_ROLE + "\"}");
 
-        assertThat(response.statusCode()).isEqualTo(409);
-        assertThat(json(response).get("code").asString()).isEqualTo("TARGET_ROLE_ALREADY_EXISTS");
+        assertError(response, 409, "TARGET_ROLE_ALREADY_EXISTS", "Ese rol objetivo ya está en tu perfil.");
         var roles = json(get(profileId, "uid-e2e-8")).get("targetRoles");
         assertThat(roles).hasSize(2);
         assertThat(roles.get(0).get("professionalRoleId").asString()).isEqualTo(DATA_ANALYST_ROLE);
@@ -217,12 +217,21 @@ class TargetRolesEndToEndIT {
     }
 
     @Test
-    @DisplayName("CA-2.11.12: el catálogo no contiene un texto que no es un rol")
-    void catalog_shouldNotContainFreeText_whenSearchedTextIsNotARole() throws Exception {
-        var response = send("GET", "/api/v1/profiles/professional-roles", null, null);
+    @DisplayName("CA-2.11.12: un texto que no es un rol del catálogo no se asocia como rol objetivo")
+    void catalog_shouldRejectFreeText_whenTextIsNotACatalogRole() throws Exception {
+        var profileId = createProfile("uid-e2e-12");
+        var base = "/api/v1/profiles/" + profileId + "/target-roles";
 
-        assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(json(response).valueStream().map(r -> r.get("nombre").asString())).doesNotContain("Astronauta");
+        var unknownRole = addRole("uid-e2e-12", profileId, "00000000-0000-0000-0000-000000000000");
+        var freeText = send("POST", base, "uid-e2e-12", "{\"professionalRoleId\":\"Astronauta\"}");
+
+        assertError(unknownRole, 404, "PROFESSIONAL_ROLE_NOT_FOUND", "No encontramos ese rol en el catálogo.");
+        assertThat(freeText.statusCode()).isEqualTo(422);
+        assertThat(json(freeText).get("code").asString()).isEqualTo("REQUEST_BODY_INVALID_FORMAT");
+        assertThat(json(get(profileId, "uid-e2e-12")).get("targetRoles")).isEmpty();
+        var catalog = send("GET", "/api/v1/profiles/professional-roles", null, null);
+        assertThat(catalog.statusCode()).isEqualTo(200);
+        assertThat(json(catalog).valueStream().map(r -> r.get("nombre").asString())).doesNotContain("Astronauta");
     }
 
     @Test
