@@ -374,6 +374,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   la excepción sale del servicio; `evento_procesado` y `fecha_nacimiento_usuario` quedan sin filas (el reintento podrá procesar el
   mensaje). Si `@MockitoSpyBean` no envuelve el adaptador package-private, usa `@MockitoBean` del puerto y repórtalo.
 
+**Resultado T-P1.5 (9-oct-2026):** rojo: `BirthDateReplicaRepositoryAdapterIT` 7 errores y `BirthDateReplicaAppServiceIT` 1 error (`NoSuchBeanDefinitionException` de `BirthDateReplica`). Verde: 7/7 y 1/1 (`./mvnw -B -q verify -Dit.test=BirthDateReplicaRepositoryAdapterIT,BirthDateReplicaAppServiceIT -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false`, EXIT=0). `@MockitoSpyBean` envuelve el adaptador package-private sin problema.
+
 ### T-P1.6 · Cierre de P1
 
 - `.\mvnw.cmd clean verify` con salida real; cobertura por clase (`BirthDateReplicaAppService`, `BirthDateReplicaRepositoryAdapter`,
