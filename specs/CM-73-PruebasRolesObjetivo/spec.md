@@ -59,7 +59,7 @@ Comando de extracción (Python, sin dependencias):
 | 2.11.9 | «CA-2.11.9 Último rol en Borrador» | perfil `IN_PROGRESS` con un rol; `DELETE` | 204; `GET`: sin roles, `IN_PROGRESS` |
 | 2.11.10 | «CA-2.11.10 Quinto rol» | cuatro roles y un quinto | 201; 5 roles |
 | 2.11.11 | «CA-2.11.11 Catálogo con solo activos» | rol inactivo preparado; `GET /professional-roles` | 200; sin `a0000007-…-06`; cuenta = activos |
-| 2.11.12 | «CA-2.11.12 Texto que no es un rol del catálogo» | `GET /professional-roles` | 200; ningún `nombre` igual a «Astronauta» (el filtrado lo hace la interfaz) |
+| 2.11.12 | «CA-2.11.12 Texto que no es un rol del catálogo» | `POST …/target-roles` con un id de rol inexistente y con el texto «Astronauta»; `GET /professional-roles` | 404 `PROFESSIONAL_ROLE_NOT_FOUND` «No encontramos ese rol en el catálogo.»; 422 `REQUEST_BODY_INVALID_FORMAT`; el perfil sigue sin roles; el catálogo responde 200 sin ningún `nombre` igual a «Astronauta» (el filtrado lo hace la interfaz) |
 | 2.11.13 | «CA-2.11.13 Perfil de otro Usuario» | perfil de `uid-e2e-a`; `POST`, `PATCH`, `DELETE` con `uid-e2e-b` | 403 `PROFILE_NOT_ALLOWED` «No encontramos lo que buscabas.» en las tres; el perfil de A sin cambios |
 
 Cada respuesta de error comprueba además `Content-Type` `application/problem+json` con `charset=UTF-8` y que el cuerpo no contenga `Exception`,
@@ -69,7 +69,8 @@ Cada respuesta de error comprueba además `Content-Type` `application/problem+js
 
 | Caso | Prueba |
 |---|---|
-| `TargetRole` con título `""`, `"   "`, de 256 caracteres; con 255 | `TargetRoleTest.constructor_shouldRejectTitle_whenBlankOrTooLong` (parametrizada) y `constructor_shouldAccept_whenTitleHas255Characters` |
+| `TargetRole` con título `""`, `"   "`, de 256 caracteres; con 255 | `TargetRoleTest.constructor_shouldRejectTitle_whenBlank` (parametrizada), `constructor_shouldRejectTitle_whenTooLong` y `constructor_shouldAccept_whenTitleHas255Characters`; todas afirman el mensaje |
+| `TargetRole` con 255 y 256 emojis (cada uno ocupa dos unidades UTF-16) | `TargetRoleTest.constructor_shouldCountCodePoints_whenTitleHasEmoji`: el largo se cuenta en puntos de código, igual que la columna `VARCHAR(255)` |
 | `TargetRole` con `professionalRoleId` nulo | `TargetRoleTest.constructor_shouldRequireCatalogRole_whenRoleIdIsNull` |
 | `updateTargetRole` con `professionalRoleId` o `roleTitle` nulos (conserva el valor anterior) | `ProfessionalProfileTest.updateTargetRole_shouldKeepPreviousValues_whenArgumentsAreNull` |
 | `listAllByLang("en")` delega en el puerto | `ProfessionalRoleAppServiceTest.listAllByLang_shouldDelegateLanguage_whenCalled` |
@@ -89,6 +90,8 @@ logs ni contrato.
 | MAN-01 | cobertura de líneas y ramas por clase | ≥ 90 % (estándar de Paula; la rúbrica pide 70 %) | T-73.1 y T-73.4 |
 | AC-0003 | SEG-02 | 100 % de accesos cruzados rechazados | CA-2.11.13 de punta a punta |
 | AC-0004 | FIA-01 | cada rechazo conserva el estado | las afirmaciones de «sin cambio» de la sección 4 |
+| AC-0001 | IA-01 | no aplica: las pruebas no producen ni consumen una salida de IA | — |
+| MAN-02 | adaptador externo | no aplica: sin adaptador de proveedor externo | — |
 
 ## 8. Decisiones
 

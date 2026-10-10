@@ -53,7 +53,7 @@ Para ver las líneas sin cubrir de una clase: `target/site/jacoco/<paquete>/<Cla
   `CM-73 | test(perfil): invariantes del rol objetivo y lectura del catálogo por idioma`.
 
 ## [x] T-73.4 · Una prueba de punta a punta por CA — ≤ 30 min, ≈ 300 líneas
-- **Resultado (10-oct-2026):** `TargetRolesEndToEndIT` 12/12 (`e2e-CM-73.log`). Correcciones propias durante la ejecución: el id del rol sale de `targetRoles[0].id` y `completeProfile` envía `provenance` y comprueba cada paso. Que pueden fallar: con el catálogo sin filtro de activos falla CA-2.11.11; con el máximo en 6 falla CA-2.11.5 (revertidos).
+- **Resultado (10-oct-2026):** `TargetRolesEndToEndIT` 12/12 (`e2e-CM-73.log`). Correcciones propias durante la ejecución: el id del rol sale de `targetRoles[0].id` y `completeProfile` envía `provenance` y comprueba cada paso. Que pueden fallar: con el catálogo sin filtro de activos falla CA-2.11.11; con el máximo en 6 falla CA-2.11.5 (revertidos). Mutaciones repetidas el 10-oct-2026 sobre `TargetRolesEndToEndIT` (13 pruebas), cada una revertida: sin la línea que lanza `LastTargetRoleException` falla `remove_shouldReturn409_whenLastRoleOfActiveProfile` (CA-2.11.3); con `MAX_TARGET_ROLES = 6` falla `add_shouldReturn409_whenSixthRole` (CA-2.11.5); sin la comprobación del dueño en `checkOwner` falla `writes_shouldReturn403_whenProfileBelongsToOtherUser` (CA-2.11.13).
 
 - **Crear** `presentation/TargetRolesEndToEndIT.java` con la forma de `ResponseCharsetIT` (`@SpringBootTest(webEnvironment = RANDOM_PORT)`,
   `@Testcontainers`, `HttpClient`, `@LocalServerPort`). Para leer JSON, el mapeador que ya usan las pruebas del repo
@@ -76,7 +76,7 @@ Para ver las líneas sin cubrir de una clase: `target/site/jacoco/<paquete>/<Cla
   | 2.11.9 | `remove_shouldReturn204_whenLastRoleOfDraft` | un rol en `IN_PROGRESS` → 204; `GET`: `targetRoles` vacío, `IN_PROGRESS` |
   | 2.11.10 | `add_shouldReturn201_whenFifthRole` | cuatro y un quinto → 201; 5 roles |
   | 2.11.11 | `catalog_shouldOfferOnlyActiveRoles_whenSomeAreInactive` | rol inactivo preparado; `GET /api/v1/profiles/professional-roles` → 200, sin ese id, tamaño = `SELECT count(*) FROM rol_profesional WHERE estado='ACTIVE'` |
-  | 2.11.12 | `catalog_shouldNotContainFreeText_whenSearchedTextIsNotARole` | `GET` → 200; ningún `nombre` es «Astronauta» |
+  | 2.11.12 | `catalog_shouldRejectFreeText_whenTextIsNotACatalogRole` | `POST` con un id inexistente → 404 `PROFESSIONAL_ROLE_NOT_FOUND`; con «Astronauta» → 422 `REQUEST_BODY_INVALID_FORMAT`; el perfil sin roles; `GET` del catálogo → 200 sin «Astronauta» |
   | 2.11.13 | `writes_shouldReturn403_whenProfileBelongsToOtherUser` | perfil de `uid-e2e-a` con un rol; `POST`, `PATCH` y `DELETE` con `uid-e2e-b` → 403 `PROFILE_NOT_ALLOWED` «No encontramos lo que buscabas.»; `GET` de A sin cambio |
 
   `@DisplayName` de cada una: el de la spec §4 (empieza por «CA-2.11.N»). Cada error comprueba `Content-Type` con `application/problem+json` y
