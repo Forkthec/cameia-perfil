@@ -7,8 +7,8 @@
 - **Backlog vigente:** `09102026_01_Backlog_v6.xlsx`, hoja `HE-02`, HU-2.11 (CA-2.11.1, 2.11.2, 2.11.4, 2.11.5, 2.11.7, 2.11.8, 2.11.10, 2.11.13) y
   RT-01, RT-02, RT-03, RT-05 y RT-06.
 - **Estado:** `LISTA PARA EJECUTAR` (sección 15). Dos PENDIENTES que no bloquean (sección 14).
-- **Atributos de calidad:** seguridad (SEG-01, SEG-02, SEG-04), fiabilidad (FIA-01, FIA-02), desempeño (DES-02, DES-04), interacción (AC-0006),
-  mantenibilidad (MAN-01). Detalle en la sección 11.
+- **Atributos de calidad:** adecuación funcional de lo asistido por IA (AC-0001: IA-01), seguridad (SEG-01, SEG-02, SEG-04), fiabilidad (FIA-01, FIA-02), desempeño (DES-02, DES-04), interacción (AC-0006),
+  mantenibilidad (MAN-01, MAN-02). Detalle en la sección 11.
 
 ## 1. Contexto y defectos comprobados
 
@@ -78,7 +78,9 @@ CA-2.11.3 y 2.11.9 son de CM-71; CA-2.11.11 y 2.11.12, de CM-72; la prueba de pu
 - **REQ-70-10.** Orden de las comprobaciones (la primera que falla decide): cuerpo ilegible o con tipo incorrecto (422 `REQUEST_BODY_INVALID_FORMAT`) →
   forma del cuerpo (422) → identidad (401) → perfil ocupado más de 2 s (409 `PROFILE_UPDATE_IN_PROGRESS`, de CM-274) → perfil inexistente (404) o ajeno
   (403), porque la existencia y el dueño se leen con la fila ya bloqueada (REQ-EF-17 de CM-274) → rol en el catálogo (404 `PROFESSIONAL_ROLE_NOT_FOUND`) → rol activo
-  (422) → máximo (409) → duplicado (409).
+  (422) → máximo (409) → duplicado (409). En el `PATCH`, el rol del catálogo se comprueba antes que el rol objetivo del perfil: un `roleId` que no
+  está en el perfil, con un rol del catálogo inexistente o inactivo, responde el 404 o el 422 del catálogo y solo después el 404 `TARGET_ROLE_NOT_FOUND`
+  (`ProfileAppServiceTest.updateTargetRole_shouldReportCatalogRole_whenRoleIdIsNotInProfile`).
 - **REQ-70-11 (RT-06-CA02).** Dos `POST` simultáneos con el mismo rol sobre el mismo perfil dejan una sola fila; uno responde 201 y el otro 409
   `TARGET_ROLE_ALREADY_EXISTS`. Seis `POST` simultáneos con roles distintos sobre un perfil con 0 roles dejan exactamente 5 filas.
 - **REQ-70-12 (RN-045).** Un Rol Objetivo que ya estaba en el perfil sigue en él y se muestra aunque su rol del catálogo pase a `INACTIVE`.
@@ -88,10 +90,11 @@ CA-2.11.3 y 2.11.9 son de CM-71; CA-2.11.11 y 2.11.12, de CM-72; la prueba de pu
 | Petición | Campo | Caso (valor literal) | Estado | `code` (arriba / en `errors[]`) | Mensaje | Prueba |
 |---|---|---|---|---|---|---|
 | `POST …/target-roles` | `professionalRoleId` | ausente, `null` | 422 | `VALIDATION_FAILED` / `PROFESSIONAL_ROLE_ID_REQUIRED` | «Selecciona una opción.» | `ProfileControllerTest.postTargetRoles_shouldReturnRoleIdRequired_whenBodyIsEmpty` |
-| ídem | ídem | `""`, `"no-es-uuid"`, `123`, `{}` | 422 | `REQUEST_BODY_INVALID_FORMAT` | «Revisa el formato de los datos enviados.» | `ProfileControllerTest.postTargetRoles_shouldReturnBodyInvalid_whenRoleIdIsNotUuid` |
+| ídem | ídem | `""` (texto vacío) | 422 | `VALIDATION_FAILED` / `PROFESSIONAL_ROLE_ID_REQUIRED` | «Selecciona una opción.» (se trata como vacío, igual que ausente o `null`) | `ProfileControllerTest.postTargetRoles_shouldReturnRoleIdRequired_whenRoleIdIsEmptyString` |
+| ídem | ídem | `"no-es-uuid"`, `123`, `{}` | 422 | `REQUEST_BODY_INVALID_FORMAT` | «Revisa el formato de los datos enviados.» | `ProfileControllerTest.postTargetRoles_shouldReturnBodyInvalid_whenRoleIdIsNotUuid` (parametrizada) |
 | ídem | ídem | `"00000000-0000-0000-0000-000000000000"` (no existe) | 404 | `PROFESSIONAL_ROLE_NOT_FOUND` | «No encontramos ese rol en el catálogo.» | `ProfileAppServiceTest.addTargetRole_shouldThrowNotFound_whenRoleIsNotInCatalog` |
 | ídem | ídem | rol con `estado = 'INACTIVE'` | 422 | `VALIDATION_FAILED` / `PROFESSIONAL_ROLE_DISABLED` | «No encontramos ese rol en el catálogo.» | REQ-70-02 |
-| ídem | `provenance` | `"AI_SUGGESTED"`, `"X"`, `null`, ausente | 201 | — | — (se ignora) | `ProfileControllerTest.postTargetRoles_shouldIgnoreProvenance_whenClientSendsIt` |
+| ídem | `provenance` | `"AI_SUGGESTED"`, `"X"`, `null`, ausente | 201 | — | — (se ignora) | `ProfileControllerTest.postTargetRoles_shouldIgnoreProvenance_whenClientSendsIt` (parametrizada con los cuatro valores) |
 | ídem | cuerpo | `{` (JSON roto) | 422 | `REQUEST_BODY_INVALID_FORMAT` | «Revisa el formato de los datos enviados.» | existe en `ApiExceptionHandlerTest` |
 | ídem | `Content-Type` | `text/plain` | 415 | `MEDIA_TYPE_NOT_ALLOWED` | «Tipo de contenido no admitido.» | existe |
 | ídem | `{id}` | `no-es-uuid` | 422 | `PROFILE_ID_INVALID_FORMAT` | «El identificador del perfil no es válido.» | existe |
@@ -219,6 +222,8 @@ La matriz de `cameia-infra` no cambia por esta tarea.
 | AC-0002 Desempeño | DES-02 | p95 ≤ 2 s | una lectura del catálogo por id (PK) y el perfil bloqueado | Newman: `pm.expect(pm.response.responseTime).to.be.below(2000)` en cada petición de la carpeta |
 | AC-0002 Desempeño | DES-04 | 5xx propios < 1 % | ninguna ruta previsible al 500 (sección 8) | Newman sin 5xx |
 | AC-0006 Interacción | INT | `code` y `errors[]` por campo | 422 con `errors[0].field = professionalRoleId` | `ProfileControllerTest.postTargetRoles_shouldReturn422WithField_whenRoleIsInactive` |
+| AC-0001 Adecuación funcional | IA-01 | una salida que pueda cambiar estado lleva procedencia y confirmación: 100 % | el rol agregado a mano se guarda `MANUAL` / `PENDING_REVIEW` y el cliente no puede declarar `AI_SUGGESTED` | `TargetRolesEndToEndIT.add_shouldStoreManualRole_whenRoleIsActive` |
+| Mantenibilidad | MAN-02 | cada adaptador con éxito, formato inválido, timeout y cuota agotada | no aplica: la tarea no agrega ningún adaptador de servicio externo | — |
 | Mantenibilidad | MAN-01 | ≥ 90 % líneas y ramas en lo nuevo | | JaCoCo por clase (sección 15) |
 
 ## 12. Decisiones
