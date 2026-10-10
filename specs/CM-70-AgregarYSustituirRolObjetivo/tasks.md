@@ -270,7 +270,7 @@
 - **Commit:** `CM-70 | docs(perfil): OpenAPI de agregar y sustituir rol objetivo con los estados del backlog`.
 - **Resultado (10-oct):** `OpenApiDocumentIT` Tests run: 1, Failures: 0 (BUILD SUCCESS).
 
-## [ ] T-70.8 · Concurrencia y repetición — ≤ 30 min, ≈ 160 líneas
+## [x] T-70.8 · Concurrencia y repetición — ≤ 30 min, ≈ 160 líneas
 
 - **Crear** `infrastructure/persistence/TargetRoleConcurrencyIT.java` con la forma de `ProfileCreationConcurrencyIT` (Testcontainers,
   `ExecutorService`, `CountDownLatch` de arranque, limpieza de `firebase_uid like 'uid-roles-%'`). Usa `ProfileCreationAppService` para crear el
@@ -283,6 +283,7 @@
 - **Comandos:** `./mvnw.cmd -B "-Dit.test=TargetRoleConcurrencyIT" verify`.
 - **Detente si** quedan dos filas con el mismo rol: el bloqueo del perfil no se está tomando.
 - **Commit:** `CM-70 | test(perfil): roles objetivo sin duplicados ni sexto rol con peticiones simultáneas`.
+- **Resultado (10-oct):** `TargetRoleConcurrencyIT` Tests run: 3, Failures: 0 (BUILD SUCCESS). Son pruebas de regresión: pasan desde la primera ejecución porque el bloqueo del perfil ya lo trae la base de la cadena (no hay rojo previo que capturar).
 
 ## [ ] T-70.9 · Postman y Newman — ≤ 30 min, ≈ 330 líneas
 
