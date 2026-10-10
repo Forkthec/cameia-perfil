@@ -1,4 +1,4 @@
-package co.edu.unicauca.cameia.perfil.presentation.advice;
+package co.edu.unicauca.cameia.perfil.domain.exception;
 
 import java.sql.SQLException;
 import java.util.Collections;
@@ -13,7 +13,7 @@ import java.util.Set;
  * la clase original (como mensaje), la traza y la cadena de causas, que es lo que hace falta para
  * diagnosticar, y descarta los textos (CLAUDE.md §6 y estándar §8).</p>
  */
-final class RedactedException extends RuntimeException {
+public final class RedactedException extends RuntimeException {
 
     private RedactedException(Throwable original, Throwable cause) {
         super(original.getClass().getName(), cause, false, true);
@@ -24,7 +24,7 @@ final class RedactedException extends RuntimeException {
      * @param original excepción tal como se lanzó
      * @return la copia sin mensajes, con la misma traza y la misma cadena de causas
      */
-    static RedactedException of(Throwable original) {
+    public static RedactedException of(Throwable original) {
         return copy(original, Collections.newSetFromMap(new IdentityHashMap<>()));
     }
 
@@ -33,7 +33,7 @@ final class RedactedException extends RuntimeException {
      * @return el {@code SQLState} de la primera {@link SQLException} de la cadena, o {@code -} si no hay;
      *         es un código de cinco caracteres, sin datos
      */
-    static String sqlState(Throwable original) {
+    public static String sqlState(Throwable original) {
         var seen = Collections.<Throwable>newSetFromMap(new IdentityHashMap<>());
         for (var t = original; t != null && seen.add(t); t = t.getCause()) {
             if (t instanceof SQLException sql && sql.getSQLState() != null) {
@@ -47,7 +47,7 @@ final class RedactedException extends RuntimeException {
      * @param original excepción tal como se lanzó
      * @return {@code clase.método} donde se lanzó, o {@code desconocido} si no tiene traza
      */
-    static String origin(Throwable original) {
+    public static String origin(Throwable original) {
         var frames = original.getStackTrace();
         return frames.length == 0 ? "desconocido" : frames[0].getClassName() + "." + frames[0].getMethodName();
     }
