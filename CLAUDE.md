@@ -59,7 +59,8 @@ El servicio no tiene `infrastructure/client` ni `persistence/mapper`: el mapeo e
 | Dominio | `ProfessionalProfile` | Agregado: contiene experiencia, educación, habilidades y roles objetivo, y sus invariantes (completitud, 1 a 5 roles objetivo, no quitar el último rol de un perfil finalizado) |
 | Dominio | `ProfessionalProfileRepository`, `ProfessionalRoleRepository` | Puertos de persistencia |
 | Infraestructura | `ProfessionalProfileRepositoryAdapter`, `ProfessionalRoleRepositoryAdapter` | Implementan los puertos sobre Spring Data |
-| Infraestructura | `RabbitConfig`, `AccountDeletedListener`, `SubscriptionUpdatedListener`, `ConsumptionRecordedListener`, `ProfileEventPublisher` | Mensajería; los consumidores y el publicador son esqueletos (ver sección 10) |
+| Infraestructura | `AccountEventsRabbitConfig`, `AccountEventsRetryConfig`, `AccountCreatedListener`, `AccountDeletedListener`, `AccountEventsErrorHandler`, `AccountEventsRecoverer` | Consumen `cuenta.creada` y `cuenta.eliminada` para mantener la réplica de la fecha de nacimiento, con Inbox, reintentos y una cola de fallidos por cola |
+| Infraestructura | `RabbitConfig`, `SubscriptionUpdatedListener`, `ConsumptionRecordedListener`, `ProfileEventPublisher` | Mensajería restante: esqueletos (ver sección 10) |
 
 **Persistencia en tres piezas.** Un `JpaRepository` suelto no es el repositorio del dominio. El puerto vive en `domain/port` con el vocabulario del dominio; el `JpaRepository` y el adaptador viven en `infrastructure/persistence/repository` (el adaptador implementa el puerto y es el único que conoce las dos orillas). `application.service` inyecta el puerto, nunca el adaptador ni el `JpaRepository`.
 
@@ -133,6 +134,7 @@ Base PostgreSQL propia `cameia_perfil` y migraciones Flyway en `src/main/resourc
 | `V2__eliminar_seniority.sql` | Quita la columna `seniority` |
 | `V3__catalogo_roles_profesionales.sql` | Crea el catálogo `rol_profesional` y la clave foránea desde `rol_objetivo` |
 | `V4__i18n_catalogo_roles.sql` | Agrega los nombres en inglés del catálogo |
+| `V5__replica_fecha_nacimiento.sql` | Crea `fecha_nacimiento_usuario` (réplica de la fecha de nacimiento por Usuario) y `evento_procesado` (Inbox de eventos de cuenta) |
 
 No hay claves foráneas hacia otros servicios. Las tablas y columnas van en `snake_case` español y las fechas en `TIMESTAMPTZ`; el resto de las reglas de esquema están en la [sección 7 del estándar](docs/estandar-backend.md#7-base-de-datos). Todo cambio de esquema es una migración nueva.
 
@@ -167,6 +169,7 @@ Verificación completa: `./mvnw.cmd clean verify`. Genera el informe de cobertur
 - Sin instalar Java ni Maven: `docker compose run --rm verify`.
 - Con Docker: `docker compose up -d` levanta Perfil y PostgreSQL 16.
 - Con la aplicación en `http://localhost:8082`: salud en `/actuator/health`, `/actuator/health/liveness` y `/actuator/health/readiness`; solo `health` e `info` están expuestos.
+- RabbitMQ: `SPRING_RABBITMQ_HOST`, `SPRING_RABBITMQ_PORT`, `SPRING_RABBITMQ_USERNAME`, `SPRING_RABBITMQ_PASSWORD`, `SPRING_RABBITMQ_VIRTUAL_HOST` y `SPRING_RABBITMQ_SSL_ENABLED` (`true` en staging y producción); `SPRING_RABBITMQ_LISTENER_SIMPLE_AUTO_STARTUP=false` apaga los consumidores en una instancia que solo atiende la API.
 - El puerto sale de `SERVER_PORT` (8082 por defecto; en Cloud Run, de `PORT`). El Gateway apunta a Perfil con `CAMEIA_PERFIL_URL`.
 
 ## 9. Contribución
@@ -186,7 +189,7 @@ Las specs nuevas viven en `specs/CM-NNN-Descripcion/` con `Descripcion` en Pasca
 | Pendiente | Responsable | Qué bloquea |
 |---|---|---|
 | API y consumidor de RabbitMQ en el mismo proceso | Backend (arranque, `Dockerfile`, `docker-compose.yml`) y DevOps (recursos de Cloud Run) | Escalar la API sin duplicar consumidores |
-| Consumidores y publicador de RabbitMQ son esqueletos con `TODO`: sin payload definido, idempotencia ni Outbox | Backend, con Cuentas | Reaccionar a cuenta eliminada y a cambios de plan; publicar cambios del perfil |
+| Los consumidores de suscripción y de consumo y el publicador de eventos del perfil son esqueletos con `TODO`: sin payload definido, idempotencia ni Outbox | Backend, con Cuentas | Reaccionar a cambios de plan; publicar cambios del perfil |
 | El cupo de perfiles es fijo en 1 (Plan Free), a la espera de la réplica del plan | Backend y Product Owner | Perfiles múltiples según el plan |
 | Swagger UI y OpenAPI sin bandera de apagado ni perfil `prod` | Backend (CM-283) | Cerrar la documentación en producción |
 | Cobertura por debajo de la meta del estándar | Backend (CM-283) | Cumplir el 70 % de la rúbrica y la meta del 90 % |
