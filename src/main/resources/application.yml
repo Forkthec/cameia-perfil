@@ -35,6 +35,23 @@ spring:
     problemdetails:
       enabled: true
 
+  rabbitmq:
+    listener:
+      simple:
+        # El ack se envía cuando el consumidor termina, es decir, después del commit de la base de datos.
+        acknowledge-mode: auto
+        # Un mensaje fallido nunca vuelve a su propia cola: agotados los reintentos va a la cola de fallidos.
+        default-requeue-rejected: false
+        prefetch: 10
+        concurrency: 1
+        retry:
+          enabled: true
+          # Reintentos DESPUÉS del primer intento: 2 reintentos = 3 intentos en total (esperas de 1 s y 2 s).
+          max-retries: 2
+          initial-interval: 1s
+          multiplier: 2
+          max-interval: 2s
+
   servlet:
     encoding:
       # Toda respuesta declara charset=UTF-8 en Content-Type, tambien las de exito, para que
@@ -69,3 +86,7 @@ management:
 logging:
   level:
     root: ${LOG_LEVEL:INFO}
+    # El contenedor de RabbitMQ escribe un WARN con la traza y el mensaje de cada causa por cada fallo de un consumidor.
+    # Los consumidores de eventos de cuenta ya registran cada fallo una sola vez, con su código y sin datos personales,
+    # y el mensaje de una excepción de persistencia puede traer los valores de las columnas.
+    org.springframework.amqp.listener.ConditionalRejectingErrorHandler: ERROR
