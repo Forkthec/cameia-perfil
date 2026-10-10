@@ -197,7 +197,7 @@
 - **Commit:** `CM-70 | fix(perfil): el sexto rol objetivo responde 409 y el rol inactivo tiene su código`.
 - **Resultado (10-oct):** rojo (con el catálogo en 422): `ApiExceptionHandlerTest` `expected:<409> but was:<422>` y `ProfileControllerTest.postTargetRoles_shouldReturn409_whenMaxReached` `Status expected:<409> but was:<422>`. Verde: 170 pruebas, 0 fallos (`ProfileControllerTest`, `ApiExceptionHandlerTest`, `ErrorCatalogTest`, `ErrorCodeDocumentationTest`). `PROFESSIONAL_ROLE_DISABLED` ya estaba hecho en T-70.2.
 
-## [ ] T-70.6 · Agregar y sustituir solo roles activos, con procedencia `MANUAL` — ≤ 30 min, ≈ 160 líneas
+## [x] T-70.6 · Agregar y sustituir solo roles activos, con procedencia `MANUAL` — ≤ 30 min, ≈ 160 líneas
 
 - **Modificar** `AddTargetRoleRequest`: un solo componente, `@NotNull @Schema(description = "Rol del catálogo; debe estar activo", format = "uuid",
   example = "a0000001-0000-0000-0000-000000000002", requiredMode = Schema.RequiredMode.REQUIRED) UUID professionalRoleId`, con Javadoc en español
@@ -257,6 +257,7 @@
   `no-es-uuid` no aparece en la respuesta). Actualizar las pruebas existentes que enviaban `provenance` (puede quedarse en el cuerpo: se ignora).
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileAppServiceTest,ProfessionalProfileTest,ProfileControllerTest,ErrorCatalogTest,ArquitecturaTest" test`.
 - **Commit:** `CM-70 | feat(perfil): agregar y sustituir roles objetivo solo con roles activos y procedencia MANUAL`.
+- **Resultado (10-oct):** rojo: `ProfileAppServiceTest` Tests run: 39, Errors: 39 (`Unresolved compilation problems`: el comando de 3 componentes no existía). Verde: `ProfileAppServiceTest` 53/53, `ProfessionalProfileTest` 27/27, `ProfileControllerTest` 115/115, `ErrorCatalogTest`, `ErrorCodeDocumentationTest`, `ApiExceptionHandlerTest`, `ArquitecturaTest`: 234 pruebas, 0 fallos. Prueba existente cambiada por el CA-2.11.2: se quitó la fila `TARGET_ROLES provenance` de `ProfileControllerTest.fieldCodes` (el campo ya no existe en el contrato; ahora se ignora).
 
 ## [ ] T-70.7 · OpenAPI de agregar y sustituir — ≤ 15 min, ≈ 30 líneas
 

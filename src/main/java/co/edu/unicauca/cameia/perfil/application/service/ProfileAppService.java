@@ -11,6 +11,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedExcepti
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRole;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
@@ -133,17 +134,16 @@ public class ProfileAppService {
     @Transactional
     public ProfessionalProfile addTargetRole(AddTargetRoleCommand cmd) {
         var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
-        var role = roleRepository.findById(cmd.professionalRoleId())
-                .orElseThrow(ProfessionalRoleNotFoundException::new);
-        p.addTargetRole(new TargetRole(UUID.randomUUID(), role.id(), role.nombre(), provenance(cmd.provenance())));
+        var role = selectableRole(cmd.professionalRoleId());
+        // Un rol agregado a mano nunca trae origen de IA: la procedencia la fija el servidor.
+        p.addTargetRole(new TargetRole(UUID.randomUUID(), role.id(), role.nombre(), DataProvenance.MANUAL));
         repository.save(p); return p;
     }
 
     @Transactional
     public ProfessionalProfile updateTargetRole(UpdateTargetRoleCommand cmd) {
         var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
-        var role = roleRepository.findById(cmd.professionalRoleId())
-                .orElseThrow(ProfessionalRoleNotFoundException::new);
+        var role = selectableRole(cmd.professionalRoleId());
         p.updateTargetRole(cmd.roleId(), role.id(), role.nombre());
         repository.save(p); return p;
     }
@@ -185,6 +185,13 @@ public class ProfileAppService {
     private ProfessionalProfile loadForUser(UUID profileId, String uid) {
         var owner = FirebaseUid.required(uid);
         return checkOwner(load(profileId), owner);
+    }
+
+    /** Busca el rol en el catálogo y exige que se pueda elegir: 404 si no existe, 422 si está inactivo. */
+    private ProfessionalRole selectableRole(UUID professionalRoleId) {
+        return roleRepository.findById(professionalRoleId)
+                .orElseThrow(ProfessionalRoleNotFoundException::new)
+                .requireSelectable();
     }
 
     /** Carga el perfil de quien llama bloqueando su fila; todo caso de uso que modifica un perfil empieza aquí. */

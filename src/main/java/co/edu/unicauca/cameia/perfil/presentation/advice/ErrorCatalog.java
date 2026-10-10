@@ -94,7 +94,6 @@ final class ErrorCatalog {
             Map.entry("AddWorkExperienceRequest.employmentStatus.NotNull", EMPLOYMENT_STATUS_REQUIRED),
             Map.entry("AddWorkExperienceRequest.provenance.NotNull", PROVENANCE_REQUIRED),
             Map.entry("AddSkillRequest.provenance.NotBlank", PROVENANCE_REQUIRED),
-            Map.entry("AddTargetRoleRequest.provenance.NotNull", PROVENANCE_REQUIRED),
             Map.entry("AddSkillRequest.skillName.NotBlank", SKILL_NAME_REQUIRED),
             Map.entry("AddSkillRequest.level.NotBlank", SKILL_LEVEL_REQUIRED),
             Map.entry("UpdateTargetRoleRequest.professionalRoleId.NotNull", PROFESSIONAL_ROLE_ID_REQUIRED),

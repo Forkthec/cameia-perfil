@@ -390,7 +390,6 @@ class ProfileControllerTest {
                 new Object[]{SKILLS, "level", true, "SKILL_LEVEL_REQUIRED", "Elige un nivel."},
                 new Object[]{SKILLS, "provenance", true, "PROVENANCE_REQUIRED", SELECT_OPTION},
                 new Object[]{TARGET_ROLES, "professionalRoleId", false, "PROFESSIONAL_ROLE_ID_REQUIRED", SELECT_OPTION},
-                new Object[]{TARGET_ROLES, "provenance", false, "PROVENANCE_REQUIRED", SELECT_OPTION},
                 new Object[]{EDUCATIONS, "institution", true, "INSTITUTION_REQUIRED", "Ingresa la institución."},
                 new Object[]{EDUCATIONS, "degree", true, "DEGREE_REQUIRED", "Ingresa el título obtenido."},
                 new Object[]{EDUCATIONS, "level", true, "EDUCATION_LEVEL_REQUIRED", "Elige un nivel educativo."},
@@ -651,6 +650,71 @@ class ProfileControllerTest {
                                 {"professionalRoleId": "%s", "provenance": "MANUAL"}
                                 """.formatted(UUID.randomUUID())))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("El cuerpo solo aporta el rol: la procedencia, la identidad y el id que envía el cliente se ignoran")
+    void postTargetRoles_shouldIgnoreProvenance_whenClientSendsIt() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-role"));
+        when(profileAppService.addTargetRole(any())).thenReturn(profile);
+        var roleId = UUID.randomUUID();
+        var command = ArgumentCaptor.forClass(co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand.class);
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"professionalRoleId": "%s", "provenance": "AI_SUGGESTED", "firebaseUid": "otro", "id": "x"}
+                                """.formatted(roleId)))
+                .andExpect(status().isCreated());
+
+        verify(profileAppService).addTargetRole(command.capture());
+        assertThat(command.getValue().professionalRoleId()).isEqualTo(roleId);
+        assertThat(command.getValue().uid()).isEqualTo("uid-ctrl-role");
+    }
+
+    @Test
+    @DisplayName("Un rol inactivo responde 422 con el campo professionalRoleId y su código")
+    void postTargetRoles_shouldReturn422WithField_whenRoleIsInactive() throws Exception {
+        when(profileAppService.addTargetRole(any())).thenThrow(InvalidFieldsException.of(
+                "professionalRoleId", co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.PROFESSIONAL_ROLE_DISABLED,
+                "No encontramos ese rol en el catálogo."));
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"professionalRoleId\": \"%s\"}".formatted(UUID.randomUUID())))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.detail").value("Revisa los campos marcados."))
+                .andExpect(jsonPath("$.errors[0].field").value("professionalRoleId"))
+                .andExpect(jsonPath("$.errors[0].code").value("PROFESSIONAL_ROLE_DISABLED"))
+                .andExpect(jsonPath("$.errors[0].message").value("No encontramos ese rol en el catálogo."));
+    }
+
+    @Test
+    @DisplayName("Un cuerpo sin professionalRoleId responde 422 con PROFESSIONAL_ROLE_ID_REQUIRED y sin errores de procedencia")
+    void postTargetRoles_shouldReturnRoleIdRequired_whenBodyIsEmpty() throws Exception {
+        mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors.length()").value(1))
+                .andExpect(jsonPath("$.errors[0].field").value("professionalRoleId"))
+                .andExpect(jsonPath("$.errors[0].code").value("PROFESSIONAL_ROLE_ID_REQUIRED"));
+    }
+
+    @Test
+    @DisplayName("Un professionalRoleId que no es UUID responde 422 de formato sin repetir el valor")
+    void postTargetRoles_shouldReturnBodyInvalid_whenRoleIdIsNotUuid() throws Exception {
+        mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"professionalRoleId\": \"no-es-uuid\"}"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("REQUEST_BODY_INVALID_FORMAT"))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("no-es-uuid"))));
     }
 
     @Test

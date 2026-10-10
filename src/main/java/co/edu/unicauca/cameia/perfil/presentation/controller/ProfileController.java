@@ -328,7 +328,7 @@ class ProfileController {
             @Valid @RequestBody AddTargetRoleRequest r,
             @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addTargetRole(
-                new AddTargetRoleCommand(id, uid, r.professionalRoleId(), r.provenance()))));
+                new AddTargetRoleCommand(id, uid, r.professionalRoleId()))));
     }
 
     @Operation(summary = "Actualizar rol objetivo del perfil")
