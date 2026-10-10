@@ -28,7 +28,7 @@
 Copiar `specs/CM-71-EliminarRolObjetivo/` desde `C:\Users\paanm\Documents\cameia\cameia-worktrees\perfil-specs-v6`. Commit:
 `CM-71 | docs(spec): spec, plan y tarjetas de eliminar roles objetivo`.
 
-## [ ] T-71.1 · El último rol de un perfil activo responde 409 — ≤ 20 min, ≈ 60 líneas
+## [x] T-71.1 · El último rol de un perfil activo responde 409 — ≤ 20 min, ≈ 60 líneas
 
 - **Prueba que falla primero** `ProfileControllerTest.removeTargetRole_shouldReturn409_whenLastRoleOfActiveProfile`: el servicio lanza
   `new LastTargetRoleException()` → `status().isConflict()`, `$.code` `TARGET_ROLE_NOT_ALLOWED`, `$.detail` «No puedes quedarte sin roles objetivo con
@@ -42,8 +42,9 @@ Copiar `specs/CM-71-EliminarRolObjetivo/` desde `C:\Users\paanm\Documents\cameia
 - **Modificar** `docs/errores.md`, fila de `TARGET_ROLE_NOT_ALLOWED`: HTTP `409`; prueba `ProfileControllerTest.removeTargetRole_shouldReturn409_whenLastRoleOfActiveProfile`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileControllerTest,ApiExceptionHandlerTest,ErrorCatalogTest,ErrorCodeDocumentationTest" test`.
 - **Commit:** `CM-71 | fix(perfil): eliminar el último rol objetivo de un perfil activo responde 409`.
+- **Resultado (10-oct):** rojo: `ApiExceptionHandlerTest ... Response status expected:<409> but was:<422>` y `ProfileControllerTest.removeTargetRole_shouldReturn409_whenLastRoleOfActiveProfile:773 Status expected:<409> but was:<422>`. Verde: 267 pruebas, 0 fallos (`ProfileControllerTest`, `ApiExceptionHandlerTest`, `ErrorCatalogTest`, `ErrorCodeDocumentationTest`, `ProfileAppServiceTest`, `ProfessionalProfileTest`, `ArquitecturaTest`). Además de la fila de `ApiExceptionHandlerTest`, cambió `businessException_shouldOmitErrors_whenItRejectsNoField` (esperaba 422 para `LastTargetRoleException`) por el CA-2.11.3.
 
-## [ ] T-71.2 · Pruebas de eliminar en el servicio y el dominio — ≤ 25 min, ≈ 120 líneas
+## [x] T-71.2 · Pruebas de eliminar en el servicio y el dominio — ≤ 25 min, ≈ 120 líneas
 
 - `ProfileAppServiceTest` (perfiles con los ayudantes existentes `freshProfile()` y `completeProfile()`):
   - `removeTargetRole_shouldRemoveLastRole_whenProfileIsDraft` (CA-2.11.9): perfil `IN_PROGRESS` con un rol → sin roles, `getStatus()` `IN_PROGRESS`,
@@ -56,6 +57,7 @@ Copiar `specs/CM-71-EliminarRolObjetivo/` desde `C:\Users\paanm\Documents\cameia
 - `ProfileControllerTest.removeTargetRole_shouldReturn204WithoutBody_whenRemoved` ya existe: no se toca.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileAppServiceTest,ProfessionalProfileTest" test`.
 - **Commit:** `CM-71 | test(perfil): eliminar roles objetivo en Borrador y en perfil activo`.
+- **Resultado (10-oct):** `ProfileAppServiceTest` 57/57 y `ProfessionalProfileTest` 28/28 en verde. Son pruebas de comportamiento que ya cumplía el dominio: pasan desde la primera corrida (no hay rojo previo que capturar).
 
 ## [ ] T-71.3 · Concurrencia, Postman y Newman — ≤ 30 min, ≈ 230 líneas
 
