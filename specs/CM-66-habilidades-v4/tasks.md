@@ -1,6 +1,6 @@
 # Tareas — CM-66 (cameia-perfil)
 
-Estado: PR 1a (T-1 a T-3) y PR 1b (T-4 a T-6) hechos y verificados en local; spec y plan aprobados por Paula el 9-oct-2026. Una tarjeta a la vez, con la salida real antes de marcar `[x]`.
+Estado: PR 1a (T-1 a T-3), PR 1b (T-4 a T-6), PR 2a y PR 2b (T-7) hechos y verificados en local; spec y plan aprobados por Paula el 9-oct-2026. Una tarjeta a la vez, con la salida real antes de marcar `[x]`.
 
 ## Reglas para todas las tarjetas
 
@@ -201,7 +201,7 @@ Estado: PR 1a (T-1 a T-3) y PR 1b (T-4 a T-6) hechos y verificados en local; spe
 
 **Resultado T-6.** OpenAPI y `docs/errores.md` quedaron en 1a (el enumerado exige la documentación en la misma capa). Cierre de 1b: `clean verify` BUILD SUCCESS, 776 unitarias + 235 de integración, 0 fallos (`ejecucion/verify-CM-66-1b.log`). Cobertura: `SkillName` 17/17 y 6/6; `ProfessionalProfileMapping` 99/99 y 26/26; `ProfessionalProfileRepositoryAdapter` 39/40 y 22/24 (previas: ramas del bloqueo de la creación); `ProfileSkillEntity` 11/12 (constructor sin argumentos que usa Hibernate); global 97,2 % líneas y 98,4 % ramas.
 
-## [ ] T-7 · Postman y Newman — ≤ 30 min, ≈ 550 líneas
+## [x] T-7 · Postman y Newman — ≤ 30 min, ≈ 550 líneas
 
 - Carpeta `HU-2.5 — Habilidades` con subcarpetas `POST skills` y `DELETE skills/{skillId}`; `pre-request` con Usuario `uid-pm-{{$guid}}` y su perfil; utilidades `expectProblem`/`expectFieldError` de la colección. Para la vigésima y la 21.ª, el `pre-request` agrega 19 habilidades con `pm.sendRequest` (nombres `skill-01` a `skill-19`).
 - Peticiones: las de la columna «Postman» de la spec §3 y una por causa de §6 y de §9 (repetidas con mayúsculas, tilde, «ñ», espacios; dos veces la misma eliminación; campos extra; cuerpo ilegible; `text/plain`; sin identidad; ajeno en las dos rutas; inexistente). Cada una con estado, `Content-Type`, `code`, `errors[]`, `requestId` y sin traza.
@@ -209,5 +209,28 @@ Estado: PR 1a (T-1 a T-3) y PR 1b (T-4 a T-6) hechos y verificados en local; spe
 - **DES-02:** carpeta `DES-02 — HU-2.5 habilidades` (por iteración: Usuario `uid-des-{{$guid}}`, crear perfil, `POST …/skills` válido y `DELETE` de esa habilidad); `-n 105` con `--reporters cli,json --reporter-json-export target/newman/des02-habilidades.json` y el script de p95 de CM-274 T-E3; p95 ≤ 2000 ms con `n=100` en `POST` y `DELETE`.
 - **SEG-04:** `docker compose logs app | Select-String -Pattern 'Programaci|machine learning|Python'` → 0 líneas.
 
-**Resultado T-7 · PR 2a (`POST skills`; 10-oct-2026).** Colección generada con `ejecucion/herramientas/hu25_postman.py post` (no se edita a mano; reescribe de forma idempotente la carpeta, antes de la de HU-2.4). 64 peticiones en `POST skills`: un 201 por cada caso válido (Python intermedio, 60, 59, 60 con emoji, «é» × 60, recorte, NFD→NFC, HTML y `%`/`_` como texto, `provenance`/`id`/`status` ignorados, nombre numérico), siete 409 de duplicado (mayúsculas, tilde, «ñ», espacios, U+00A0 y otro nivel) con `errors[skillName]`, 422 por cada causa de nombre y de nivel con su `code` y su mensaje, cuerpo ilegible, `text/plain` (415), 401, 403, 404 y el límite de 20 (vigésima 201, 21.ª 409 sin `errors[]` y repetida con 20 gana el máximo). Newman contra la imagen empaquetada con la base limpia y el rol `a0000007-…06` en `INACTIVE`: carpeta 84 peticiones (64 de la colección + 20 altas auxiliares), 0 fallidas, 489 aserciones (`newman-CM-66-2a.log`). Una primera corrida falló en 6 aserciones porque la habilidad «<b>SQL</b>» de la prueba hacía coincidir el filtro de «sin SQL» de `H.noLeaks`: se renombró a «<b>Excel</b>».
+**Resultado T-7 · PR 2a (`POST skills`; 10-oct-2026).** Colección generada con `ejecucion/herramientas/hu25_postman.py post` (no se edita a mano; reescribe de forma idempotente la carpeta, antes de la de HU-2.4). 64 peticiones en `POST skills`: un 201 por cada caso válido (Python intermedio, 60, 59, 60 con emoji, «é» × 60, recorte, NFD→NFC, HTML y `%`/`_` como texto, `provenance`/`id`/`status` ignorados, nombre numérico), siete 409 de duplicado (mayúsculas, tilde, «ñ», espacios, U+00A0 y otro nivel) con `errors[skillName]`, 422 por cada causa de nombre y de nivel con su `code` y su mensaje, cuerpo ilegible, `text/plain` (415), 401, 403, 404 y el límite de 20 (vigésima 201, 21.ª 409 sin `errors[]` y repetida con 20 gana el máximo). Newman contra la imagen empaquetada con la base limpia y el rol `a0000007-…06` en `INACTIVE`: carpeta 84 peticiones (64 de la colección + 18 altas y 2 publicaciones de cuenta.creada auxiliares), 0 fallidas, 489 aserciones (`newman-CM-66-2a.log`). Una primera corrida falló en 6 aserciones porque la habilidad «<b>SQL</b>» de la prueba hacía coincidir el filtro de «sin SQL» de `H.noLeaks`: se renombró a «<b>Excel</b>».
+
+**Resultado T-7 · PR 2b (`DELETE skills/{skillId}`, DES-02, README y corrida completa; 10-oct-2026).** `hu25_postman.py todo` agrega la subcarpeta `DELETE skills/{skillId}` (25 peticiones: 404 de otro perfil e inexistente, 403 en perfil ajeno, 422 de identificadores, 401, 204 de la única habilidad en Borrador y su repetición en 404, perfil activo que conserva su única habilidad con 409 `SKILL_NOT_ALLOWED`, y 204 de una de dos) y la carpeta `DES-02 — HU-2.5`. Newman contra la imagen empaquetada con la base limpia y el rol `a0000007-…06` en `INACTIVE`: carpeta `HU-2.5 — Habilidades` 110 peticiones (89 de la colección + 18 altas y 3 publicaciones de cuenta.creada auxiliares), 0 fallidas, 604 aserciones (`newman-CM-66-2.log`); colección completa 574 peticiones, 0 fallidas, 2 678 aserciones (`newman-CM-66-2-completa.log`); DES-02 con n=100: p95 de 33 ms (crear perfil), 40 ms (agregar habilidad) y 36 ms (eliminarla) (`newman-CM-66-2-des02.log`). Con una copia mutada (tres textos cambiados) fallan 11 aserciones (`newman-CM-66-2-mutada.log`). `docker compose logs app`: dos líneas `ERROR`, ambas el 503 `BIRTH_DATE_UNAVAILABLE` esperado de HU-2.4, y cero apariciones de los nombres de habilidad de las pruebas (SEG-04). Las peticiones de la sección 3 llevan exactamente el nombre de la columna «Postman» (se renombraron cuatro para que coincidieran).
+
+## Autoverificación de la CM (10-oct-2026)
+
+| # | Comprobación | Resultado real |
+|---|---|---|
+| V-01 | Cada prueba y petición de la sección 3 existe | 22 pruebas citadas en las secciones 3, 13 y 15, todas existen por nombre exacto (`addSkill_shouldReturn409_whenSkillIsDuplicated` se renombró desde `…WithFieldError…` para coincidir con la spec); las 20 peticiones de Postman de la columna «Postman» existen por nombre |
+| V-02 | `clean verify` | PR 1a: 776 unitarias + 207 IT, 0 fallos (`verify-CM-66-1.log`); PR 1b: 776 + 235, 0 fallos (`verify-CM-66-1b.log`); PR 2a y 2b: sin cambio de `src` |
+| V-03 | Pares de la sección 5 | `SkillNameTest.samePairs` tiene los nueve pares iguales y `differentPairs` los tres distintos; pasan |
+| V-04 | 61 caracteres, U+0000, 1 MiB, `text/plain` por petición real | 422 `SKILL_NAME_TOO_LONG`, 422 `SKILL_NAME_INVALID_CHARACTERS`, 422 (1 MiB, Newman), 415; 40 peticiones adversariales y 20 altas simultáneas, ningún 5xx (`adversarial-CM-66.log`) |
+| V-05 | 20.ª y 21.ª; repetida con 20 | 201; 409 `SKILL_LIMIT_REACHED` sin `errors[]`; la repetida con 20 también (Newman y `SkillsEndToEndIT`) |
+| V-06 | Última en Activo; dos pestañas | 409 `SKILL_NOT_ALLOWED` y el perfil sigue `COMPLETED` con su habilidad; `ProfileWriteLockIT.removeSkill_shouldRejectSecond_whenTwoTabsDeleteBothSkillsOfActiveProfile` |
+| V-07 | 409 de repetida | `errors[0]` = `skillName`, `SKILL_ALREADY_EXISTS`, «Esa habilidad ya está en tu perfil.» (`H.fieldError` en siete peticiones de Newman) |
+| V-08 | Forma de error de cualquier 4xx | `H.problem` comprueba `application/problem+json` con `charset=UTF-8`, `code`, `detail` y `requestId`, y que no haya traza |
+| V-09 | `SkillSchemaIT` | 8 pruebas, 0 fallos: clave rellenada y cada `ck_` y el `uq_` rechazan su fila |
+| V-10 | 20 repeticiones | `SkillsEndToEndIT` (alta y baja) y 20 altas simultáneas reales por HTTP: un 201 y diecinueve 409 |
+| V-11 | Cobertura | `SkillName` 17/17 y 6/6; `ProfileSkill` 11/11; `ProfessionalProfile` 133/135 y 63/64; `SkillLimitReachedException` y `SkillNotAllowedException` 2/2; `AddSkillRequest` 4/4; `AddSkillCommand` 3/3; `ProfileAppService` 100/101 y 40/40; `ProfessionalProfileMapping` 99/99 y 26/26; `ProfessionalProfileRepositoryAdapter` 39/40 y 22/24; `ApiExceptionHandler` 66/66 y 29/30; `ErrorCatalog` 92/92. Todas sobre 90 %. Global 97,2 % líneas y 98,4 % ramas (la base de CM-54 era 97,1 % y 97,6 %) |
+| V-12 | Newman y DES-02 | 0 fallos; p95 de 33, 40 y 36 ms |
+| V-13 | Logs; `CM-NNN`; `pom.xml` | Cero nombres de habilidad en los logs; ninguna coincidencia nueva de `CM-NNN` en `src` (las 24 previas son de Sprint 1, Desvío 25); `pom.xml` sin cambios |
+| V-14 | Tamaño y revisiones | PR 1a 940, PR 1b 666, PR 2a 660, PR 2b 273 líneas contra su base (todas ≤ 1000); `/code-review` y `/security-review`: worktree de revisión armado, los corre Paula (Prompt H) |
+
+Hallazgos de la autoverificación sin código: (1) un sustituto UTF-16 suelto (`x\ud800y`) se guarda como `x?y` (201), igual que en CM-274 y CM-54: ver la decisión pendiente de la Bandeja; (2) los valores JSON booleanos y numéricos en `skillName` se guardan como texto (`"true"`, `"123"`), el mismo comportamiento fijado en CM-274 (V1).
 
