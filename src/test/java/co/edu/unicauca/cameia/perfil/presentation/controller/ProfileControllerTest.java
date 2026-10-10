@@ -5,7 +5,7 @@ import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
-import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationTimeoutException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
@@ -150,13 +150,13 @@ class ProfileControllerTest {
     }
 
     @Test
-    @DisplayName("Si otra creación del mismo Usuario no termina a tiempo, crear un perfil responde 503 con su código")
-    void postProfiles_shouldReturn503_whenCreationLockTimesOut() throws Exception {
-        when(profileCreationAppService.createProfile(any())).thenThrow(new ProfileCreationTimeoutException());
+    @DisplayName("Si otra creación del mismo Usuario no termina a tiempo, crear un perfil responde 409 con su código")
+    void postProfiles_shouldReturn409_whenCreationLockTimesOut() throws Exception {
+        when(profileCreationAppService.createProfile(any())).thenThrow(new ProfileCreationInProgressException());
 
         mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-ana-001"))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.code").value("PROFILE_CREATION_TIMEOUT"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PROFILE_CREATION_IN_PROGRESS"))
                 .andExpect(jsonPath("$.detail").value("Estamos creando tu perfil. Inténtalo de nuevo en unos segundos."))
                 .andExpect(jsonPath("$.requestId").exists());
     }
@@ -294,7 +294,13 @@ class ProfileControllerTest {
                 Arguments.of(get("/api/v1/profiles/no-es-uuid").header("X-User-Id", "uid-ctrl-id"),
                         422, "PROFILE_ID_INVALID_FORMAT", "El identificador del perfil no es válido."),
                 Arguments.of(delete("/api/v1/profiles/" + profileId + "/skills/xyz").header("X-User-Id", "uid-ctrl-id"),
-                        422, "SKILL_ID_INVALID_FORMAT", "El identificador de la habilidad no es válido."));
+                        422, "SKILL_ID_INVALID_FORMAT", "El identificador de la habilidad no es válido."),
+                Arguments.of(delete("/api/v1/profiles/" + profileId + "/work-experiences/xyz").header("X-User-Id", "uid-ctrl-id"),
+                        422, "WORK_EXPERIENCE_ID_INVALID_FORMAT", "El identificador de la experiencia no es válido."),
+                Arguments.of(delete("/api/v1/profiles/" + profileId + "/educations/xyz").header("X-User-Id", "uid-ctrl-id"),
+                        422, "EDUCATION_ID_INVALID_FORMAT", "El identificador de la formación no es válido."),
+                Arguments.of(delete("/api/v1/profiles/" + profileId + "/target-roles/xyz").header("X-User-Id", "uid-ctrl-id"),
+                        422, "TARGET_ROLE_ID_INVALID_FORMAT", "El identificador del rol objetivo no es válido."));
     }
 
     @ParameterizedTest

@@ -19,6 +19,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedExcepti
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileUpdateInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.exception.SkillNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.UnsupportedLanguageException;
@@ -196,6 +197,27 @@ class ApiExceptionHandlerTest {
 
         assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8))
                 .doesNotContain("Exception").doesNotContain("co.edu");
+    }
+
+    @Test
+    @DisplayName("Una escritura que espera más de lo permitido responde 409 con el mensaje de reintento")
+    void profileUpdateInProgress_shouldReturn409_whenThrown() throws Exception {
+        toThrow = ProfileUpdateInProgressException::new;
+
+        mockMvc.perform(get("/boom").header("X-Request-Id", "req-upd-1"))
+                .andExpect(status().isConflict())
+                .andExpect(header().string("Content-Type", "application/problem+json;charset=UTF-8"))
+                .andExpect(jsonPath("$.code").value("PROFILE_UPDATE_IN_PROGRESS"))
+                .andExpect(jsonPath("$.title").value("Perfil ocupado"))
+                .andExpect(jsonPath("$.detail")
+                        .value("Estamos guardando otro cambio de tu perfil. Inténtalo de nuevo en unos segundos."))
+                .andExpect(jsonPath("$.requestId").value("req-upd-1"))
+                .andExpect(jsonPath("$.errors").doesNotExist());
+
+        assertThat(logs.list).filteredOn(event -> event.getLevel() == Level.WARN).singleElement().satisfies(event -> {
+            assertThat(event.getFormattedMessage()).contains("code=PROFILE_UPDATE_IN_PROGRESS");
+            assertThat(event.getThrowableProxy()).isNull();
+        });
     }
 
     @Test

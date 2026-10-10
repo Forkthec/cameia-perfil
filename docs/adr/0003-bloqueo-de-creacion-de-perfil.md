@@ -4,6 +4,8 @@
 
 Aceptada. Decisión de Paula Andrea Muñoz Delgado, 7 de octubre de 2026.
 
+Ajustada por Paula Andrea Muñoz Delgado el 9 de octubre de 2026: la espera máxima baja de 5 s a 2 s y el corte responde 409 `PROFILE_CREATION_IN_PROGRESS` en lugar de 503.
+
 ## Contexto
 
 El Plan Free permite un Perfil Profesional por Usuario. La comprobación «¿ya tiene perfil?» y la inserción eran dos pasos separados, y la tabla no tiene restricción de unicidad por Usuario, porque Premium admitirá varios perfiles. Con dos clics seguidos en «Llenado Manual», las dos peticiones pasaban la comprobación antes de que la primera guardara y se creaban dos perfiles. Sin el bloqueo que describe este ADR, la prueba de integración con 5 peticiones simultáneas del mismo Usuario contra PostgreSQL real crea 5 perfiles.
@@ -28,7 +30,7 @@ El bloqueo se libera solo al terminar la transacción y solo afecta a las creaci
 - Una petición que llega cuando la creación anterior ya terminó, aunque sea pocos milisegundos después, cuenta ese perfil en el paso 1 y recibe 409. En la misma prueba, 9 de 30 rondas tuvieron entre 1 y 3 respuestas 409 de ese tipo. Como la creación tarda pocos milisegundos, el segundo clic de una persona suele llegar así; para que no vea el mensaje de cupo, `cameia-web` deshabilita el botón de creación mientras la petición está en curso.
 - Premium cambia solo el cupo con el que se compara; la regla no cambia.
 - Si la creación en proceso falla y se deshace, la que esperaba crea el perfil normalmente.
-- La espera tiene un límite de 5 s (`lock_timeout`, solo en esa transacción): si la creación en proceso se atasca, las que esperan se cortan con 503 `PROFILE_CREATION_TIMEOUT` en lugar de retener cada una una conexión del pool. El bloqueo exige una transacción abierta (`Propagation.MANDATORY`); sin ella se soltaría al terminar la sentencia.
+- La espera tiene un límite de 2 s (`lock_timeout`, solo en esa transacción): si la creación en proceso se atasca, las que esperan se cortan con 409 `PROFILE_CREATION_IN_PROGRESS` en lugar de retener cada una una conexión del pool. Son 2 s porque es el presupuesto de DES-02 (p95 de 2 s en operaciones JSON propias) y porque una creación ocupada no es un fallo del servicio: es la misma respuesta que da toda escritura sobre un perfil ocupado. El bloqueo exige una transacción abierta (`Propagation.MANDATORY`); sin ella se soltaría al terminar la sentencia.
 - El bloqueo depende de PostgreSQL; una prueba de integración con PostgreSQL real comprueba la regla, la independencia entre Usuarios y la creación tras deshacer.
 
 ## Alternativas descartadas

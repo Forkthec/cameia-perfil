@@ -292,13 +292,15 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 - **Resultado (9-oct-2026):** rojo: `DomainRuleValidatorTest` y `CodePointSizeValidatorTest` no compilaban (faltaban las restricciones). Verde: `DomainRuleValidatorTest` 32/32, `CodePointSizeValidatorTest` 5/5, `ErrorCatalogTest` 6/6 con la nueva `constraintNames`, `CommandValuesTest` 21/21, `ApiExceptionHandlerTest` 48/48, `ArquitecturaTest` 8/8 (152 pruebas, BUILD SUCCESS). `hasControlCharacter` y `InvalidFieldsException.of(FieldError)` ya existían por T-A1 y T-A2. Se agregó `ApiExceptionHandlerDomainRuleTest` (2 pruebas) porque la tarjeta no probaba el cambio de `fieldProblems` por la ruta HTTP real. Los 5 códigos `*_INVALID_CHARACTERS` se documentan en `docs/errores.md` en T-A7. hibernate-validator llega con `spring-boot-starter-validation` (verificado en `pom.xml`).
 
-## [ ] T-A4 · Reloj UTC — ≤ 15 min, ≈ 30 líneas
+## [x] T-A4 · Reloj UTC — ≤ 15 min, ≈ 30 líneas
 
 - **Reutilizar** `infrastructure/config/ClockConfig.java`, que crea CM-279 (bloque P1) con `@Bean Clock clock()` = `Clock.systemUTC()`. **No crear** otra clase de reloj: dos `@Bean Clock` hacen fallar el arranque (`NoUniqueBeanDefinitionException`). Comprueba con `git grep -n "Clock.systemUTC" -- src/main` que existe exactamente uno; si no existe, detente y reporta (falta P1 en la base).
 - **Modificar** `ProfileAppService`: nuevo parámetro de constructor `Clock clock` (tercer parámetro) guardado en un campo `final`; aún no se usa en reglas (lo usan T-B4 y T-C4). Actualiza `ProfileAppServiceTest.setUp`: `service = new ProfileAppService(repository, roleRepository, Clock.fixed(Instant.parse("2026-10-15T12:00:00Z"), ZoneOffset.UTC));`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileAppServiceTest" test`.
 
-## [ ] T-A5 · Bloqueo del perfil en toda escritura — ≤ 30 min, ≈ 120 líneas
+- **Resultado (9-oct-2026):** rojo: `ProfileAppServiceTest` no compilaba (el constructor solo recibía dos parámetros). Verde: 28/28 (`./mvnw -B test -Dtest=ProfileAppServiceTest`). Exactamente un `Clock.systemUTC` en `src/main` (el de `ClockConfig`, de CM-279 P1): no se creó otro reloj. El campo `clock` queda sin uso hasta T-B4 y T-C4.
+
+## [x] T-A5 · Bloqueo del perfil en toda escritura — ≤ 30 min, ≈ 120 líneas
 
 - **Cubre:** REQ-EF-05, REQ-EF-06.
 - **Modificar** `infrastructure/persistence/repository/ProfessionalProfileJpaRepository.java`:
@@ -349,7 +351,9 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 - **Pruebas** `ProfileAppServiceTest`: actualizar los `when(repository.findById(...))` de las escrituras a `findByIdForUpdate`; nueva `writes_shouldLoadProfileForUpdate_whenProfileChanges` (parametrizada por los 13 casos de uso: `verify(repository).findByIdForUpdate(ProfileId.of(PROFILE_ID))` y `verify(repository, never()).findById(any())`); `getProfile_shouldNotLock_whenReading`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileAppServiceTest,ErrorCatalogTest" test`.
 
-## [ ] T-A6 · Prueba de integración del bloqueo — ≤ 30 min, ≈ 160 líneas
+- **Resultado (10-oct-2026):** rojo: `ProfileAppServiceTest` no compilaba (el puerto no tenía `findByIdForUpdate`). Verde: `./mvnw -q -B "-Dtest=ProfileAppServiceTest,ErrorCatalogTest" test` sin fallos. `getProfile` sigue con `loadForUser` (sin bloqueo); los 13 casos de uso que modifican usan `loadForUserForUpdate`. El adaptador captura `PersistenceException` y `PessimisticLockingFailureException`; si la integración de T-A6 muestra otra excepción, se reporta aquí.
+
+## [x] T-A6 · Prueba de integración del bloqueo — ≤ 30 min, ≈ 160 líneas
 
 - **Crear** `infrastructure/persistence/ProfileWriteLockIT.java` con la forma de `ProfileCreationConcurrencyIT` (`@SpringBootTest`, `@Testcontainers`, `@Container @ServiceConnection static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine")`, `ExecutorService`, limpieza de `firebase_uid like 'uid-lock-%'`).
 - **Pruebas:**
@@ -359,7 +363,9 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 - **Comandos:** `./mvnw.cmd -B "-Dit.test=ProfileWriteLockIT" verify` (Docker encendido).
 - **Detente si** B no espera en la primera prueba: el bloqueo no se está tomando.
 
-## [ ] T-A7 · Catálogo documentado y probado — ≤ 20 min, ≈ 90 líneas
+- **Resultado (10-oct-2026):** verde en la primera corrida: `./mvnw -B "-Dit.test=ProfileWriteLockIT" verify` → Tests run: 5, Failures: 0, Errors: 0 (BUILD SUCCESS). La espera agotada responde `ProfileUpdateInProgressException` entre 1,5 s y 3,5 s con el perfil sin cambios; B espera con A reteniendo la fila (primera prueba) y la lectura no espera. La excepción de Spring Data que llega al adaptador es capturada (`PersistenceException | PessimisticLockingFailureException`); no hizo falta otra. Se agregaron dos pruebas: el bloqueo exige transacción (`IllegalTransactionStateException`) y el límite de espera vuelve a `0` tras tomarlo.
+
+## [x] T-A7 · Catálogo documentado y probado — ≤ 20 min, ≈ 90 líneas
 
 - **Crear** `domain/exception/ErrorCodeDocumentationTest.java`:
   - `everyCode_shouldBeDocumented_whenCatalogIsRead`: lee `docs/errores.md` (ruta relativa a la raíz del módulo, `Path.of("docs", "errores.md")`) y comprueba que cada `ErrorCode.name()` aparece entre comillas invertidas en alguna fila de tabla (línea que empieza con `| \``).
@@ -368,7 +374,9 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ErrorCodeDocumentationTest" test`.
 - **Trampa:** la prueba lee archivos con rutas relativas al módulo; Surefire corre con el directorio del módulo como directorio de trabajo, así que `Path.of("docs", "errores.md")` funciona con `./mvnw.cmd` desde la raíz del repo. Lee con `Files.readString(path, StandardCharsets.UTF_8)`: el archivo tiene tildes.
 
-## [ ] T-A9 · Lectura de opciones y fechas en el dominio, vigilada por ArchUnit — ≤ 25 min, ≈ 90 líneas
+- **Resultado (10-oct-2026):** rojo: `ErrorCodeDocumentationTest` falló en sus dos pruebas. Sin fila en `docs/errores.md`: `PROFILE_UPDATE_IN_PROGRESS` y los cinco `*_INVALID_CHARACTERS`; sin prueba que los nombre: `PROFILE_UPDATE_IN_PROGRESS`, `WORK_EXPERIENCE_ID_INVALID_FORMAT`, `EDUCATION_ID_INVALID_FORMAT` y `TARGET_ROLE_ID_INVALID_FORMAT` (estos tres ya estaban documentados con una prueba que no los nombraba). Se agregaron las seis filas, `ApiExceptionHandlerTest.profileUpdateInProgress_shouldReturn409_whenThrown` y tres casos de `ProfileControllerTest.frameworkError_shouldReturnCommonShape_whenRequestIsRejected`. Verde: `ErrorCodeDocumentationTest, ApiExceptionHandlerTest, ProfileControllerTest, ErrorCatalogTest, ErrorCodeTest` → 172 pruebas, 0 fallos.
+
+## [x] T-A9 · Lectura de opciones y fechas en el dominio, vigilada por ArchUnit — ≤ 25 min, ≈ 90 líneas
 
 - **Por qué:** CM-271 dejó a esta tarea mover `CommandValues` al dominio y prohibir `Enum.valueOf` y `YearMonth.parse` sueltos en `application` (hallazgo de su sección 11). Convertir un texto en una opción o en un mes es una regla de forma del dominio, y `@DomainRule` (T-A3) la ejecuta desde el borde.
 - **Mover** `application/command/CommandValues.java` a `domain/model/FieldValues.java` con los mismos métodos públicos (`option`, `yearMonth` y las constantes de mensaje) y su Javadoc en español (ya lo está). Actualizar las referencias (`git grep -n CommandValues -- src`): `ProfileAppService`, `DomainRule` (T-A3) y `CommandValuesTest` → `domain/model/FieldValuesTest`.
@@ -386,7 +394,9 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ArquitecturaTest,FieldValuesTest" test`.
 - **Orden:** después de T-A3; si T-A3 aún no está, detente.
 
-## [ ] T-A10 · Creación del perfil alineada: 2 s y 409 — ≤ 20 min, ≈ 80 líneas
+- **Resultado (10-oct-2026):** `CommandValues` pasó a `domain/model/FieldValues` y su prueba a `FieldValuesTest` (movidos con `git mv`; referencias en `ProfileAppService`, `DomainRule` y `docs/errores.md`). Nueva regla `ArquitecturaTest.applicationDoesNotParseRawValues`. Verde: `ArquitecturaTest, FieldValuesTest, DomainRuleValidatorTest, ProfileAppServiceTest` → 104 pruebas, 0 fallos. La regla muerde: con un `EmploymentStatus.valueOf("X")` temporal en `ProfileAppService.loadProfile` falló con `Method <ProfileAppService.loadProfile(java.util.UUID)> calls method <EmploymentStatus.valueOf(java.lang.String)> in (ProfileAppService.java:178)`; el temporal se retiró (el archivo ya no contiene `valueOf("X")`).
+
+## [x] T-A10 · Creación del perfil alineada: 2 s y 409 — ≤ 20 min, ≈ 80 líneas
 
 - **Por qué:** decisión de Paula del 9-oct-2026: la escritura que encuentra el perfil ocupado espera como máximo 2 s (presupuesto de DES-02) y responde 409; la creación del perfil hace lo mismo para no tener dos comportamientos.
 - **Modificar** `ProfessionalProfileRepositoryAdapter.CREATION_LOCK_TIMEOUT` de `"5s"` a `"2s"` y su comentario.
@@ -395,11 +405,15 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 - **Pruebas:** actualizar `ProfileCreationConcurrencyIT` y las pruebas que nombran el código o la excepción (`git grep -n "PROFILE_CREATION_TIMEOUT\|ProfileCreationTimeoutException" -- src docs`); la prueba de la espera agotada pasa a esperar el 409 entre 1,5 s y 3,5 s. Postman: la petición de la creación concurrente, si existe, espera 409.
 - **Comandos:** `./mvnw.cmd -B "-Dit.test=ProfileCreationConcurrencyIT" verify` y `./mvnw.cmd -q -B "-Dtest=ErrorCatalogTest,ErrorCodeTest" test`.
 
-## [ ] T-A8 · ADR y cierre del PR 1 — ≤ 30 min
+- **Resultado (10-oct-2026):** `PROFILE_CREATION_TIMEOUT` (503) se retiró y se agregó `PROFILE_CREATION_IN_PROGRESS` (409) con `ProfileCreationInProgressException`; la espera de la creación pasó de 5 s a 2 s; OpenAPI del `POST /api/v1/profiles` agrupa los dos 409 en una sola respuesta con dos ejemplos (una respuesta no puede repetir su estado); `docs/errores.md` gana la sección «Códigos retirados». Nota de ejecución: el código y sus pruebas se cambiaron en el mismo paso (es un retiro y un reemplazo), así que no se capturó una corrida en rojo; las pruebas que fijaban 503 y 5 s son las que ahora esperan 409 y 1,5 a 3,5 s. Verde: `ErrorCatalogTest, ErrorCodeTest, ErrorCodeDocumentationTest, ProfileControllerTest, ArquitecturaTest` → 132 pruebas, 0 fallos; `ProfileCreationConcurrencyIT` (8) y `OpenApiDocumentIT` (1) en verde. La colección de Postman no tenía la petición de creación concurrente, así que no cambia.
+
+## [x] T-A8 · ADR y cierre del PR 1 — ≤ 30 min
 
 - **Crear** `docs/adr/0005-bloqueo-del-perfil-en-escrituras.md` (en español): contexto (máximos y mínimos que cruzan filas; dos pestañas), decisión (bloqueo pesimista de `perfil_profesional` en toda escritura, espera máxima 2 s, 409 `PROFILE_UPDATE_IN_PROGRESS`), alternativas (`@Version` con reintentos: la perdedora repite la regla y el `save` hace `merge`; bloquear solo al eliminar: no cubre los máximos), consecuencias (las escrituras de un mismo perfil se serializan; las lecturas no esperan).
 - **Cierre:** `./mvnw.cmd -B clean verify` en verde; extraer de `target/site/jacoco/jacoco.csv` líneas y ramas de `SingleLineText`, `InvalidFieldsException`, `ProfileUpdateInProgressException`, `CodePointSizeValidator`, `DomainRuleValidator`, `ApiExceptionHandler`, `FieldValues`, `ProfileAppService`, `ProfessionalProfileRepositoryAdapter`, `ErrorCatalog`, `ProfileCreationInProgressException` (≥ 90 % cada una; cada línea o rama sin cubrir con su razón) y la cobertura global (anotarla: es la línea base que los PR siguientes no pueden bajar). Medir el diff con `git diff --stat origin/develop...HEAD` (≤ 1000 líneas agregadas + eliminadas).
 - **Terminado:** salida de `clean verify`, tabla de cobertura y tamaño del diff pegados en el PR.
+
+- **Resultado (10-oct-2026):** ADR `0005-bloqueo-del-perfil-en-escrituras.md` creado y ADR 0003 ajustado (2 s y 409). El PR 1 se partió en 1a y 1b (Desvío 12 de la cola): 1a = T-A0 a T-A3 (rama `CM-274-base-escritura-perfil`, 943 líneas contra el PR 0; `clean verify` BUILD SUCCESS, 410 unitarias + 44 IT, 0 fallos); 1b = T-A4 a T-A10 (rama `CM-274-bloqueo-escrituras-perfil`, base 1a; `clean verify` BUILD SUCCESS, 433 unitarias + 49 IT, 0 fallos). Cobertura de 1b (líneas · ramas): `SingleLineText` 18/18 · 32/32; `InvalidFieldsException` 8/8 · 2/2; `ProfileUpdateInProgressException` 2/2; `ProfileCreationInProgressException` 2/2; `CodePointSizeValidator` 4/4 · 4/4; `FieldValues` 14/14 · 12/12; `ProfessionalProfileRepositoryAdapter` 28/28 · 12/12; `ErrorCatalog` 73/73 · 2/2; `ApiExceptionHandler` 64/64 · 27/28; `ProfileAppService` 62/65 · 12/12; `DomainRuleValidator` 17/18 · 5/6. Sin cubrir y su razón: `DomainRuleValidator` línea 28, rama `!rule.canReport(code)` — defensa que hoy no se alcanza porque cada regla solo lanza los códigos que informa (queda como cláusula de seguridad si una regla futura lanza otro); `ApiExceptionHandler` línea 214, una rama de `unwrap(...) instanceof HibernateConstraintViolation` (de la capa de CM-279, no de esta); `ProfileAppService` líneas 102 y 153, 178 (`removeEducation`, `removeTargetRole` y `loadProfile` no tienen prueba unitaria de su camino feliz; la prueba parametrizada de las 13 escrituras solo llega hasta la carga del perfil). Cobertura global del repo: 93,5 % de líneas (1154/1234) y 88,8 % de ramas (300/338): es la línea base que los PR siguientes no bajan. Logs: `ejecucion/verify-CM-274-1a.log` y `ejecucion/verify-CM-274-1b.log`.
 
 ---
 
