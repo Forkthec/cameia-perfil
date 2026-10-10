@@ -4,7 +4,7 @@
 
 Las respuestas de error siguen la [sección 6 del estándar](estandar-backend.md#6-errores) y el [ADR 0001](adr/0001-codigo-de-error-y-request-id.md). Toda respuesta de error es `application/problem+json;charset=UTF-8` (RFC 9457) y lleva:
 
-- `type`, `title`, `status`, `detail` e `instance`, de la norma. `instance` es la ruta de la petición y la pone Spring; las rutas de Perfil solo llevan identificadores UUID, así que no expone datos personales, y el cuerpo es JSON, que el navegador no interpreta como página.
+- `type`, `title`, `status`, `detail` e `instance`, de la norma. `instance` es la ruta de la petición, tal como la envió el cliente (codificada), y la pone Spring; las rutas de Perfil solo llevan identificadores, así que no expone datos personales, y si un identificador viene mal escrito el valor aparece solo ahí, nunca en `detail` ni en `errors[]`; el cuerpo es JSON, que el navegador no interpreta como página.
 - `code`: código estable. El cliente decide qué mostrar a partir de él, no del texto.
 - `requestId`: identificador de la petición. Si llega un `X-Request-Id` válido (`[A-Za-z0-9._-]{1,64}`) se devuelve igual; si no, se genera un UUID. Va también en el encabezado `X-Request-Id` de la respuesta.
 - `errors[]` (solo en `VALIDATION_FAILED`): un elemento por campo, con `field`, `code` y `message`. Lo arman Bean Validation y los campos que rechaza el dominio.

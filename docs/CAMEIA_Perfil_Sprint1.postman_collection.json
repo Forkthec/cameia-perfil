@@ -4884,7 +4884,8 @@
                   "pm.test('Content-Type problem+json con charset', () => { const t = pm.response.headers.get('Content-Type').toLowerCase(); pm.expect(t).to.include('application/problem+json'); pm.expect(t).to.include('charset=utf-8'); });",
                   "pm.test('code TARGET_ROLE_ID_INVALID_FORMAT', () => pm.expect(pm.response.json().code).to.eql('TARGET_ROLE_ID_INVALID_FORMAT'));",
                   "pm.test('detail del identificador', () => pm.expect(pm.response.json().detail).to.eql(\"El identificador del rol objetivo no es válido.\"));",
-                  "pm.test('Sin eco del valor hostil', () => pm.expect(pm.response.text()).to.not.match(/OR 1=1|OR%201/));",
+                  "pm.test('instance es la ruta de la petición', () => pm.expect(pm.response.json().instance).to.match(/\\/target-roles\\/%27%20OR%201=1$/));",
+                  "pm.test('Sin eco del valor hostil fuera de instance', () => { const cuerpo = pm.response.json(); delete cuerpo.instance; pm.expect(JSON.stringify(cuerpo)).to.not.match(/OR 1=1|OR%201/); });",
                   "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
                   "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
                 ]
