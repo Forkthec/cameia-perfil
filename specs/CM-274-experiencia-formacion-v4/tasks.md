@@ -36,7 +36,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 - **Resultado (9-oct-2026):** los siete defectos se reprodujeron; las respuestas reales están en `evidencia-antes.md`. Entorno: jar de la cadena en el puerto 18082 y PostgreSQL desechable en el 55432 (el 5432 no se tocó). Las altas de formación y habilidad de preparación usan `level` `UNDERGRADUATE` y `skillName`, los nombres reales de los campos.
 
-## [ ] T-A1 · `SingleLineText` — ≤ 30 min, ≈ 120 líneas
+## [x] T-A1 · `SingleLineText` — ≤ 30 min, ≈ 120 líneas
 
 - **Crear** `domain/model/SingleLineText.java`:
   ```java
@@ -91,6 +91,8 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
   - `length_shouldCountCodePoints_whenTextHasEmoji`: `"😀"`→1; `"a😀b"`→3.
 - **Trampa:** las pruebas con caracteres invisibles se escriben con escapes `\uXXXX` en el código fuente, nunca con el carácter pegado (la herramienta de edición los convierte: verifica con `git diff` que el archivo contiene la barra y la `u`).
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=SingleLineTextTest" test` → 0 fallos.
+
+- **Resultado (9-oct-2026):** rojo: `SingleLineTextTest` no compilaba (faltaba la clase). Verde: 24/24 (`./mvnw -B test -Dtest=SingleLineTextTest`). `hasControlCharacter` se escribió aquí porque las mismas pruebas la cubren; T-A3 ya no la crea. Los invisibles de la prueba están con escapes `\uXXXX` (la herramienta de edición los convertía en el carácter real).
 
 ## [ ] T-A2 · Acumulador de errores en `InvalidFieldsException` — ≤ 20 min, ≈ 80 líneas
 
