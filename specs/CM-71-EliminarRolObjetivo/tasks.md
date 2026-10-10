@@ -59,7 +59,7 @@ Copiar `specs/CM-71-EliminarRolObjetivo/` desde `C:\Users\paanm\Documents\cameia
 - **Commit:** `CM-71 | test(perfil): eliminar roles objetivo en Borrador y en perfil activo`.
 - **Resultado (10-oct):** `ProfileAppServiceTest` 57/57 y `ProfessionalProfileTest` 28/28 en verde. Son pruebas de comportamiento que ya cumplía el dominio: pasan desde la primera corrida (no hay rojo previo que capturar).
 
-## [ ] T-71.3 · Concurrencia, Postman y Newman — ≤ 30 min, ≈ 230 líneas
+## [x] T-71.3 · Concurrencia, Postman y Newman — ≤ 30 min, ≈ 230 líneas
 
 - `TargetRoleConcurrencyIT.removeTargetRole_shouldKeepOneRole_whenTwoRemovalsArriveOnActiveProfile`: crear el perfil, agregar los roles
   `a0000001-0000-0000-0000-000000000001` y `…02`, completarlo con lo que exija `completeProfile` (nombre, resumen, formación, habilidad, rol: usar los
@@ -81,8 +81,11 @@ Copiar `specs/CM-71-EliminarRolObjetivo/` desde `C:\Users\paanm\Documents\cameia
 - **Comandos:** `./mvnw.cmd -B "-Dit.test=TargetRoleConcurrencyIT" verify`; Newman como en CM-70 (base limpia, rol inactivo preparado con el
   `UPDATE` de CM-70 y restaurado al final). Pega el resumen.
 - **Commit:** `CM-71 | test(perfil): concurrencia y peticiones de Postman de eliminar roles objetivo`.
+- **Resultado (10-oct):** `TargetRoleConcurrencyIT` Tests run: 4, Failures: 0 (BUILD SUCCESS; la prueba nueva es de regresión: pasa desde la primera corrida porque el bloqueo del perfil ya está en la base). Newman contra la imagen empaquetada con base limpia y el rol de CM-70 inactivo: 106 peticiones, 0 fallidas, 103 scripts de prueba, 332 aserciones, 0 fallos (`ejecucion/newman-CM-71.log`).
 
-## [ ] T-71.4 · Autoverificación y cierre — ≤ 20 min
+## [x] T-71.4 · Autoverificación y cierre — ≤ 20 min
 
 Lista V1 a V10 de la spec (§11) con salida real; `./mvnw.cmd -B clean verify`; cobertura de `ProfileAppService` y `ErrorCatalog`; `git diff
 --shortstat <punta de CM-70>...HEAD` (≤ 800); `/simplify` y `/code-review high`. Sin migración ni identidad nueva: no necesita Prompt H.
+
+- **Resultado (10-oct):** V1 y V2 Newman (409 y 204) y V3 (404), V4 (403 del Usuario C sobre el perfil de D): 106 peticiones, 0 fallidas, 332 aserciones (`ejecucion/newman-CM-71.log`); la conservación del rol y de `COMPLETED` tras el 409 la afirma `ProfileAppServiceTest.removeTargetRole_shouldKeepRoleAndStatus_whenLastRoleOfCompletedProfile`; V5 `TargetRoleConcurrencyIT` 4/4 (1 rol, un resultado correcto y un `LastTargetRoleException`, perfil `COMPLETED`); V6 `DELETE` repetido → 204 y 404 `TARGET_ROLE_NOT_FOUND`; V7 `DELETE …/target-roles/%27%20OR%201=1` → 422 `TARGET_ROLE_ID_INVALID_FORMAT` sin eco, perfil `IN_PROGRESS` sin roles, 0 «Fallo no controlado» en el log (`ejecucion/adversarial-CM-71.log`); V8 `ErrorCatalog` 72/72 y 2/2, `ProfileAppService` 64/66 y 12/12 (líneas previas, Desvío 13), `ProfessionalProfile` 115/117 y 42/46 (previas), global 95,1 % de líneas y 91,4 % de ramas; V9 verde dentro de `clean verify` (497 unitarias + 105 IT, 0 fallos; `ejecucion/verify-CM-71.log`); V10 `git diff` de `src/main` sin `CM-` y capa de 682 líneas (232 de documentos). Sin migración ni identidad nueva: no necesita Prompt H. `/simplify` y `/code-review high` no se corrieron desde esta sesión (misma razón que en CM-70).

@@ -1,11 +1,16 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
 import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
+import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
+import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -108,6 +113,46 @@ class TargetRoleConcurrencyIT {
 
         assertThat(duplicates).isEqualTo(19);
         assertThat(countRoles(profileId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Dos eliminaciones a la vez en un perfil activo con dos roles dejan uno: la segunda recibe el último rol")
+    void removeTargetRole_shouldKeepOneRole_whenTwoRemovalsArriveOnActiveProfile() throws Exception {
+        var uid = "uid-roles-" + UUID.randomUUID();
+        var profileId = profileCreationAppService.createProfile(new CreateProfileCommand(uid)).getId().value();
+        profileAppService.updateProfileInfo(new UpdateProfileInfoCommand(
+                profileId, uid, "Perfil de prueba", "Resumen de prueba con más de diez caracteres.", null, null));
+        profileAppService.addEducation(new AddEducationCommand(profileId, uid, "Universidad de prueba", "Ingeniería de Sistemas",
+                null, "UNDERGRADUATE", "2018-01", "2022-12", false, "MANUAL"));
+        profileAppService.addSkill(new AddSkillCommand(profileId, uid, "Java", "ADVANCED", "MANUAL"));
+        profileAppService.addTargetRole(new AddTargetRoleCommand(profileId, uid, UUID.fromString(roleId(1))));
+        var withTwo = profileAppService.addTargetRole(new AddTargetRoleCommand(profileId, uid, UUID.fromString(roleId(2))));
+        profileAppService.completeProfile(profileId, uid);
+        var roleIds = withTwo.getTargetRoles().stream().map(role -> role.getId()).toList();
+
+        var start = new CountDownLatch(1);
+        var futures = new ArrayList<Future<Object>>();
+        for (var roleId : roleIds) {
+            futures.add(executor.submit(() -> {
+                start.await();
+                return profileAppService.removeTargetRole(profileId, uid, roleId);
+            }));
+        }
+        start.countDown();
+        var outcomes = new ArrayList<Object>();
+        for (var future : futures) {
+            try {
+                outcomes.add(future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS));
+            } catch (ExecutionException e) {
+                outcomes.add(e.getCause());
+            }
+        }
+
+        assertThat(outcomes).filteredOn(o -> o instanceof LastTargetRoleException).hasSize(1);
+        assertThat(outcomes).filteredOn(o -> !(o instanceof Exception)).hasSize(1);
+        assertThat(countRoles(profileId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select estado from perfil_profesional where id = ?", String.class, profileId))
+                .isEqualTo(ProfileStatus.COMPLETED.name());
     }
 
     private static String roleId(int number) {
