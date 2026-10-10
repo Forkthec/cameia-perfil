@@ -55,7 +55,8 @@ Un PR: `CM-72-catalogo-activos-y-orden-roles`, base la punta de CM-71. ≈ 380 l
 | Colecciones | 0 activos | `[]` | REQ-72-02 (controlador con el servicio simulado) |
 | Orden | 3 roles A, B, C; sustituir B por D | A, D, C en el `PATCH` y en el `GET` | REQ-72-03 |
 | Orden | 3 roles; eliminar A | B, C | `ProfessionalProfileTest.removeTargetRole_shouldKeepOrderOfOthers_whenOneIsRemoved` |
-| Enumerados | `lang=EN`, `lang=`, `lang=fr` | 422 (existente: solo `es` y `en` en minúsculas) | `ProfessionalRoleControllerTest` (existente) |
+| Enumerados | `lang=EN`, `lang=fr` | 422 (existente: solo `es` y `en` en minúsculas) | `ProfessionalRoleControllerTest` (existente) |
+| Enumerados | `lang=` (vacío) | 200 en español (existente: el valor por defecto aplica a un parámetro vacío) | `ProfessionalRoleControllerTest#listAll_shouldReturnSpanish_whenLangIsEmpty` (existente) |
 | Propiedad, concurrencia, fechas, texto | no aplican: lectura pública del catálogo y orden de una lista ya protegida por el bloqueo del perfil | — | justificación |
 | Dependencia lenta | base lenta en el catálogo | sin tiempo de espera propio; DES-02 se mide con Newman | Newman `responseTime < 2000` |
 
@@ -73,6 +74,8 @@ cuerpo, integración ni URL de entrada.
 | AC-0002 | DES-02 | filtro con índice; una consulta | Newman `responseTime < 2000` |
 | AC-0003 | SEG-01 | 15.3.1 | `ProfessionalRoleControllerTest` (campos exactos) |
 | MAN-01 | ≥ 90 % | `ProfessionalRoleRepositoryAdapter`, `ProfessionalProfile`, `ProfileResponse` | JaCoCo |
+| AC-0001 | IA-01 | no aplica: el catálogo y el orden de los roles no producen ni consumen una salida de IA | — |
+| MAN-02 | adaptador externo | no aplica: sin adaptador de proveedor externo; solo el puerto del catálogo | — |
 
 ## 8. Decisiones
 
