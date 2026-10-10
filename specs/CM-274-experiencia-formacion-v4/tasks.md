@@ -20,7 +20,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 # PR 1 — Base de escritura (`CM-274-base-escritura-perfil`, desde `origin/develop`)
 
-## [ ] T-A0 · Reproducir los defectos antes de corregir — ≤ 30 min
+## [x] T-A0 · Reproducir los defectos antes de corregir — ≤ 30 min
 
 - **Objetivo:** dejar evidencia real de los defectos D1, D2, D4 a D7 y D10 sobre `develop` sin cambiar código de producción.
 - **Pasos:** en una rama temporal desde `origin/develop`, `docker compose up -d --build`, y con `curl` (o Postman) contra `http://localhost:8082`:
@@ -33,6 +33,8 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
   7. D5: perfil completo (nombre, resumen, 1 formación, 1 habilidad, 1 rol, `POST …/completion`) y `DELETE …/educations/{eduId}` → 204.
 - **Salida:** pegar cada respuesta (estado y cuerpo) en `specs/CM-274-experiencia-formacion-v4/evidencia-antes.md`. Si algún resultado no coincide con lo esperado, detenerse y reportar.
 - **Terminado:** archivo con las siete respuestas reales; `docker compose down -v`.
+
+- **Resultado (9-oct-2026):** los siete defectos se reprodujeron; las respuestas reales están en `evidencia-antes.md`. Entorno: jar de la cadena en el puerto 18082 y PostgreSQL desechable en el 55432 (el 5432 no se tocó). Las altas de formación y habilidad de preparación usan `level` `UNDERGRADUATE` y `skillName`, los nombres reales de los campos.
 
 ## [ ] T-A1 · `SingleLineText` — ≤ 30 min, ≈ 120 líneas
 
