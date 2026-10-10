@@ -4685,7 +4685,8 @@
             }
           }
         }
-      ]
+      ],
+      "description": "Antes de correr esta carpeta, el rol del catálogo a0000007-0000-0000-0000-000000000006 debe estar inactivo; si no, las peticiones de rol inactivo responden 201 y el catálogo lo sigue ofreciendo. Ejecutar sobre la base de la prueba: UPDATE rol_profesional SET estado = 'INACTIVE' WHERE id = 'a0000007-0000-0000-0000-000000000006';"
     }
   ]
 }
