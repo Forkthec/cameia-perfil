@@ -469,6 +469,100 @@ class ProfessionalProfileTest {
         assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
     }
 
+    // ── Formaciones académicas: máximo de 5 y mínimo de 1 en perfil activo ─
+
+    @Test
+    @DisplayName("La quinta formación se acepta")
+    void addEducation_shouldAcceptFifth_whenProfileHasFour() {
+        var profile = ProfessionalProfile.create(UID);
+        for (int i = 0; i < 4; i++) {
+            profile.addEducation(edu("Institución " + i));
+        }
+
+        profile.addEducation(edu("Institución 4"));
+
+        assertThat(profile.getEducations()).hasSize(5);
+    }
+
+    @Test
+    @DisplayName("La sexta formación se rechaza y la lista sigue con cinco")
+    void addEducation_shouldRejectSixth_whenProfileHasFive() {
+        var profile = ProfessionalProfile.create(UID);
+        for (int i = 0; i < 5; i++) {
+            profile.addEducation(edu("Institución " + i));
+        }
+
+        assertThatThrownBy(() -> profile.addEducation(edu("Institución 5")))
+                .isInstanceOf(co.edu.unicauca.cameia.perfil.domain.exception.EducationLimitReachedException.class)
+                .hasMessage("Ya tienes el máximo de 5 formaciones académicas.");
+        assertThat(profile.getEducations()).hasSize(5);
+    }
+
+    @Test
+    @DisplayName("Un perfil en Borrador puede quedarse sin su última formación")
+    void removeEducation_shouldRemoveLast_whenProfileIsInProgress() {
+        var profile = ProfessionalProfile.create(UID);
+        var only = edu("Institución");
+        profile.addEducation(only);
+
+        profile.removeEducation(only.getId());
+
+        assertThat(profile.getEducations()).isEmpty();
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_PROGRESS);
+    }
+
+    @Test
+    @DisplayName("Un perfil en revisión puede quedarse sin su última formación")
+    void removeEducation_shouldRemoveLast_whenProfileIsInReview() {
+        var profile = buildCompleteProfile();
+        profile.requestReview();
+        var only = profile.getEducations().get(0);
+
+        profile.removeEducation(only.getId());
+
+        assertThat(profile.getEducations()).isEmpty();
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_REVIEW);
+    }
+
+    @Test
+    @DisplayName("La última formación de un perfil activo no se elimina y el perfil sigue activo")
+    void removeEducation_shouldRejectLast_whenProfileIsCompleted() {
+        var profile = buildCompleteProfile();
+        profile.complete();
+        var only = profile.getEducations().get(0);
+
+        assertThatThrownBy(() -> profile.removeEducation(only.getId()))
+                .isInstanceOf(co.edu.unicauca.cameia.perfil.domain.exception.EducationNotAllowedException.class)
+                .hasMessage("No puedes quedarte sin formación académica con el perfil activo. Agrega otra antes de eliminar esta.");
+        assertThat(profile.getEducations()).hasSize(1);
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("Un perfil activo con dos formaciones puede eliminar una")
+    void removeEducation_shouldRemove_whenCompletedProfileHasTwo() {
+        var profile = buildCompleteProfile();
+        var second = edu("Otra institución");
+        profile.addEducation(second);
+        profile.complete();
+
+        profile.removeEducation(second.getId());
+
+        assertThat(profile.getEducations()).hasSize(1);
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("Un identificador ajeno responde no encontrado y no no-permitido, aunque quede una sola formación")
+    void removeEducation_shouldThrowNotFound_whenIdIsForeignInCompletedProfileWithOne() {
+        var profile = buildCompleteProfile();
+        profile.complete();
+
+        assertThatThrownBy(() -> profile.removeEducation(UUID.randomUUID()))
+                .isInstanceOf(co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException.class);
+        assertThat(profile.getEducations()).hasSize(1);
+    }
+
     private static WorkExperience experience(String company) {
         return WorkExperience.create(new WorkExperienceDraft(company, "Dev", null, null, null, EmploymentStatus.CURRENT),
                 new DateBounds(YearMonth.of(2026, 10), null));

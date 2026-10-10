@@ -126,4 +126,25 @@ class OpenApiDocumentIT {
                 .containsExactlyInAnyOrder("CURRENT", "ENDED", "UNKNOWN_END");
         assertThat(schema.has("provenance")).isFalse();
     }
+
+    @Test
+    @DisplayName("El OpenAPI de la formación publica los límites de 150, el formato de las fechas, los niveles y sin área de estudio")
+    void addEducationRequest_shouldDocumentLimits_whenApiDocsAreGenerated() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+
+        var schemas = JsonMapper.builder().build().readTree(response.body()).get("components").get("schemas");
+        var schema = schemas.get("AddEducationRequest").get("properties");
+        assertThat(schema.get("institution").get("maxLength").asInt()).isEqualTo(150);
+        assertThat(schema.get("degree").get("maxLength").asInt()).isEqualTo(150);
+        assertThat(schema.get("level").get("enum").valueStream().map(v -> v.asString()).toList())
+                .containsExactlyInAnyOrder("TECHNICAL", "UNDERGRADUATE", "POSTGRADUATE");
+        assertThat(schema.get("startDate").get("pattern").asString()).isEqualTo("^\\d{4}-(0[1-9]|1[0-2])$");
+        assertThat(schema.get("endDate").get("pattern").asString()).isEqualTo("^\\d{4}-(0[1-9]|1[0-2])$");
+        assertThat(schema.has("provenance")).isFalse();
+        assertThat(schema.has("fieldOfStudy")).isFalse();
+        assertThat(schemas.get("EducationItem").get("properties").has("fieldOfStudy")).isFalse();
+        assertThat(response.body()).contains("EDUCATION_LIMIT_REACHED", "EDUCATION_NOT_ALLOWED");
+    }
 }

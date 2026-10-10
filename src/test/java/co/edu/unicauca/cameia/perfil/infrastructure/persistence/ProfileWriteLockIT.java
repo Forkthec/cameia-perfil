@@ -1,12 +1,18 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
+import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
+import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotAllowedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileUpdateInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceLimitReachedException;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -214,6 +220,84 @@ class ProfileWriteLockIT {
                 .hasCauseInstanceOf(WorkExperienceLimitReachedException.class);
         assertThat(jdbcTemplate.queryForObject("select count(*) from experiencia_laboral where perfil_id = ?", Integer.class,
                 profileId)).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("Dos pestañas que eliminan las dos formaciones de un perfil activo: la segunda recibe que no puede quedarse sin formación")
+    void removeEducation_shouldRejectSecond_whenTwoTabsDeleteBothEducationsOfActiveProfile() throws Exception {
+        var completed = completeProfileWithEducations(2);
+        var first = completed.getEducations().get(0).getId();
+        var second = completed.getEducations().get(1).getId();
+
+        var held = removeEducationHoldingTransaction(first);
+
+        var other = executor.submit(() -> profileAppService.removeEducation(profileId, uid, second));
+        assertThatThrownBy(() -> other.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+        held.release().countDown();
+
+        assertThat(held.result()).succeedsWithin(10, TimeUnit.SECONDS);
+        assertThatThrownBy(() -> other.get(10, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(EducationNotAllowedException.class);
+        assertThat(jdbcTemplate.queryForList("select id from educacion where perfil_id = ?", UUID.class, profileId))
+                .containsExactly(second);
+        assertThat(jdbcTemplate.queryForObject("select estado from perfil_profesional where id = ?", String.class, profileId))
+                .isEqualTo("COMPLETED");
+    }
+
+    @Test
+    @DisplayName("Dos bajas simultáneas de la misma formación: una termina bien y la otra recibe que no existe")
+    void removeEducation_shouldReturnNotFound_whenTwoTabsDeleteSameEducation() throws Exception {
+        var profile = completeProfileWithEducations(3);
+        var target = profile.getEducations().get(0).getId();
+
+        var held = removeEducationHoldingTransaction(target);
+
+        var other = executor.submit(() -> profileAppService.removeEducation(profileId, uid, target));
+        assertThatThrownBy(() -> other.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+        held.release().countDown();
+
+        assertThat(held.result()).succeedsWithin(10, TimeUnit.SECONDS);
+        assertThatThrownBy(() -> other.get(10, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(EducationNotFoundException.class);
+        assertThat(jdbcTemplate.queryForObject("select count(*) from educacion where perfil_id = ?", Integer.class, profileId))
+                .isEqualTo(2);
+    }
+
+    /** Resultado de una baja que mantiene su transacción abierta: la futura baja y el cierre que la deja confirmar. */
+    private record HeldRemoval(Future<?> result, CountDownLatch release) { }
+
+    /** Elimina la formación dentro de una transacción que no confirma hasta soltar el cierre, y espera a que tenga el bloqueo. */
+    private HeldRemoval removeEducationHoldingTransaction(UUID educationId) throws InterruptedException {
+        var locked = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var result = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+            profileAppService.removeEducation(profileId, uid, educationId);
+            locked.countDown();
+            try {
+                release.await(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
+            return null;
+        }));
+        assertThat(locked.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
+        return new HeldRemoval(result, release);
+    }
+
+    /** Deja el perfil activo con lo que pide finalizar y el número dado de formaciones. */
+    private ProfessionalProfile completeProfileWithEducations(int educations) {
+        profileAppService.updateProfileInfo(new UpdateProfileInfoCommand(
+                profileId, uid, "Perfil de prueba", "Resumen de prueba con más de diez caracteres.", null, null));
+        for (int i = 0; i < educations; i++) {
+            profileAppService.addEducation(new AddEducationCommand(profileId, uid, "Universidad " + i,
+                    "Ingeniería de Sistemas", "UNDERGRADUATE", "2018-01", "2022-12", false));
+        }
+        profileAppService.addSkill(new AddSkillCommand(profileId, uid, "Java", "ADVANCED", "MANUAL"));
+        profileAppService.addTargetRole(new AddTargetRoleCommand(profileId, uid,
+                UUID.fromString("a0000001-0000-0000-0000-000000000002")));
+        profileAppService.completeProfile(profileId, uid);
+        return profileAppService.getProfile(profileId, uid);
     }
 
     private AddWorkExperienceCommand command(String company) {

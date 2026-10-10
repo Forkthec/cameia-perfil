@@ -49,6 +49,12 @@ class WorkHistoryEndToEndIT {
 
     private static final String CURRENT = "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\",\"startDate\":\"2024-06\"";
 
+    private static final String EDUCATION_BASE =
+            "{\"institution\":\"Universidad del Cauca\",\"degree\":\"Ingenieria de Sistemas\",\"level\":\"UNDERGRADUATE\",\"startDate\":\"2025-02\"";
+    private static final String EDUCATION_ENDED =
+            "{\"institution\":\"Universidad del Cauca\",\"degree\":\"Ingenieria de Sistemas\",\"level\":\"UNDERGRADUATE\","
+                    + "\"startDate\":\"2021-01\",\"endDate\":\"2025-12\",\"inProgress\":false}";
+
     @LocalServerPort
     int port;
 
@@ -269,6 +275,201 @@ class WorkHistoryEndToEndIT {
         assertThat(profile.get("status").asString()).isEqualTo("IN_PROGRESS");
     }
 
+    // ── Formación académica ───────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Una formación en curso se guarda sin fecha de fin y con procedencia MANUAL")
+    void addEducation_shouldReturn201WithNullEndDate_whenInProgress() throws Exception {
+        var uid = newUid();
+        var profileId = api.createProfile(uid);
+
+        var response = addEducation(uid, profileId, EDUCATION_BASE + ",\"inProgress\":true}");
+
+        assertThat(response.statusCode()).isEqualTo(201);
+        var education = api.json(response).get("educations").get(0);
+        assertThat(education.get("startDate").asString()).isEqualTo("2025-02");
+        assertThat(education.get("endDate").isNull()).isTrue();
+        assertThat(education.get("inProgress").asBoolean()).isTrue();
+        assertThat(education.get("provenance").asString()).isEqualTo("MANUAL");
+    }
+
+    @Test
+    @DisplayName("Una formación terminada en el mes actual se acepta y el mes siguiente se rechaza")
+    void addEducation_shouldValidateAgainstUtcMonth_whenEndIsCurrentOrNext() throws Exception {
+        var uid = newUid();
+        var profileId = api.createProfile(uid);
+
+        var current = addEducation(uid, profileId, EDUCATION_BASE + ",\"endDate\":\"2026-10\"}");
+        var next = addEducation(uid, profileId, EDUCATION_BASE + ",\"endDate\":\"2026-11\"}");
+
+        assertThat(current.statusCode()).isEqualTo(201);
+        assertThat(next.statusCode()).isEqualTo(422);
+        assertThat(api.json(next).get("errors").get(0).get("code").asString()).isEqualTo("END_DATE_IN_THE_FUTURE");
+    }
+
+    @Test
+    @DisplayName("Un perfil en Borrador puede eliminar su única formación")
+    void removeEducation_shouldReturn204_whenDraftHasOnlyOne() throws Exception {
+        var uid = newUid();
+        var profileId = api.createProfile(uid);
+        var educationId = api.json(addEducation(uid, profileId, EDUCATION_ENDED)).get("educations").get(0).get("id").asString();
+
+        var response = api.send("DELETE", "/api/v1/profiles/" + profileId + "/educations/" + educationId, uid, null);
+
+        assertThat(response.statusCode()).isEqualTo(204);
+        assertThat(api.json(api.send("GET", "/api/v1/profiles/" + profileId, uid, null)).get("educations")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Eliminar la última formación de un perfil activo responde 409 y la formación sigue")
+    void removeEducation_shouldReturn409_whenLastEducationOfActiveProfile() throws Exception {
+        var uid = newUid();
+        var profileId = api.createProfile(uid);
+        completeProfile(uid, profileId);
+        var educationId = api.json(api.send("GET", "/api/v1/profiles/" + profileId, uid, null))
+                .get("educations").get(0).get("id").asString();
+
+        var response = api.send("DELETE", "/api/v1/profiles/" + profileId + "/educations/" + educationId, uid, null);
+
+        assertThat(response.statusCode()).isEqualTo(409);
+        assertThat(api.json(response).get("code").asString()).isEqualTo("EDUCATION_NOT_ALLOWED");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM educacion WHERE perfil_id = ?::uuid", Integer.class, profileId))
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Un perfil activo con dos formaciones elimina una y sigue activo")
+    void removeEducation_shouldReturn204_whenActiveProfileHasTwo() throws Exception {
+        var uid = newUid();
+        var profileId = api.createProfile(uid);
+        completeProfile(uid, profileId);
+        var second = api.json(addEducation(uid, profileId, EDUCATION_BASE + ",\"inProgress\":true}"))
+                .get("educations").get(1).get("id").asString();
+
+        var response = api.send("DELETE", "/api/v1/profiles/" + profileId + "/educations/" + second, uid, null);
+
+        assertThat(response.statusCode()).isEqualTo(204);
+        assertThat(api.json(api.send("GET", "/api/v1/profiles/" + profileId, uid, null)).get("status").asString())
+                .isEqualTo("COMPLETED");
+    }
+
+    @Test
+    @DisplayName("La sexta formación responde 409 y la base conserva cinco")
+    void addEducation_shouldReturn409_whenProfileAlreadyHasFive() throws Exception {
+        var uid = newUid();
+        var profileId = api.createProfile(uid);
+        for (int i = 0; i < 5; i++) {
+            assertThat(addEducation(uid, profileId, EDUCATION_BASE + "}").statusCode()).isEqualTo(201);
+        }
+
+        var sixth = addEducation(uid, profileId, EDUCATION_BASE + "}");
+
+        assertThat(sixth.statusCode()).isEqualTo(409);
+        assertThat(api.json(sixth).get("code").asString()).isEqualTo("EDUCATION_LIMIT_REACHED");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM educacion WHERE perfil_id = ?::uuid", Integer.class, profileId))
+                .isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("Una formación de otro perfil no se puede quitar por la ruta de este y sigue en su perfil")
+    void removeEducation_shouldKeepOtherProfileEducation_whenIdBelongsToAnotherProfile() throws Exception {
+        var uidA = newUid();
+        var uidB = newUid();
+        var profileA = api.createProfile(uidA);
+        var profileB = api.createProfile(uidB);
+        var educationOfB = api.json(addEducation(uidB, profileB, EDUCATION_ENDED)).get("educations").get(0).get("id").asString();
+
+        var response = api.send("DELETE", "/api/v1/profiles/" + profileA + "/educations/" + educationOfB, uidA, null);
+
+        assertThat(response.statusCode()).isEqualTo(404);
+        assertThat(api.json(response).get("code").asString()).isEqualTo("EDUCATION_NOT_FOUND");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM educacion WHERE perfil_id = ?::uuid", Integer.class, profileB))
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Quien no es el dueño recibe 403 al agregar y al quitar una formación, y el perfil no cambia")
+    void education_shouldNotChangeOtherProfile_whenUserIsNotOwner() throws Exception {
+        var owner = newUid();
+        var intruder = newUid();
+        var profileId = api.createProfile(owner);
+        var educationId = api.json(addEducation(owner, profileId, EDUCATION_ENDED)).get("educations").get(0).get("id").asString();
+
+        var post = addEducation(intruder, profileId, EDUCATION_BASE + "}");
+        var delete = api.send("DELETE", "/api/v1/profiles/" + profileId + "/educations/" + educationId, intruder, null);
+
+        assertThat(post.statusCode()).isEqualTo(403);
+        assertThat(delete.statusCode()).isEqualTo(403);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM educacion WHERE perfil_id = ?::uuid", Integer.class, profileId))
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("El área de estudio salió del contrato: si llega se ignora y la respuesta no la tiene")
+    void addEducation_shouldIgnoreFieldOfStudy_whenSent() throws Exception {
+        var uid = newUid();
+        var profileId = api.createProfile(uid);
+
+        var response = addEducation(uid, profileId, EDUCATION_BASE + ",\"fieldOfStudy\":\"Sistemas\",\"provenance\":\"AI_SUGGESTED\"}");
+
+        assertThat(response.statusCode()).isEqualTo(201);
+        var education = api.json(response).get("educations").get(0);
+        assertThat(education.has("fieldOfStudy")).isFalse();
+        assertThat(education.get("provenance").asString()).isEqualTo("MANUAL");
+    }
+
+    @Test
+    @DisplayName("Un año suelto como inicio responde 422 con el formato esperado y no 500")
+    void addEducation_shouldReturn422_whenStartDateIsOnlyYear() throws Exception {
+        var uid = newUid();
+        var profileId = api.createProfile(uid);
+
+        var response = addEducation(uid, profileId,
+                "{\"institution\":\"Unicauca\",\"degree\":\"Sistemas\",\"level\":\"TECHNICAL\",\"startDate\":\"2024\"}");
+
+        assertThat(response.statusCode()).isEqualTo(422);
+        assertThat(api.json(response).get("errors").get(0).get("code").asString()).isEqualTo("START_DATE_INVALID_FORMAT");
+    }
+
+    @Test
+    @DisplayName("Un carácter de control en la institución responde 422 y no 500")
+    void addEducation_shouldRejectControlCharacter_whenInstitutionHasNul() throws Exception {
+        var uid = newUid();
+        var profileId = api.createProfile(uid);
+
+        var response = addEducation(uid, profileId,
+                "{\"institution\":\"Uni\\u0000\",\"degree\":\"Sistemas\",\"level\":\"TECHNICAL\",\"startDate\":\"2024-01\"}");
+
+        assertThat(response.statusCode()).isEqualTo(422);
+        assertThat(api.json(response).get("errors").get(0).get("code").asString()).isEqualTo("INSTITUTION_INVALID_CHARACTERS");
+    }
+
+    @Test
+    @DisplayName("Repetir veinte veces la eliminación de una formación no tiene más efecto que la primera")
+    void removeEducation_shouldHaveNoExtraEffect_whenRepeatedTwentyTimes() throws Exception {
+        var uid = newUid();
+        var profileId = api.createProfile(uid);
+        addEducation(uid, profileId, EDUCATION_BASE + "}");
+        addEducation(uid, profileId, EDUCATION_BASE + "}");
+        var first = api.json(addEducation(uid, profileId, EDUCATION_BASE + "}")).get("educations").get(0).get("id").asString();
+        var path = "/api/v1/profiles/" + profileId + "/educations/" + first;
+
+        assertThat(api.send("DELETE", path, uid, null).statusCode()).isEqualTo(204);
+        for (int i = 0; i < 19; i++) {
+            var repeated = api.send("DELETE", path, uid, null);
+            assertThat(repeated.statusCode()).isEqualTo(404);
+            assertThat(api.json(repeated).get("code").asString()).isEqualTo("EDUCATION_NOT_FOUND");
+        }
+
+        var profile = api.json(api.send("GET", "/api/v1/profiles/" + profileId, uid, null));
+        assertThat(profile.get("educations")).hasSize(2);
+        assertThat(profile.get("status").asString()).isEqualTo("IN_PROGRESS");
+    }
+
+    private HttpResponse<String> addEducation(String uid, String profileId, String body) throws Exception {
+        return api.send("POST", "/api/v1/profiles/" + profileId + "/educations", uid, body);
+    }
+
     private HttpResponse<String> add(String uid, String profileId, String body) throws Exception {
         return api.send("POST", "/api/v1/profiles/" + profileId + "/work-experiences", uid, body);
     }
@@ -278,9 +479,7 @@ class WorkHistoryEndToEndIT {
         var base = "/api/v1/profiles/" + profileId;
         assertThat(api.send("PATCH", base, uid, "{\"name\":\"Perfil E2E\",\"summary\":\"Resumen E2E de una persona desarrolladora.\"}")
                 .statusCode()).isEqualTo(200);
-        assertThat(api.send("POST", base + "/educations", uid, "{\"institution\":\"Universidad del Cauca\",\"degree\":\"Ingenieria de Sistemas\","
-                + "\"fieldOfStudy\":\"Ingenieria de Software\",\"level\":\"UNDERGRADUATE\",\"startDate\":\"2021-01\","
-                + "\"endDate\":\"2025-12\",\"inProgress\":false,\"provenance\":\"MANUAL\"}").statusCode()).isEqualTo(201);
+        assertThat(addEducation(uid, profileId, EDUCATION_ENDED).statusCode()).isEqualTo(201);
         assertThat(api.send("POST", base + "/skills", uid,
                 "{\"skillName\":\"Java\",\"level\":\"ADVANCED\",\"provenance\":\"MANUAL\"}").statusCode()).isEqualTo(201);
         assertThat(api.send("POST", base + "/target-roles", uid,

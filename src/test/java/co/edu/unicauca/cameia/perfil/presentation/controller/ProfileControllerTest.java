@@ -593,6 +593,46 @@ class ProfileControllerTest {
     }
 
     @Test
+    @DisplayName("Agregar la sexta formación responde 409 con el máximo y sin errors")
+    void addEducation_shouldReturn409_whenLimitReached() throws Exception {
+        when(profileAppService.addEducation(any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.EducationLimitReachedException());
+
+        postEducation(EDUCATION_BASE + "}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EDUCATION_LIMIT_REACHED"))
+                .andExpect(jsonPath("$.detail").value("Ya tienes el máximo de 5 formaciones académicas."))
+                .andExpect(jsonPath("$.errors").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Eliminar la última formación de un perfil activo responde 409 con su código")
+    void removeEducation_shouldReturn409_whenLastEducationOfActiveProfile() throws Exception {
+        when(profileAppService.removeEducation(any(), any(), any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.EducationNotAllowedException());
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/educations/{eduId}", UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-edu"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EDUCATION_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.detail").value(
+                        "No puedes quedarte sin formación académica con el perfil activo. Agrega otra antes de eliminar esta."))
+                .andExpect(jsonPath("$.errors").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Eliminar una formación que no es del perfil responde 404 con su código")
+    void removeEducation_shouldReturn404_whenEducationIsNotInProfile() throws Exception {
+        when(profileAppService.removeEducation(any(), any(), any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException());
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/educations/{eduId}", UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-edu"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("EDUCATION_NOT_FOUND"));
+    }
+
+    @Test
     @DisplayName("Actualizar la expectativa salarial sin monto responde 422 con su campo, no 500")
     void updateSalaryExpectation_shouldReturnAmountRequired_whenBodyIsEmpty() throws Exception {
         mockMvc.perform(patch("/api/v1/profiles/{id}/salary-expectation", UUID.randomUUID())

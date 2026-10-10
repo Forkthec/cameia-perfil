@@ -20,8 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Esquema de {@code experiencia_laboral} tras la migración V6, contra PostgreSQL real: conserva los datos de la
- * versión anterior, rechaza cada fila que rompe una restricción y usa nombres estándar.
+ * Esquema de {@code experiencia_laboral} y {@code educacion} tras las migraciones V6 y V7, contra PostgreSQL real:
+ * conserva los datos de la versión anterior, rechaza cada fila que rompe una restricción y usa nombres estándar.
  */
 @Testcontainers
 class WorkHistorySchemaIT {
@@ -156,6 +156,130 @@ class WorkHistorySchemaIT {
 
             assertThat(names).contains("pk_experiencia_laboral", "fk_experiencia_laboral_perfil");
             assertThat(indexes).contains("ix_experiencia_laboral_perfil_id");
+        }
+    }
+
+    // ── educacion (migración V7) ──────────────────────────────────────────
+
+    private static void insertEducation(Connection connection, String institution, String degree, String level,
+            String provenance, String start, String end, boolean inProgress) throws SQLException {
+        var sql = "INSERT INTO educacion (id, perfil_id, institucion, titulo, nivel, fecha_inicio, fecha_fin, en_curso, procedencia) "
+                + "VALUES (?::uuid, ?::uuid, ?, ?, ?, ?::date, ?::date, ?, ?)";
+        try (var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, UUID.randomUUID().toString());
+            statement.setString(2, PROFILE_ID);
+            statement.setString(3, institution);
+            statement.setString(4, degree);
+            statement.setString(5, level);
+            statement.setString(6, start);
+            statement.setString(7, end);
+            statement.setBoolean(8, inProgress);
+            statement.setString(9, provenance);
+            statement.executeUpdate();
+        }
+    }
+
+    @Test
+    @DisplayName("La migración conserva una formación guardada con el esquema anterior y quita el área de estudio")
+    void migration_shouldKeepEducationRowAndDropFieldOfStudy_whenAppliedOnDataFromV4() throws Exception {
+        var older = flyway("4");
+        older.clean();
+        older.migrate();
+        try (var connection = connection()) {
+            insertProfile(connection);
+            try (var statement = connection.createStatement()) {
+                statement.execute("INSERT INTO educacion (id, perfil_id, institucion, titulo, area_estudio, nivel, fecha_inicio, fecha_fin, en_curso, procedencia) "
+                        + "VALUES ('" + UUID.randomUUID() + "', '" + PROFILE_ID + "', 'Unicauca', 'Ingeniería', 'Sistemas', 'UNDERGRADUATE', "
+                        + "'2018-01-01', '2022-12-01', false, 'MANUAL')");
+            }
+        }
+
+        flyway("latest").migrate();
+
+        try (var connection = connection(); var statement = connection.createStatement();
+             var rows = statement.executeQuery("SELECT institucion, titulo, nivel, fecha_inicio, fecha_fin, en_curso FROM educacion")) {
+            assertThat(rows.next()).isTrue();
+            assertThat(rows.getString("institucion")).isEqualTo("Unicauca");
+            assertThat(rows.getString("titulo")).isEqualTo("Ingeniería");
+            assertThat(rows.getString("nivel")).isEqualTo("UNDERGRADUATE");
+            assertThat(rows.getString("fecha_inicio")).isEqualTo("2018-01-01");
+            assertThat(rows.getString("fecha_fin")).isEqualTo("2022-12-01");
+            assertThat(rows.getBoolean("en_curso")).isFalse();
+            assertThat(rows.next()).isFalse();
+        }
+    }
+
+    @Test
+    @DisplayName("La tabla educacion ya no tiene la columna del área de estudio")
+    void educacion_shouldNotHaveFieldOfStudyColumn_whenMigrated() throws Exception {
+        migrateFresh();
+        try (var connection = connection(); var statement = connection.createStatement();
+             var rows = statement.executeQuery("SELECT count(*) FROM information_schema.columns "
+                     + "WHERE table_name = 'educacion' AND column_name = 'area_estudio'")) {
+            assertThat(rows.next()).isTrue();
+            assertThat(rows.getInt(1)).isZero();
+        }
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("brokenEducationRows")
+    @DisplayName("Cada formación que rompe una restricción se rechaza con su nombre")
+    void educationConstraint_shouldReject_whenRowBreaksIt(String name, String institution, String degree, String level,
+            String provenance, String start, String end, boolean inProgress, String constraint) throws Exception {
+        migrateFresh();
+        try (var connection = connection()) {
+            insertProfile(connection);
+            assertThatThrownBy(() -> insertEducation(connection, institution, degree, level, provenance, start, end, inProgress))
+                    .isInstanceOfSatisfying(SQLException.class, e -> {
+                        assertThat(e.getSQLState()).isEqualTo("23514");
+                        assertThat(e.getMessage()).contains(constraint);
+                    });
+        }
+    }
+
+    static Stream<Arguments> brokenEducationRows() {
+        return Stream.of(
+                Arguments.of("institución en blanco", "  ", "Ing", "TECHNICAL", "MANUAL", "2024-05-01", null, false, "ck_educacion_institucion_presente"),
+                Arguments.of("título en blanco", "Uni", " ", "TECHNICAL", "MANUAL", "2024-05-01", null, false, "ck_educacion_titulo_presente"),
+                Arguments.of("nivel desconocido", "Uni", "Ing", "DOCTORATE", "MANUAL", "2024-05-01", null, false, "ck_educacion_nivel"),
+                Arguments.of("procedencia desconocida", "Uni", "Ing", "TECHNICAL", "HUMAN", "2024-05-01", null, false, "ck_educacion_procedencia"),
+                Arguments.of("en curso con fin", "Uni", "Ing", "TECHNICAL", "MANUAL", "2024-05-01", "2024-06-01", true, "ck_educacion_fin_en_curso"),
+                Arguments.of("fin antes del inicio", "Uni", "Ing", "TECHNICAL", "MANUAL", "2024-05-01", "2024-04-01", false, "ck_educacion_fechas"),
+                Arguments.of("inicio a mitad de mes", "Uni", "Ing", "TECHNICAL", "MANUAL", "2024-05-15", null, false, "ck_educacion_primer_dia"),
+                Arguments.of("fin a mitad de mes", "Uni", "Ing", "TECHNICAL", "MANUAL", "2024-05-01", "2024-06-15", false, "ck_educacion_primer_dia"));
+    }
+
+    @Test
+    @DisplayName("Una formación sin fin conocido que no está en curso se acepta")
+    void educationConstraint_shouldAccept_whenNotInProgressHasNoEnd() throws Exception {
+        migrateFresh();
+        try (var connection = connection()) {
+            insertProfile(connection);
+
+            insertEducation(connection, "Uni", "Ing", "TECHNICAL", "MANUAL", "2024-05-01", null, false);
+        }
+    }
+
+    @Test
+    @DisplayName("La clave primaria, la clave foránea y el índice de educacion tienen nombres estándar")
+    void educationConstraints_shouldHaveStandardNames_whenSchemaIsMigrated() throws Exception {
+        migrateFresh();
+        try (var connection = connection(); var statement = connection.createStatement()) {
+            var names = new java.util.ArrayList<String>();
+            try (var rows = statement.executeQuery("SELECT conname FROM pg_constraint WHERE conrelid = 'educacion'::regclass")) {
+                while (rows.next()) {
+                    names.add(rows.getString(1));
+                }
+            }
+            var indexes = new java.util.ArrayList<String>();
+            try (var rows = statement.executeQuery("SELECT indexname FROM pg_indexes WHERE tablename = 'educacion'")) {
+                while (rows.next()) {
+                    indexes.add(rows.getString(1));
+                }
+            }
+
+            assertThat(names).contains("pk_educacion", "fk_educacion_perfil");
+            assertThat(indexes).contains("ix_educacion_perfil_id");
         }
     }
 }
