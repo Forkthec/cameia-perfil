@@ -16,6 +16,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.ReviewStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.SalaryExpectation;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
+import co.edu.unicauca.cameia.perfil.domain.model.SkillName;
 import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft;
@@ -179,7 +180,7 @@ class ProfessionalProfileRepositoryAdapterIT {
         var ongoing = Education.rebuild(UUID.randomUUID(), new EducationDraft("Unicauca", "Maestría",
                 EducationLevel.POSTGRADUATE, YearMonth.of(2023, 1), null, true), DataProvenance.MANUAL);
         var role = new TargetRole(UUID.randomUUID(), CATALOG_ROLE_ID, "Desarrollador Frontend", DataProvenance.MANUAL);
-        var skill = new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL);
+        var skill = new ProfileSkill(UUID.randomUUID(), SkillName.of("Java"), SkillLevel.ADVANCED, DataProvenance.MANUAL);
         profile.addWorkExperience(current);
         profile.addWorkExperience(ended);
         profile.addEducation(finished);

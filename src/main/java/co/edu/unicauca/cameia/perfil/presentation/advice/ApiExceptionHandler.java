@@ -1,6 +1,7 @@
 package co.edu.unicauca.cameia.perfil.presentation.advice;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.BusinessException;
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.RedactedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
@@ -66,6 +67,10 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             // El dominio rechazó campos: responde igual que Bean Validation, un elemento por campo.
             problem.setProperty("errors", invalid.getErrors().stream()
                     .map(e -> new FieldProblem(e.field(), e.code(), e.message())).toList());
+        }
+        if (ex instanceof DuplicateSkillException) {
+            // El cliente muestra la repetida bajo el campo de la habilidad.
+            problem.setProperty("errors", List.of(new FieldProblem("skillName", ex.getCode(), ex.getMessage())));
         }
         return reject(problem, request);
     }

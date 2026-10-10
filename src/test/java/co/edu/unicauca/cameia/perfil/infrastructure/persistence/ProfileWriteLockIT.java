@@ -369,7 +369,7 @@ class ProfileWriteLockIT {
             profileAppService.addEducation(new AddEducationCommand(profileId, uid, "Universidad " + i,
                     "Ingeniería de Sistemas", "UNDERGRADUATE", "2018-01", "2022-12", false));
         }
-        profileAppService.addSkill(new AddSkillCommand(profileId, uid, "Java", "ADVANCED", "MANUAL"));
+        profileAppService.addSkill(new AddSkillCommand(profileId, uid, "Java", "ADVANCED"));
         profileAppService.addTargetRole(new AddTargetRoleCommand(profileId, uid,
                 UUID.fromString("a0000001-0000-0000-0000-000000000002")));
     }

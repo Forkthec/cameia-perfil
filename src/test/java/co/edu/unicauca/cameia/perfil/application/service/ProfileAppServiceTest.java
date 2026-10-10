@@ -32,6 +32,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRole;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
+import co.edu.unicauca.cameia.perfil.domain.model.SkillName;
 import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
@@ -207,15 +208,40 @@ class ProfileAppServiceTest {
     }
 
     @Test
-    @DisplayName("Una procedencia que no existe no guarda la habilidad")
-    void addSkill_shouldThrowProvenanceInvalid_whenProvenanceIsUnknown() {
+    @DisplayName("Una habilidad sin nombre ni nivel informa los dos campos y no guarda nada")
+    void addSkill_shouldThrowFieldErrors_whenCommandHasNullRequiredFields() {
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
-        assertThatThrownBy(() -> service.addSkill(new AddSkillCommand(
-                UUID.randomUUID(), SVC_UID, "Java", "BASIC", "HUMANO")))
+        assertThatThrownBy(() -> service.addSkill(new AddSkillCommand(UUID.randomUUID(), SVC_UID, null, null)))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code, FieldError::message)
+                        .containsExactly(
+                                tuple("skillName", ErrorCode.SKILL_NAME_REQUIRED, "Ingresa una habilidad."),
+                                tuple("level", ErrorCode.SKILL_LEVEL_REQUIRED, "Elige un nivel.")));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Una habilidad con nombre de control y nivel desconocido informa los dos campos")
+    void addSkill_shouldThrowBothFields_whenNameHasControlAndLevelIsUnknown() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
+        assertThatThrownBy(() -> service.addSkill(new AddSkillCommand(UUID.randomUUID(), SVC_UID, "Py\u0000", "EXPERT")))
                 .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
                         .extracting(FieldError::field, FieldError::code)
-                        .containsExactly(tuple("provenance", ErrorCode.PROVENANCE_INVALID_VALUE)));
+                        .containsExactly(
+                                tuple("skillName", ErrorCode.SKILL_NAME_INVALID_CHARACTERS),
+                                tuple("level", ErrorCode.SKILL_LEVEL_INVALID_VALUE)));
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("La habilidad que se agrega queda con procedencia MANUAL y el nombre recortado")
+    void addSkill_shouldSaveManualAndTrimmed_whenNameHasSpaces() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
+        var saved = service.addSkill(new AddSkillCommand(UUID.randomUUID(), SVC_UID, "  Python ", "BASIC"));
+        assertThat(saved.getProfileSkills()).singleElement().satisfies(skill -> {
+            assertThat(skill.getSkillName()).isEqualTo("Python");
+            assertThat(skill.getProvenance()).isEqualTo(DataProvenance.MANUAL);
+        });
     }
 
     @Test
@@ -467,7 +493,7 @@ class ProfileAppServiceTest {
     void addSkill_addsSkillAndSaves() {
         var profile = freshProfile();
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
-        service.addSkill(new AddSkillCommand(UUID.randomUUID(), SVC_UID, "Java", "ADVANCED", "MANUAL"));
+        service.addSkill(new AddSkillCommand(UUID.randomUUID(), SVC_UID, "Java", "ADVANCED"));
         assertThat(profile.getProfileSkills()).hasSize(1);
         assertThat(profile.getProfileSkills().get(0).getSkillName()).isEqualTo("Java");
         verify(repository).save(profile);
@@ -476,7 +502,7 @@ class ProfileAppServiceTest {
     @Test
     void removeSkill_removesSkillAndSaves() {
         var profile = freshProfile();
-        profile.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), SkillName.of("Java"), SkillLevel.ADVANCED, DataProvenance.MANUAL));
         var skillId = profile.getProfileSkills().get(0).getId();
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.removeSkill(UUID.randomUUID(), SVC_UID, skillId);
@@ -559,7 +585,7 @@ class ProfileAppServiceTest {
                 use("removeEducation", s -> s.removeEducation(id, SVC_UID, UUID.randomUUID())),
                 use("updateSalaryExpectation", s -> s.updateSalaryExpectation(
                         new UpdateSalaryExpectationCommand(id, SVC_UID, new BigDecimal("3500000")))),
-                use("addSkill", s -> s.addSkill(new AddSkillCommand(id, SVC_UID, "Java", "ADVANCED", "MANUAL"))),
+                use("addSkill", s -> s.addSkill(new AddSkillCommand(id, SVC_UID, "Java", "ADVANCED"))),
                 use("removeSkill", s -> s.removeSkill(id, SVC_UID, UUID.randomUUID())),
                 use("requestReview", s -> s.requestReview(id, SVC_UID)),
                 use("addTargetRole", s -> s.addTargetRole(new AddTargetRoleCommand(id, SVC_UID, UUID.randomUUID()))),
@@ -1021,7 +1047,7 @@ class ProfileAppServiceTest {
         p.updateName(new ProfileName("Ana Sofía"));
         p.updateSummary(new ProfessionalSummary("Desarrolladora backend con experiencia en Java y DDD."));
         p.addTargetRole(new TargetRole(UUID.randomUUID(), UUID.randomUUID(), "Backend Developer", DataProvenance.MANUAL));
-        p.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
+        p.addSkill(new ProfileSkill(UUID.randomUUID(), SkillName.of("Java"), SkillLevel.ADVANCED, DataProvenance.MANUAL));
         p.addEducation(Education.create(new EducationDraft("Universidad X", "Ingeniería",
                 EducationLevel.UNDERGRADUATE, YearMonth.of(2018, 1), null, false),
                 new DateBounds(YearMonth.of(2026, 10), null)));

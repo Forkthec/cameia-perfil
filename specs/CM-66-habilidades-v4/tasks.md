@@ -1,6 +1,6 @@
 # Tareas — CM-66 (cameia-perfil)
 
-Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Una tarjeta a la vez, con la salida real antes de marcar `[x]`.
+Estado: PR 1a (T-1 a T-3) hecho y verificado en local; spec y plan aprobados por Paula el 9-oct-2026. Una tarjeta a la vez, con la salida real antes de marcar `[x]`.
 
 ## Reglas para todas las tarjetas
 
@@ -27,7 +27,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Una tarjet
 - **Línea base:** corre la sección 20 de la spec (`./mvnw.cmd -B clean verify` y Newman de la colección completa) y pega la salida antes de editar.
 - Reproducir con `docker compose up -d --build` y pegar en `specs/CM-66-habilidades-v4/evidencia-antes.md`: habilidad de 61 → 201; «Programación» y luego «programacion» → 201; 21.ª → 201; perfil `COMPLETED` con una habilidad y `DELETE` → 204; `"Py\u0000"` → 500; `{"skillName":"","level":"EXPERT","provenance":"MANUAL"}` → un solo error.
 
-## [ ] T-1 · Petición de la habilidad — ≤ 20 min, ≈ 80 líneas
+## [x] T-1 · Petición de la habilidad — ≤ 20 min, ≈ 80 líneas
 
 - **Modificar** `presentation/dto/AddSkillRequest.java`:
   ```java
@@ -57,7 +57,9 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Una tarjet
 - **Pruebas** `ProfileControllerTest`: `addSkill_shouldReturnRequired_whenFieldIsMissingOrBlank` (`skillName` y `level` con ausente, `null`, `""`, `"   "`, `"\t\n"`, `" "`); `addSkill_shouldReturnTooLong_whenNameExceedsLimit` (61 `a`; 60 `a` + `"😀"`; 61 `ñ`); `addSkill_shouldAccept_whenNameIsAtLimit` (60 `a`; 59 `a` + `"😀"`; `"é"` × 60); `addSkill_shouldReturnLevelInvalid_whenLevelIsUnknown` (`EXPERT`, `basic`, `Basic`); `addSkill_shouldReturnBothFields_whenNameIsBlankAndLevelIsUnknown`; `addSkill_shouldRejectControlCharacter_whenNameHasNul` (`"Py\u0000"` → `SKILL_NAME_INVALID_CHARACTERS`, «La habilidad tiene caracteres no permitidos.»). Cada una con `Content-Type` y sin traza.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileControllerTest,ErrorCatalogTest" test`.
 
-## [ ] T-2 · `SkillName` — ≤ 30 min, ≈ 120 líneas
+**Resultado T-1 (10-oct-2026).** Rojo: no capturado para las pruebas web (el código del borde se escribió antes que ellas; Desvío 34 de la cola); el rojo de T-2 (`SkillNameTest` sin `SkillName`) sí se vio. Verde: `ProfileControllerTest` 223 pruebas, 0 fallos (cubren requerido, 61 en `a`/`ñ`/emoji, 60 y 59, nivel `EXPERT`/`basic`/`Basic`/`BEGINNER`, los dos campos a la vez, NUL, campos extra). Cambio de contrato: `provenance` sale del cuerpo y de los códigos `PROVENANCE_REQUIRED` y `PROVENANCE_INVALID_VALUE`, que pasan a «Códigos retirados» (Desvío 33 de la cola); `postSkills_returns201` mandaba `EXPERT`, que ya no es un nivel (`ADVANCED`).
+
+## [x] T-2 · `SkillName` — ≤ 30 min, ≈ 120 líneas
 
 - **Crear** `domain/model/SkillName.java`:
   ```java
@@ -101,7 +103,9 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Una tarjet
 - **Pruebas** `domain/model/SkillNameTest.java`: `sameAs_shouldMatch_whenNamesDifferOnlyInCaseSpacesOrAccents` (parametrizada con los pares iguales de la spec §5); `sameAs_shouldNotMatch_whenNamesAreDifferentSkills` (`C`/`C++`, `C#`/`C`, `Java`/`JavaScript`); `of_shouldTrimAndCompose_whenNameHasSpacesAndDecomposedLetters`; `of_shouldKeepInnerSpacesAndCase_whenStoring` (`"Machine   Learning"` se guarda igual); límites 59/60/61 con `a`, `ñ`, emoji; `of_shouldRejectRequired_whenNameIsBlank`; `of_shouldRejectControlCharacter_whenNameHasBell`; `constructor_shouldNotValidate_whenRebuildingStoredValue` (100 `a` sin excepción); `comparisonKey_shouldNotExceedMaxLength_whenNameIsAtLimit`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=SkillNameTest" test`.
 
-## [ ] T-3 · Agregado: máximo, duplicado y mínimo — ≤ 25 min, ≈ 110 líneas
+**Resultado T-2.** Rojo: `SkillNameTest` no compilaba (`SkillName` no existía). Verde: `SkillNameTest` y `SingleLineTextTest.collapseSpaces_…`, 0 fallos. `FieldRules` quedó sin uso y se borró; `ProfileValueRulesTest` pasó de 256/255 a 61/60 con el mensaje de 60.
+
+## [x] T-3 · Agregado: máximo, duplicado y mínimo — ≤ 25 min, ≈ 110 líneas
 
 - **Crear** `SkillLimitReachedException` (`SKILL_LIMIT_REACHED`, «Ya tienes el máximo de 20 habilidades.») y `SkillNotAllowedException` (`SKILL_NOT_ALLOWED`, «No puedes quedarte sin habilidades con el perfil activo. Agrega otra antes de eliminar esta.»); `ErrorCatalog.RESPONSES` con `CONFLICT` («Máximo de habilidades alcanzado», «No se puede eliminar la última habilidad»).
 - **Modificar** `ProfessionalProfile`:
@@ -149,6 +153,8 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Una tarjet
 - **Modificar** `ApiExceptionHandler.handleBusiness`: para `DuplicateSkillException`, `errors` = `[{field:"skillName", code:"SKILL_ALREADY_EXISTS", message:"Esa habilidad ya está en tu perfil."}]` (comentario de línea: «El cliente muestra la repetida bajo el campo de la habilidad.»). Prueba `ProfileControllerTest.addSkill_shouldReturn409_whenSkillIsDuplicated`: 409, `$.code` y `$.errors[0]` con esos tres valores.
 - **Pruebas** `ProfessionalProfileTest`: `addSkill_shouldAcceptTwentieth_whenProfileHasNineteen`; `addSkill_shouldRejectTwentyFirst_whenProfileHasTwenty`; `addSkill_shouldRejectLimitFirst_whenProfileHasTwentyAndSkillIsRepeated`; `addSkill_shouldRejectDuplicate_whenOnlyAccentsDiffer`; `removeSkill_shouldRemoveLast_whenProfileIsInProgress`; `removeSkill_shouldRejectLast_whenProfileIsCompleted` (sigue con 1 y `COMPLETED`); `removeSkill_shouldRemove_whenCompletedProfileHasTwo`; `removeSkill_shouldThrowNotFound_whenIdIsForeignInCompletedProfileWithOne`. `ProfileAppServiceTest.addSkill_shouldThrowFieldErrors_whenCommandHasNullRequiredFields`. `ProfileControllerTest`: `addSkill_shouldReturn409_whenSkillIsDuplicated` (con `errors[0].field` `skillName`), `addSkill_shouldReturn409_whenLimitReached`, `removeSkill_shouldReturn409_whenLastSkillOfActiveProfile`, `removeSkill_shouldReturn404_whenSkillIsNotInProfile`, `skills_shouldReturn403_whenProfileBelongsToAnotherUser`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfessionalProfileTest,ProfileAppServiceTest,ProfileControllerTest" test`.
+
+**Resultado T-3.** Rojo: no capturado (el agregado y las excepciones se escribieron antes que las pruebas; Desvío 34 de la cola). Verde: `clean verify` BUILD SUCCESS, 776 unitarias + 207 de integración, 0 fallos (`ejecucion/verify-CM-66-1.log`). Cobertura de lo tocado: `SkillName` 17/17 y 6/6; `ProfileSkill` 11/11; `SingleLineText` 31/31 y 38/38; `ProfessionalProfile` 133/135 y 63/64 (previas); `ProfileAppService` 100/101 y 40/40; `ApiExceptionHandler` 66/66 y 29/30 (previa); `ErrorCatalog` 92/92; `ProfessionalProfileMapping` 98/98 y 26/26; global 97,2 % líneas y 98,4 % ramas. `ProfileAppServiceTest.addSkill_shouldThrowFieldErrors_whenCommandHasNullRequiredFields` reemplaza a la de procedencia desconocida.
 
 ## [ ] T-4 · Migración V8, entidad, mapeo y traducción del `UNIQUE` — ≤ 30 min, ≈ 130 líneas
 

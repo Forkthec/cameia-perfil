@@ -133,7 +133,7 @@ class TargetRoleConcurrencyIT {
                 profileId, uid, "Perfil de prueba", "Resumen de prueba con más de diez caracteres.", null));
         profileAppService.addEducation(new AddEducationCommand(profileId, uid, "Universidad de prueba", "Ingeniería de Sistemas",
                 "UNDERGRADUATE", "2018-01", "2022-12", false));
-        profileAppService.addSkill(new AddSkillCommand(profileId, uid, "Java", "ADVANCED", "MANUAL"));
+        profileAppService.addSkill(new AddSkillCommand(profileId, uid, "Java", "ADVANCED"));
         profileAppService.addTargetRole(new AddTargetRoleCommand(profileId, uid, UUID.fromString(roleId(1))));
         var withTwo = profileAppService.addTargetRole(new AddTargetRoleCommand(profileId, uid, UUID.fromString(roleId(2))));
         profileAppService.completeProfile(profileId, uid);
