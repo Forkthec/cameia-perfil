@@ -3,6 +3,7 @@ package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
+import co.edu.unicauca.cameia.perfil.domain.model.EducationDraft;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
@@ -173,10 +174,10 @@ class ProfessionalProfileRepositoryAdapterIT {
                 YearMonth.of(2022, 1), null, EmploymentStatus.CURRENT), DataProvenance.MANUAL);
         var ended = WorkExperience.rebuild(UUID.randomUUID(), new WorkExperienceDraft("Globex", "Tester", null,
                 YearMonth.of(2019, 3), YearMonth.of(2021, 6), EmploymentStatus.ENDED), DataProvenance.AI_SUGGESTED);
-        var finished = new Education(UUID.randomUUID(), "Unicauca", "Ingeniería", "Sistemas",
-                EducationLevel.UNDERGRADUATE, YearMonth.of(2015, 2), YearMonth.of(2020, 12), false, DataProvenance.MANUAL);
-        var ongoing = new Education(UUID.randomUUID(), "Unicauca", "Maestría", "Computación",
-                EducationLevel.POSTGRADUATE, YearMonth.of(2023, 1), null, true, DataProvenance.MANUAL);
+        var finished = Education.rebuild(UUID.randomUUID(), new EducationDraft("Unicauca", "Ingeniería",
+                EducationLevel.UNDERGRADUATE, YearMonth.of(2015, 2), YearMonth.of(2020, 12), false), DataProvenance.MANUAL);
+        var ongoing = Education.rebuild(UUID.randomUUID(), new EducationDraft("Unicauca", "Maestría",
+                EducationLevel.POSTGRADUATE, YearMonth.of(2023, 1), null, true), DataProvenance.MANUAL);
         var role = new TargetRole(UUID.randomUUID(), CATALOG_ROLE_ID, "Desarrollador Frontend", DataProvenance.MANUAL);
         var skill = new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL);
         profile.addWorkExperience(current);

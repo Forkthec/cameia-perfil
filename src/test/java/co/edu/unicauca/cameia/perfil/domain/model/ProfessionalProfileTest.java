@@ -479,8 +479,12 @@ class ProfessionalProfileTest {
     }
 
     private static Education edu() {
-        return new Education(UUID.randomUUID(), "Universidad X", "Ingeniería", "Sistemas",
-                EducationLevel.UNDERGRADUATE, YearMonth.of(2018, 1), null, false, DataProvenance.MANUAL);
+        return edu("Universidad X");
+    }
+
+    private static Education edu(String institution) {
+        return Education.create(new EducationDraft(institution, "Ingeniería", EducationLevel.UNDERGRADUATE,
+                YearMonth.of(2018, 1), null, false), new DateBounds(YearMonth.of(2026, 10), null));
     }
 
     private static ProfessionalProfile buildCompleteProfile() {

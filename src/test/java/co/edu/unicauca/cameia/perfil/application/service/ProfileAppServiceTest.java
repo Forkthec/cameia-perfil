@@ -17,7 +17,9 @@ import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedExcepti
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
+import co.edu.unicauca.cameia.perfil.domain.model.DateBounds;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
+import co.edu.unicauca.cameia.perfil.domain.model.EducationDraft;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
@@ -205,14 +207,29 @@ class ProfileAppServiceTest {
     }
 
     @Test
-    @DisplayName("Una educación con solo el año de inicio se guarda en enero de ese año")
-    void addEducation_shouldReadJanuary_whenStartDateIsOnlyYear() {
+    @DisplayName("Una educación con inicio AAAA-MM se guarda como MANUAL en ese mes")
+    void addEducation_shouldSaveManual_whenStartDateIsValid() {
         var profile = freshProfile();
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.addEducation(new AddEducationCommand(UUID.randomUUID(), SVC_UID, "Unicauca", "Ingeniería",
-                null, "UNDERGRADUATE", "2018", null, false, "MANUAL"));
-        assertThat(profile.getEducations()).singleElement()
-                .satisfies(e -> assertThat(e.getStartDate()).isEqualTo(YearMonth.of(2018, 1)));
+                "UNDERGRADUATE", "2018-03", null, false));
+        assertThat(profile.getEducations()).singleElement().satisfies(e -> {
+            assertThat(e.getStartDate()).isEqualTo(YearMonth.of(2018, 3));
+            assertThat(e.getProvenance()).isEqualTo(DataProvenance.MANUAL);
+        });
+        verify(repository).save(profile);
+    }
+
+    @Test
+    @DisplayName("Un año suelto como inicio no guarda la educación y marca su campo")
+    void addEducation_shouldThrowStartDateInvalid_whenStartDateIsOnlyYear() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
+        assertThatThrownBy(() -> service.addEducation(new AddEducationCommand(UUID.randomUUID(), SVC_UID,
+                "Unicauca", "Ingeniería", "UNDERGRADUATE", "2018", null, false)))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("startDate", ErrorCode.START_DATE_INVALID_FORMAT)));
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -220,10 +237,26 @@ class ProfileAppServiceTest {
     void addEducation_shouldThrowEducationLevelInvalid_whenLevelIsUnknown() {
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.addEducation(new AddEducationCommand(UUID.randomUUID(), SVC_UID,
-                "Unicauca", "Ingeniería", null, "DOCTORADO", "2018", null, false, "MANUAL")))
+                "Unicauca", "Ingeniería", "DOCTORADO", "2018-01", null, false)))
                 .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
                         .extracting(FieldError::field, FieldError::code)
                         .containsExactly(tuple("level", ErrorCode.EDUCATION_LEVEL_INVALID_VALUE)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Una educación sin institución, título, nivel ni inicio informa los cuatro campos y no guarda")
+    void addEducation_shouldThrowFieldErrors_whenCommandHasNullRequiredFields() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
+        assertThatThrownBy(() -> service.addEducation(new AddEducationCommand(UUID.randomUUID(), SVC_UID,
+                null, null, null, null, null, false)))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactlyInAnyOrder(
+                                tuple("institution", ErrorCode.INSTITUTION_REQUIRED),
+                                tuple("degree", ErrorCode.DEGREE_REQUIRED),
+                                tuple("level", ErrorCode.EDUCATION_LEVEL_REQUIRED),
+                                tuple("startDate", ErrorCode.START_DATE_REQUIRED)));
         verify(repository, never()).save(any());
     }
 
@@ -409,7 +442,7 @@ class ProfileAppServiceTest {
                         id, SVC_UID, "ACME", "Dev", null, "2022-01", null, "CURRENT"))),
                 use("removeWorkExperience", s -> s.removeWorkExperience(id, SVC_UID, UUID.randomUUID())),
                 use("addEducation", s -> s.addEducation(new AddEducationCommand(id, SVC_UID, "Unicauca", "Ingeniería",
-                        null, "UNDERGRADUATE", "2018-01", null, false, "MANUAL"))),
+                        "UNDERGRADUATE", "2018-01", null, false))),
                 use("removeEducation", s -> s.removeEducation(id, SVC_UID, UUID.randomUUID())),
                 use("updateSalaryExpectation", s -> s.updateSalaryExpectation(
                         new UpdateSalaryExpectationCommand(id, SVC_UID, new BigDecimal("3500000")))),
@@ -703,8 +736,9 @@ class ProfileAppServiceTest {
         p.updateSummary(new ProfessionalSummary("Desarrolladora backend con experiencia en Java y DDD."));
         p.addTargetRole(new TargetRole(UUID.randomUUID(), UUID.randomUUID(), "Backend Developer", DataProvenance.MANUAL));
         p.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
-        p.addEducation(new Education(UUID.randomUUID(), "Universidad X", "Ingeniería", "Sistemas",
-                EducationLevel.UNDERGRADUATE, YearMonth.of(2018, 1), null, false, DataProvenance.MANUAL));
+        p.addEducation(Education.create(new EducationDraft("Universidad X", "Ingeniería",
+                EducationLevel.UNDERGRADUATE, YearMonth.of(2018, 1), null, false),
+                new DateBounds(YearMonth.of(2026, 10), null)));
         return p;
     }
 }

@@ -437,7 +437,7 @@ class ProfileControllerTest {
         when(profileAppService.addEducation(any()))
                 .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-edu")));
         var body = """
-                {"institution":"Unicauca","degree":"Sistemas","level":"UNDERGRADUATE","startDate":"2018-01","provenance":"MANUAL"}
+                {"institution":"Unicauca","degree":"Sistemas","level":"UNDERGRADUATE","startDate":"2018-01"}
                 """;
 
         mockMvc.perform(post("/api/v1/profiles/{id}/educations", UUID.randomUUID())
@@ -448,6 +448,148 @@ class ProfileControllerTest {
         var command = ArgumentCaptor.forClass(AddEducationCommand.class);
         verify(profileAppService).addEducation(command.capture());
         assertThat(command.getValue().inProgress()).isFalse();
+    }
+
+    private static final String EDUCATION_BASE =
+            "{\"institution\":\"Unicauca\",\"degree\":\"Sistemas\",\"level\":\"UNDERGRADUATE\",\"startDate\":\"2018-01\"";
+
+    private org.springframework.test.web.servlet.ResultActions postEducation(String json) throws Exception {
+        return mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + "/educations")
+                .header("X-User-Id", "uid-ctrl-edu").contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    @Test
+    @DisplayName("Una formación con el cuerpo vacío informa los cuatro campos obligatorios a la vez")
+    void addEducation_shouldReturnAllRequiredFields_whenAllAreMissing() throws Exception {
+        postEducation("{}").andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.detail").value("Revisa los campos marcados."))
+                .andExpect(jsonPath("$.errors.length()").value(4))
+                .andExpect(jsonPath("$.errors[?(@.field=='institution')].message").value("Ingresa la institución."))
+                .andExpect(jsonPath("$.errors[?(@.field=='degree')].message").value("Ingresa el título obtenido."))
+                .andExpect(jsonPath("$.errors[?(@.field=='level')].message").value("Elige un nivel educativo."))
+                .andExpect(jsonPath("$.errors[?(@.field=='startDate')].message").value("Ingresa la fecha de inicio."));
+    }
+
+    @ParameterizedTest(name = "{0}={1}")
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', textBlock = """
+            institution | "\\t\\n"
+            institution | " "
+            institution | ""
+            institution | null
+            degree      | "\\t\\n"
+            degree      | " "
+            degree      | ""
+            degree      | null
+            """)
+    @DisplayName("Una institución o un título ausente, nulo, vacío o en blanco responde que es obligatorio")
+    void addEducation_shouldReturnRequired_whenTextIsMissingOrBlank(String field, String value) throws Exception {
+        var json = "institution".equals(field)
+                ? "{\"institution\":" + value + ",\"degree\":\"Ing\",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}"
+                : "{\"institution\":\"Unicauca\",\"degree\":" + value + ",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}";
+        var message = "institution".equals(field) ? "Ingresa la institución." : "Ingresa el título obtenido.";
+
+        expectFieldError(postEducation(json), field, field.equals("institution") ? "INSTITUTION_REQUIRED" : "DEGREE_REQUIRED", message);
+    }
+
+    @ParameterizedTest(name = "{0} de {1} puntos de código")
+    @org.junit.jupiter.params.provider.CsvSource({"institution,151", "degree,151"})
+    @DisplayName("Un texto de 151 puntos de código responde 422 con su código y su mensaje")
+    void addEducation_shouldReturnTooLong_whenTextExceedsLimit(String field, int length) throws Exception {
+        var institution = "institution".equals(field) ? "a".repeat(length) : "Unicauca";
+        var degree = "degree".equals(field) ? "a".repeat(length) : "Sistemas";
+        var json = "{\"institution\":\"" + institution + "\",\"degree\":\"" + degree
+                + "\",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}";
+        var code = "institution".equals(field) ? "INSTITUTION_TOO_LONG" : "DEGREE_TOO_LONG";
+        var message = "institution".equals(field) ? "La institución no puede superar los 150 caracteres."
+                : "El título obtenido no puede superar los 150 caracteres.";
+
+        expectFieldError(postEducation(json), field, code, message);
+    }
+
+    @Test
+    @DisplayName("Un emoji que lleva el texto a 151 puntos de código se rechaza y 150 se acepta")
+    void addEducation_shouldCountCodePoints_whenTextEndsWithEmoji() throws Exception {
+        when(profileAppService.addEducation(any())).thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-edu")));
+        var atLimit = "{\"institution\":\"" + "a".repeat(149) + "😀\",\"degree\":\"" + "b".repeat(150)
+                + "\",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}";
+        var overLimit = "{\"institution\":\"" + "a".repeat(149) + "😀😀\",\"degree\":\"Sistemas\",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}";
+
+        postEducation(atLimit).andExpect(status().isCreated());
+        expectFieldError(postEducation(overLimit), "institution", "INSTITUTION_TOO_LONG",
+                "La institución no puede superar los 150 caracteres.");
+    }
+
+    @ParameterizedTest(name = "nivel {0}")
+    @ValueSource(strings = {"DOCTORATE", "undergraduate"})
+    @DisplayName("Un nivel que no es una opción responde 422 con su código")
+    void addEducation_shouldReturnLevelInvalid_whenLevelIsUnknown(String level) throws Exception {
+        var json = "{\"institution\":\"Unicauca\",\"degree\":\"Sistemas\",\"level\":\"" + level + "\",\"startDate\":\"2018-01\"}";
+
+        expectFieldError(postEducation(json), "level", "EDUCATION_LEVEL_INVALID_VALUE", SELECT_OPTION);
+    }
+
+    @ParameterizedTest(name = "{0}={1}")
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', textBlock = """
+            startDate | 2024
+            startDate | 2020-13
+            startDate | 20-01
+            startDate | 2020/01
+            endDate   | 2024
+            endDate   | 2020-13
+            endDate   | 2020-01-15
+            """)
+    @DisplayName("Una fecha mal escrita, incluido un año suelto, responde 422 en su campo con el formato esperado")
+    void addEducation_shouldReturnDateInvalidFormat_whenDateIsMalformed(String field, String value) throws Exception {
+        var code = "startDate".equals(field) ? "START_DATE_INVALID_FORMAT" : "END_DATE_INVALID_FORMAT";
+        var base = "startDate".equals(field)
+                ? "{\"institution\":\"Unicauca\",\"degree\":\"Sistemas\",\"level\":\"TECHNICAL\",\"endDate\":\"2021-01\",\"startDate\":\"" + value + "\"}"
+                : EDUCATION_BASE + ",\"endDate\":\"" + value + "\"}";
+
+        expectFieldError(postEducation(base), field, code, "Ingresa una fecha válida con el formato mm/aaaa.");
+    }
+
+    @Test
+    @DisplayName("Un inProgress que es texto no booleano responde 422 de cuerpo ilegible")
+    void addEducation_shouldRejectInProgressThatIsNotBoolean_whenValueIsText() throws Exception {
+        postEducation(EDUCATION_BASE + ",\"inProgress\":\"abc\"}").andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("REQUEST_BODY_INVALID_FORMAT"));
+    }
+
+    /**
+     * Fija lo que Jackson hace hoy: convierte {@code 1}, {@code 0} y {@code "true"} a booleano, igual que convierte
+     * {@code 123} a texto en la empresa. Si se quisiera rechazarlos habría que desactivar la conversión de escalares
+     * para todos los cuerpos, no solo para este campo.
+     */
+    @ParameterizedTest(name = "inProgress={0} llega como {1}")
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', textBlock = """
+            1        | true
+            0        | false
+            "true"   | true
+            "false"  | false
+            """)
+    @DisplayName("Un inProgress numérico o booleano entre comillas se convierte a booleano, como en el resto de los cuerpos")
+    void addEducation_shouldRecordJacksonBehaviour_whenInProgressIsNumberOrQuotedBoolean(String value, boolean expected)
+            throws Exception {
+        when(profileAppService.addEducation(any()))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-edu")));
+
+        postEducation(EDUCATION_BASE + ",\"inProgress\":" + value + "}").andExpect(status().isCreated());
+
+        var command = ArgumentCaptor.forClass(AddEducationCommand.class);
+        verify(profileAppService).addEducation(command.capture());
+        assertThat(command.getValue().inProgress()).isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("Una procedencia y un área de estudio en el cuerpo se ignoran")
+    void addEducation_shouldIgnoreProvenanceAndFieldOfStudy_whenSent() throws Exception {
+        when(profileAppService.addEducation(any())).thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-edu")));
+
+        postEducation(EDUCATION_BASE + ",\"provenance\":\"AI_SUGGESTED\",\"fieldOfStudy\":\"Sistemas\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.educations").isEmpty());
+        verify(profileAppService).addEducation(any());
     }
 
     @Test
@@ -544,7 +686,6 @@ class ProfileControllerTest {
                 body.put("level", "\"UNDERGRADUATE\"");
                 body.put("startDate", "\"2018-01\"");
                 body.put("inProgress", "false");
-                body.put("provenance", "\"MANUAL\"");
             }
             default -> {
                 body.put("professionalRoleId", "\"" + UUID.randomUUID() + "\"");
@@ -570,8 +711,7 @@ class ProfileControllerTest {
                 new Object[]{EDUCATIONS, "institution", true, "INSTITUTION_REQUIRED", "Ingresa la institución."},
                 new Object[]{EDUCATIONS, "degree", true, "DEGREE_REQUIRED", "Ingresa el título obtenido."},
                 new Object[]{EDUCATIONS, "level", true, "EDUCATION_LEVEL_REQUIRED", "Elige un nivel educativo."},
-                new Object[]{EDUCATIONS, "startDate", true, "START_DATE_REQUIRED", "Ingresa la fecha de inicio."},
-                new Object[]{EDUCATIONS, "provenance", true, "PROVENANCE_REQUIRED", SELECT_OPTION});
+                new Object[]{EDUCATIONS, "startDate", true, "START_DATE_REQUIRED", "Ingresa la fecha de inicio."});
         return rows.flatMap(row -> {
             // null significa que el campo no se envía; el resto son valores JSON literales.
             var values = (boolean) row[2]

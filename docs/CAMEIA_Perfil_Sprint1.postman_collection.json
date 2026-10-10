@@ -684,7 +684,7 @@
           }
         },
         {
-          "name": "OK POST /profiles/{id}/educations — agrega educacion en curso (sin endDate, solo year)",
+          "name": "OK POST /profiles/{id}/educations — agrega educacion en curso (sin endDate)",
           "event": [
             {
               "listen": "test",
@@ -710,7 +710,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"institution\": \"Coursera\",\n  \"degree\": \"Especializacion en Arquitectura de Software\",\n  \"fieldOfStudy\": \"Cloud Native & Microservicios\",\n  \"level\": \"POSTGRADUATE\",\n  \"startDate\": \"2026\",\n  \"inProgress\": true,\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"institution\": \"Coursera\",\n  \"degree\": \"Especializacion en Arquitectura de Software\",\n  \"level\": \"POSTGRADUATE\",\n  \"startDate\": \"2025-02\",\n  \"inProgress\": true\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/profiles/{{profile_id}}/educations",
@@ -2517,14 +2517,14 @@
           }
         },
         {
-          "name": "ERR POST /educations — 422 área de estudio de 501 caracteres",
+          "name": "ERR POST /educations — 422 institución de 151 caracteres",
           "event": [
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.variables.set('field_501', 'a'.repeat(501));"
+                  "pm.variables.set('institution_151', 'a'.repeat(151));"
                 ]
               }
             },
@@ -2535,9 +2535,9 @@
                 "exec": [
                   "pm.test('Status 422', () => pm.response.to.have.status(422));",
                   "pm.test('code VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'));",
-                  "pm.test('errors[0] marca fieldOfStudy', () => pm.expect(pm.response.json().errors[0].field).to.eql('fieldOfStudy'));",
-                  "pm.test('errors[0].code FIELD_OF_STUDY_TOO_LONG', () => pm.expect(pm.response.json().errors[0].code).to.eql('FIELD_OF_STUDY_TOO_LONG'));",
-                  "pm.test('errors[0].message dice qué corregir', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"El área de estudio no puede superar los 500 caracteres.\"));"
+                  "pm.test('errors[0] marca institution', () => pm.expect(pm.response.json().errors[0].field).to.eql('institution'));",
+                  "pm.test('errors[0].code INSTITUTION_TOO_LONG', () => pm.expect(pm.response.json().errors[0].code).to.eql('INSTITUTION_TOO_LONG'));",
+                  "pm.test('errors[0].message dice qué corregir', () => pm.expect(pm.response.json().errors[0].message).to.eql(\"La institución no puede superar los 150 caracteres.\"));"
                 ]
               }
             }
@@ -2569,7 +2569,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"institution\": \"Unicauca\",\n  \"degree\": \"Ingeniería\",\n  \"fieldOfStudy\": \"{{field_501}}\",\n  \"level\": \"UNDERGRADUATE\",\n  \"startDate\": \"2020-01\",\n  \"inProgress\": false,\n  \"provenance\": \"MANUAL\"\n}"
+              "raw": "{\n  \"institution\": \"{{institution_151}}\",\n  \"degree\": \"Ingeniería\",\n  \"level\": \"UNDERGRADUATE\",\n  \"startDate\": \"2020-01\",\n  \"inProgress\": false\n}"
             }
           }
         },

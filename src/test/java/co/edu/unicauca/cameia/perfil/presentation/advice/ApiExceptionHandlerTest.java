@@ -137,8 +137,7 @@ class ApiExceptionHandlerTest {
                 new Object[]{new LastTargetRoleException(), 409, "TARGET_ROLE_NOT_ALLOWED"},
                 new Object[]{new DuplicateSkillException(), 409, "SKILL_ALREADY_EXISTS"},
                 new Object[]{new WorkExperienceNotFoundException(), 404, "WORK_EXPERIENCE_NOT_FOUND"},
-                new Object[]{new EducationNotFoundException(), 404, "EDUCATION_NOT_FOUND"},
-                new Object[]{new SkillNotFoundException(), 404, "SKILL_NOT_FOUND"},
+                new Object[]{new EducationNotFoundException(), 404, "EDUCATION_NOT_FOUND"},                new Object[]{new SkillNotFoundException(), 404, "SKILL_NOT_FOUND"},
                 new Object[]{new TargetRoleNotFoundException(), 404, "TARGET_ROLE_NOT_FOUND"},
                 new Object[]{new IdentityRequiredException(), 401, "IDENTITY_REQUIRED"},
                 new Object[]{new UnsupportedLanguageException(), 422, "PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE"});
