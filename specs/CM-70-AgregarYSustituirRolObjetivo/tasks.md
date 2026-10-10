@@ -182,7 +182,7 @@
 
 # PR 70-2 — Regla del rol activo, máximo en 409 y procedencia `MANUAL` (`CM-70-agregar-sustituir-rol-objetivo`)
 
-## [ ] T-70.5 · Códigos y catálogo — ≤ 20 min, ≈ 60 líneas
+## [x] T-70.5 · Códigos y catálogo — ≤ 20 min, ≈ 60 líneas
 
 - `ErrorCatalog.RESPONSES`: `entry(TARGET_ROLE_LIMIT_REACHED, CONFLICT, "Máximo de roles objetivo alcanzado", null)` (antes `UNPROCESSABLE_CONTENT`).
 - `ErrorCatalogTest.DOMAIN_FIELD_CODES`: agregar `PROFESSIONAL_ROLE_DISABLED`.
@@ -195,6 +195,7 @@
   `status().isConflict()`, `$.code` `TARGET_ROLE_LIMIT_REACHED`, `$.detail` «Ya tienes el máximo de 5 roles objetivo.», `$.errors` no existe.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ErrorCatalogTest,ApiExceptionHandlerTest,ProfileControllerTest,ErrorCodeDocumentationTest" test`.
 - **Commit:** `CM-70 | fix(perfil): el sexto rol objetivo responde 409 y el rol inactivo tiene su código`.
+- **Resultado (10-oct):** rojo (con el catálogo en 422): `ApiExceptionHandlerTest` `expected:<409> but was:<422>` y `ProfileControllerTest.postTargetRoles_shouldReturn409_whenMaxReached` `Status expected:<409> but was:<422>`. Verde: 170 pruebas, 0 fallos (`ProfileControllerTest`, `ApiExceptionHandlerTest`, `ErrorCatalogTest`, `ErrorCodeDocumentationTest`). `PROFESSIONAL_ROLE_DISABLED` ya estaba hecho en T-70.2.
 
 ## [ ] T-70.6 · Agregar y sustituir solo roles activos, con procedencia `MANUAL` — ≤ 30 min, ≈ 160 líneas
 

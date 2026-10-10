@@ -668,7 +668,8 @@ class ProfileControllerTest {
     }
 
     @Test
-    void postTargetRoles_returns422WhenMaxExceeded() throws Exception {
+    @DisplayName("El sexto rol objetivo responde 409 con el código y el mensaje del máximo, sin errors")
+    void postTargetRoles_shouldReturn409_whenMaxReached() throws Exception {
         when(profileAppService.addTargetRole(any())).thenThrow(new MaxTargetRolesExceededException(5));
 
         mockMvc.perform(post("/api/v1/profiles/{id}/target-roles", UUID.randomUUID())
@@ -677,8 +678,10 @@ class ProfileControllerTest {
                         .content("""
                                 {"professionalRoleId": "%s", "provenance": "MANUAL"}
                                 """.formatted(UUID.randomUUID())))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.title").value("Máximo de roles objetivo alcanzado"));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("TARGET_ROLE_LIMIT_REACHED"))
+                .andExpect(jsonPath("$.detail").value("Ya tienes el máximo de 5 roles objetivo."))
+                .andExpect(jsonPath("$.errors").doesNotExist());
     }
 
     @Test
