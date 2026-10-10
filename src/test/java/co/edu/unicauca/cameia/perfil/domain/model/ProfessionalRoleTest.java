@@ -2,6 +2,7 @@ package co.edu.unicauca.cameia.perfil.domain.model;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +33,8 @@ class ProfessionalRoleTest {
                         .satisfies(error -> {
                             assertThat(error.field()).isEqualTo("professionalRoleId");
                             assertThat(error.code()).isEqualTo(ErrorCode.PROFESSIONAL_ROLE_DISABLED);
-                            assertThat(error.message()).isEqualTo("No encontramos ese rol en el catálogo.");
+                            assertThat(error.message()).isEqualTo("No encontramos ese rol en el catálogo.")
+                                    .isEqualTo(new ProfessionalRoleNotFoundException().getMessage());
                         }));
     }
 }

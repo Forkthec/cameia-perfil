@@ -45,5 +45,4 @@ public class ProfessionalRoleEntity {
     public void setCategoria(String categoria) { this.categoria = categoria; }
     public void setNombreEn(String nombreEn) { this.nombreEn = nombreEn; }
     public void setCategoriaEn(String categoriaEn) { this.categoriaEn = categoriaEn; }
-    public void setEstado(String estado) { this.estado = estado; }
 }

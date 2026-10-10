@@ -2,6 +2,7 @@ package co.edu.unicauca.cameia.perfil.domain.model;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
 
 import java.util.UUID;
 
@@ -18,9 +19,6 @@ import java.util.UUID;
  */
 public record ProfessionalRole(UUID id, String nombre, String categoria, boolean active) {
 
-    /** Mensaje del rol que el buscador no ofrece; es el mismo del rol que no está en el catálogo. */
-    static final String NOT_SELECTABLE_MESSAGE = "No encontramos ese rol en el catálogo.";
-
     /**
      * Confirma que el rol se puede elegir como Rol Objetivo.
      *
@@ -29,7 +27,7 @@ public record ProfessionalRole(UUID id, String nombre, String categoria, boolean
      */
     public ProfessionalRole requireSelectable() {
         if (!active) {
-            throw InvalidFieldsException.of("professionalRoleId", ErrorCode.PROFESSIONAL_ROLE_DISABLED, NOT_SELECTABLE_MESSAGE);
+            throw InvalidFieldsException.of("professionalRoleId", ErrorCode.PROFESSIONAL_ROLE_DISABLED, ProfessionalRoleNotFoundException.MESSAGE);
         }
         return this;
     }
