@@ -84,4 +84,25 @@ class OpenApiDocumentIT {
         assertThat(JsonPath.<java.util.List<Object>>read(body, operation + ".responses.409.content.*").get(0).toString())
                 .contains("TARGET_ROLE_NOT_ALLOWED", "PROFILE_UPDATE_IN_PROGRESS");
     }
+
+    @Test
+    @DisplayName("El rol del catálogo y el rol objetivo del perfil describen cada campo, y la procedencia lista sus tres valores")
+    void apiDocs_shouldDescribeRoleFields_whenRequested() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var body = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString()).body();
+
+        for (var field : java.util.List.of("id", "nombre", "categoria")) {
+            var property = "$.components.schemas.ProfessionalRoleResponse.properties." + field;
+            assertThat(JsonPath.<String>read(body, property + ".description")).isNotBlank();
+            assertThat(JsonPath.<Object>read(body, property + ".example")).isNotNull();
+        }
+        for (var field : java.util.List.of("id", "professionalRoleId", "roleTitle", "provenance")) {
+            var property = "$.components.schemas.TargetRoleItem.properties." + field;
+            assertThat(JsonPath.<String>read(body, property + ".description")).isNotBlank();
+            assertThat(JsonPath.<Object>read(body, property + ".example")).isNotNull();
+        }
+        assertThat(JsonPath.<java.util.List<String>>read(body, "$.components.schemas.TargetRoleItem.properties.provenance.enum"))
+                .containsExactly("MANUAL", "AI_SUGGESTED", "AI_EDITED");
+    }
 }
