@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import co.edu.unicauca.cameia.perfil.domain.exception.BirthDateUnavailableException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException;
@@ -71,6 +72,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
@@ -124,6 +126,7 @@ class ApiExceptionHandlerTest {
         var id = UUID.randomUUID();
         return Stream.of(
                 new Object[]{new ProfileNotFoundException(), 404, "PROFILE_NOT_FOUND"},
+                new Object[]{new BirthDateUnavailableException(), 503, "BIRTH_DATE_UNAVAILABLE"},
                 new Object[]{new ProfileAccessDeniedException(), 403, "PROFILE_NOT_ALLOWED"},
                 new Object[]{new ProfileLimitReachedException(), 409, "PROFILE_LIMIT_REACHED"},
                 new Object[]{new ProfileAlreadyCompletedException(), 409, "PROFILE_ALREADY_COMPLETED"},
@@ -174,6 +177,51 @@ class ApiExceptionHandlerTest {
                 .andExpect(jsonPath("$.missingRequirements.length()").value(2))
                 .andExpect(jsonPath("$.requestId").isNotEmpty())
                 .andExpect(header().exists("X-Request-Id"));
+    }
+
+    @Test
+    @DisplayName("La falta de la fecha replicada responde 503 con el mensaje de reintento")
+    void birthDateUnavailable_shouldReturn503_whenThrown() throws Exception {
+        toThrow = BirthDateUnavailableException::new;
+
+        var result = mockMvc.perform(get("/boom").header("X-Request-Id", "req-bd-1"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Content-Type", "application/problem+json;charset=UTF-8"))
+                .andExpect(jsonPath("$.code").value("BIRTH_DATE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.detail").value("Ocurrió un error. Inténtalo de nuevo."))
+                .andExpect(jsonPath("$.title").value("Servicio no disponible"))
+                .andExpect(jsonPath("$.requestId").value("req-bd-1"))
+                .andExpect(jsonPath("$.errors").doesNotExist())
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .doesNotContain("Exception").doesNotContain("co.edu");
+    }
+
+    @Test
+    @DisplayName("Un rechazo de negocio con estado de servidor se registra en ERROR sin traza")
+    void rejection_shouldLogError_whenBusinessStatusIs5xx() throws Exception {
+        toThrow = BirthDateUnavailableException::new;
+
+        mockMvc.perform(get("/boom").header("X-Request-Id", "req-bd-2")).andExpect(status().isServiceUnavailable());
+
+        assertThat(logs.list).filteredOn(event -> event.getLevel() == Level.ERROR).singleElement().satisfies(event -> {
+            assertThat(event.getFormattedMessage()).contains("code=BIRTH_DATE_UNAVAILABLE").contains("requestId=req-bd-2");
+            assertThat(event.getThrowableProxy()).isNull();
+        });
+        assertThat(logs.list).noneMatch(event -> event.getLevel() == Level.WARN);
+    }
+
+    @Test
+    @DisplayName("Un rechazo de negocio con estado de cliente se registra en WARN")
+    void rejection_shouldLogWarn_whenBusinessStatusIs4xx() throws Exception {
+        toThrow = ProfileNotFoundException::new;
+
+        mockMvc.perform(get("/boom")).andExpect(status().isNotFound());
+
+        assertThat(logs.list).filteredOn(event -> event.getLevel() == Level.WARN).singleElement()
+                .satisfies(event -> assertThat(event.getFormattedMessage()).contains("code=PROFILE_NOT_FOUND"));
+        assertThat(logs.list).noneMatch(event -> event.getLevel() == Level.ERROR);
     }
 
     @Test

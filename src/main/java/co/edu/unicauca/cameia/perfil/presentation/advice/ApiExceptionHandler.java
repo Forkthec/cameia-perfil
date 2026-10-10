@@ -180,8 +180,14 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     /** Registra el rechazo con su código, el identificador de la petición y la identidad, y lo responde. */
     private ResponseEntity<Object> reject(ProblemDetail problem, WebRequest request) {
         var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
-        log.warn("Petición rechazada: code={} requestId={} firebaseUid={}",
-                problem.getProperties().get("code"), requestId, firebaseUid(request));
+        // Un 5xx significa que alguien debe actuar (por ejemplo, una réplica que nunca llegó); los 4xx son resultados esperables del cliente.
+        if (problem.getStatus() >= 500) {
+            log.error("Rechazo de negocio con estado de servidor: code={} requestId={} firebaseUid={}",
+                    problem.getProperties().get("code"), requestId, firebaseUid(request));
+        } else {
+            log.warn("Petición rechazada: code={} requestId={} firebaseUid={}",
+                    problem.getProperties().get("code"), requestId, firebaseUid(request));
+        }
         return respond(problem, requestId);
     }
 
