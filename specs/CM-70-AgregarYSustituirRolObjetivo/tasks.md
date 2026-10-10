@@ -40,7 +40,7 @@
 
 # PR 70-1 — Estado del catálogo y restricciones (`CM-70-estado-catalogo-roles`, sobre 70-0)
 
-## [ ] T-70.1 · Migración `V5_1` y su prueba — ≤ 30 min, ≈ 160 líneas
+## [x] T-70.1 · Migración `V5_1` y su prueba — ≤ 30 min, ≈ 160 líneas
 
 - **Antes:** `ls src/main/resources/db/migration` → `V1` a `V5`; si existe `V5_1` o `V6`, detente.
 - **Crear** `V5_1__estado_catalogo_y_restricciones_rol_objetivo.sql` con el SQL exacto de abajo (comentarios en español):
@@ -84,6 +84,7 @@
 - **Trampa:** `ddl-auto=validate` falla al arrancar si la entidad no tiene la columna `estado`: hasta T-70.2 la entidad no la mapea, y eso es válido
   (Hibernate solo valida las columnas que la entidad declara).
 - **Commit:** `CM-70 | feat(perfil): estado del catálogo de roles y restricciones de rol_objetivo`.
+- **Resultado (10-oct):** sin la migración, `TargetRoleSchemaIT`: Tests run: 9, Failures: 5, Errors: 4 (BUILD FAILURE). Con `V5_1`: Tests run: 9, Failures: 0, Errors: 0 (BUILD SUCCESS).
 
 ## [ ] T-70.2 · Estado del rol en el dominio y en el adaptador — ≤ 30 min, ≈ 150 líneas
 
