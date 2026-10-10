@@ -85,6 +85,8 @@ SEG-04 (el log del rechazo no lleva el nombre del rol). API2, API3 (sin cuerpo),
 | AC-0006 | INT | `code` estable para que Frontend muestre el mensaje del CA | `ProfileControllerTest` |
 | AC-0002 | DES-02 | p95 ≤ 2 s | `responseTime < 2000` en Newman |
 | MAN-01 | ≥ 90 % | `ProfileAppService.removeTargetRole` deja de estar sin cubrir | JaCoCo |
+| AC-0001 | IA-01 | no aplica: eliminar un rol objetivo no produce ni consume una salida de IA | — |
+| MAN-02 | adaptador externo | no aplica: el caso de uso solo usa el puerto del repositorio del perfil, sin adaptador nuevo | — |
 
 ## 9. Decisiones
 
