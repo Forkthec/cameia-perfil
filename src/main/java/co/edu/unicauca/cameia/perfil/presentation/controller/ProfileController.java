@@ -67,6 +67,29 @@ class ProfileController {
               "profileSkills": []
             }""";
 
+    private static final String WORK_EXPERIENCE_LIMIT_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Máximo de experiencias alcanzado",
+              "status": 409,
+              "detail": "Ya tienes el máximo de 4 experiencias laborales.",
+              "code": "WORK_EXPERIENCE_LIMIT_REACHED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String WORK_EXPERIENCE_INVALID_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Datos no válidos",
+              "status": 422,
+              "detail": "Revisa los campos marcados.",
+              "code": "VALIDATION_FAILED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+              "errors": [
+                {"field": "company", "code": "COMPANY_REQUIRED", "message": "Ingresa la empresa."}
+              ]
+            }""";
+
     private static final String PLAN_LIMIT_EXAMPLE = """
             {
               "type": "about:blank",
@@ -189,7 +212,9 @@ class ProfileController {
                 new UpdateProfileInfoCommand(id, uid, r.name(), r.summary(), r.preferredModality(), r.provenance()))));
     }
 
-    @Operation(summary = "Agregar experiencia laboral al perfil")
+    @Operation(summary = "Agregar experiencia laboral al perfil",
+            description = "Todo lo que se agrega por esta ruta se guarda con procedencia MANUAL; una procedencia en el cuerpo se ignora. "
+                    + "El perfil admite hasta 4 experiencias. Se informan a la vez todos los campos inválidos.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Experiencia laboral agregada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
@@ -199,8 +224,20 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: COMPANY_REQUIRED, COMPANY_TOO_LONG, POSITION_REQUIRED, POSITION_TOO_LONG, START_DATE_REQUIRED, START_DATE_INVALID_FORMAT, END_DATE_INVALID_FORMAT, END_DATE_REQUIRED, END_DATE_NOT_ALLOWED, END_DATE_BEFORE_START_DATE, EMPLOYMENT_STATUS_REQUIRED, EMPLOYMENT_STATUS_INVALID_VALUE, PROVENANCE_REQUIRED, PROVENANCE_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+            @ApiResponse(responseCode = "409", description = "El perfil ya tiene 4 experiencias (code WORK_EXPERIENCE_LIMIT_REACHED) "
+                    + "o está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se agregó nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Máximo alcanzado", value = WORK_EXPERIENCE_LIMIT_EXAMPLE))),
+            @ApiResponse(responseCode = "415", description = "El cuerpo no es JSON (code MEDIA_TYPE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: COMPANY_REQUIRED, "
+                    + "COMPANY_TOO_LONG, COMPANY_INVALID_CHARACTERS, POSITION_REQUIRED, POSITION_TOO_LONG, POSITION_INVALID_CHARACTERS, "
+                    + "DESCRIPTION_TOO_LONG, DESCRIPTION_INVALID_CHARACTERS, START_DATE_INVALID_FORMAT, START_DATE_IN_THE_FUTURE, "
+                    + "END_DATE_INVALID_FORMAT, END_DATE_REQUIRED, END_DATE_NOT_ALLOWED, END_DATE_IN_THE_FUTURE, END_DATE_BEFORE_START_DATE, "
+                    + "EMPLOYMENT_STATUS_REQUIRED, EMPLOYMENT_STATUS_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) "
+                    + "o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Empresa vacía", value = WORK_EXPERIENCE_INVALID_EXAMPLE)))
     })
     @PostMapping("/{id}/work-experiences")
     ResponseEntity<ProfileResponse> addWorkExperience(@PathVariable UUID id,
@@ -219,6 +256,8 @@ class ProfileController {
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o experiencia que no es de este perfil (code WORK_EXPERIENCE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "El perfil está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se quitó nada y se puede reintentar",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o WORK_EXPERIENCE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
