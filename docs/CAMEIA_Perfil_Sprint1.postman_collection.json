@@ -56,6 +56,10 @@
     {
       "key": "role_b",
       "value": ""
+    },
+    {
+      "key": "replicaMessageId",
+      "value": ""
     }
   ],
   "item": [
@@ -3359,6 +3363,516 @@
               "path": [
                 "v3",
                 "api-docs"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CM-279 — Réplica de fecha de nacimiento (local)",
+      "description": "Comprueba contra el broker local, por su API de administración, que el servicio declara su cola de cuentas creadas y que un evento válido, uno repetido y uno inválido se enrutan como dice el contrato. La fila de la réplica no se ve por HTTP porque el servicio no tiene un endpoint que la exponga: la cubre `BirthDateReplicationIT` y la prueba manual de punta a punta consulta la base. Requiere el broker de docker-compose y las variables rabbitManagementUrl, rabbitUser y rabbitPassword del entorno local.",
+      "item": [
+        {
+          "name": "R-00 Limpiar la cola de fallidos de cuentas creadas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{rabbitManagementUrl}}/api/queues/%2F/perfil.cuenta-creada.dlq/contents",
+              "host": [
+                "{{rabbitManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "queues",
+                "%2F",
+                "perfil.cuenta-creada.dlq",
+                "contents"
+              ]
+            }
+          }
+        },
+        {
+          "name": "R-01 La cola de cuentas creadas envía sus fallidos a perfil.dlx",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('x-dead-letter-exchange es perfil.dlx', () => pm.expect(pm.response.json().arguments['x-dead-letter-exchange']).to.eql('perfil.dlx'));",
+                  "pm.test('x-dead-letter-routing-key es el nombre de la cola', () => pm.expect(pm.response.json().arguments['x-dead-letter-routing-key']).to.eql('perfil.cuenta-creada'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{rabbitManagementUrl}}/api/queues/%2F/perfil.cuenta-creada",
+              "host": [
+                "{{rabbitManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "queues",
+                "%2F",
+                "perfil.cuenta-creada"
+              ]
+            }
+          }
+        },
+        {
+          "name": "R-02 Publicar cuenta.creada válida",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('replicaMessageId', pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('el mensaje se enrutó a una cola', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rabbitManagementUrl}}/api/exchanges/%2F/cuentas.events/publish",
+              "host": [
+                "{{rabbitManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "exchanges",
+                "%2F",
+                "cuentas.events",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"properties\": {\n    \"content_type\": \"application/json\",\n    \"message_id\": \"{{replicaMessageId}}\"\n  },\n  \"routing_key\": \"cuenta.creada\",\n  \"payload\": \"{\\\"usuarioId\\\":\\\"pm{{$timestamp}}\\\",\\\"email\\\":\\\"ana.perez@ejemplo.test\\\",\\\"fechaNacimiento\\\":\\\"2008-03-15\\\",\\\"creadaEn\\\":\\\"2026-10-09T15:04:05.123Z\\\"}\",\n  \"payload_encoding\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "R-03 Publicar otra vez el mismo mensaje (no produce error)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('el mensaje se enrutó a una cola', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rabbitManagementUrl}}/api/exchanges/%2F/cuentas.events/publish",
+              "host": [
+                "{{rabbitManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "exchanges",
+                "%2F",
+                "cuentas.events",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"properties\": {\n    \"content_type\": \"application/json\",\n    \"message_id\": \"{{replicaMessageId}}\"\n  },\n  \"routing_key\": \"cuenta.creada\",\n  \"payload\": \"{\\\"usuarioId\\\":\\\"pm{{$timestamp}}\\\",\\\"email\\\":\\\"ana.perez@ejemplo.test\\\",\\\"fechaNacimiento\\\":\\\"2008-03-15\\\",\\\"creadaEn\\\":\\\"2026-10-09T15:04:05.123Z\\\"}\",\n  \"payload_encoding\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "R-04 Publicar un cuerpo que no es JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('el mensaje se enrutó a una cola', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rabbitManagementUrl}}/api/exchanges/%2F/cuentas.events/publish",
+              "host": [
+                "{{rabbitManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "exchanges",
+                "%2F",
+                "cuentas.events",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"properties\": {\n    \"content_type\": \"application/json\",\n    \"message_id\": \"{{$guid}}\"\n  },\n  \"routing_key\": \"cuenta.creada\",\n  \"payload\": \"no es json\",\n  \"payload_encoding\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "R-05 Solo el inválido llegó a la cola de fallidos",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// El broker actualiza sus estadísticas cada 5 s: se espera antes de contar los mensajes.",
+                  "setTimeout(function () {}, 8000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('un solo mensaje fallido: el inválido', () => pm.expect(pm.response.json().messages).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{rabbitManagementUrl}}/api/queues/%2F/perfil.cuenta-creada.dlq",
+              "host": [
+                "{{rabbitManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "queues",
+                "%2F",
+                "perfil.cuenta-creada.dlq"
+              ]
+            }
+          }
+        },
+        {
+          "name": "R-06 Publicar cuenta.eliminada válida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('el mensaje se enrutó a una cola', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rabbitManagementUrl}}/api/exchanges/%2F/cuentas.events/publish",
+              "host": [
+                "{{rabbitManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "exchanges",
+                "%2F",
+                "cuentas.events",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"properties\": {\n    \"content_type\": \"application/json\",\n    \"message_id\": \"{{$guid}}\"\n  },\n  \"routing_key\": \"cuenta.eliminada\",\n  \"payload\": \"{\\\"usuarioId\\\":\\\"pm{{$timestamp}}\\\",\\\"eliminadaEn\\\":\\\"2026-10-20T03:00:00.000Z\\\"}\",\n  \"payload_encoding\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "R-06b La cola de fallidos de cuentas eliminadas sigue vacía",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// El broker actualiza sus estadísticas cada 5 s: se espera antes de contar los mensajes.",
+                  "setTimeout(function () {}, 8000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('sin mensajes fallidos', () => pm.expect(pm.response.json().messages).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{rabbitManagementUrl}}/api/queues/%2F/perfil.cuenta-eliminada.dlq",
+              "host": [
+                "{{rabbitManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "queues",
+                "%2F",
+                "perfil.cuenta-eliminada.dlq"
+              ]
+            }
+          }
+        },
+        {
+          "name": "R-07 Limpiar la cola de fallidos de cuentas creadas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{rabbitManagementUrl}}/api/queues/%2F/perfil.cuenta-creada.dlq/contents",
+              "host": [
+                "{{rabbitManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "queues",
+                "%2F",
+                "perfil.cuenta-creada.dlq",
+                "contents"
               ]
             }
           }

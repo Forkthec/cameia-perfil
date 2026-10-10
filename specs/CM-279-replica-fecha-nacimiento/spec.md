@@ -245,7 +245,7 @@ CREATE TABLE evento_procesado (
 | `usuarioId` | vacío / espacios / tabulador | `""`, `"   "`, `"\t"` | fallidos | `USER_ID_INVALID` | tabla parametrizada en `BirthDateReplicaAppServiceTest` |
 | `usuarioId` | 128 caracteres | 128 `a` | fila creada | — | `recordAccountCreated_shouldAccept_whenUserIdHas128Characters` |
 | `usuarioId` | 129 caracteres | 129 `a` | fallidos | `USER_ID_INVALID` | `..._whenUserIdHas129Characters` |
-| `usuarioId` | tipo número | `12345` | **Verificación previa de Backend (V-1):** depende de la coerción de Jackson 3. Si convierte el número a texto, se acepta (`"12345"`, 5 caracteres válidos); si no, va a fallidos con `PAYLOAD_INVALID_FORMAT`. La prueba fija el resultado real y esta fila se corrige en el mismo PR | — / `PAYLOAD_INVALID_FORMAT` | `accountCreated_shouldAcceptNumericUserId_whenSent` |
+| `usuarioId` | tipo número | `12345` | **Verificado el 10-oct-2026 (V-1):** Jackson 3 convierte el número a texto, así que se acepta y se guarda `"12345"` (5 caracteres válidos). El contrato de Cuentas declara `usuarioId` como cadena, de modo que un productor real no lo envía como número | — | `accountCreated_shouldAcceptNumericUserId_whenSent` |
 | `usuarioId` | objeto | `{"a":1}` | fallidos | `PAYLOAD_INVALID_FORMAT` | `..._whenUserIdIsObject` |
 | `fechaNacimiento` | ausente / `null` | — | fallidos | `BIRTH_DATE_REQUIRED` | `..._whenBirthDateIsMissing` |
 | `fechaNacimiento` | formato | `"15/03/2008"`, `"2008-3-15"`, `"2008-03-15T00:00:00Z"` | fallidos | `PAYLOAD_INVALID_FORMAT` | tabla parametrizada en `BirthDateReplicationIT` |
