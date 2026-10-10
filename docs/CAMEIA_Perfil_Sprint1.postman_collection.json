@@ -88,6 +88,42 @@
   ],
   "item": [
     {
+      "name": "Preparación — fechas de nacimiento de las identidades fijas",
+      "item": [
+        {
+          "name": "OK RabbitMQ — publica cuenta.creada de firebase-uid-ana-sofia-001",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('El mensaje se enrutó a una cola', () => pm.expect(pm.response.json().routed).to.eql(true));"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"properties\": {\"content_type\": \"application/json\", \"message_id\": \"{{$guid}}\"}, \"routing_key\": \"cuenta.creada\", \"payload\": \"{\\\"usuarioId\\\": \\\"firebase-uid-ana-sofia-001\\\", \\\"email\\\": \\\"ana.perez@ejemplo.test\\\", \\\"fechaNacimiento\\\": \\\"1990-01-01\\\", \\\"creadaEn\\\": \\\"2026-10-09T15:04:05.123Z\\\"}\", \"payload_encoding\": \"string\"}", "options": {"raw": {"language": "json"}}},
+            "auth": {"type": "basic", "basic": [{"key": "username", "value": "{{rabbitUser}}", "type": "string"}, {"key": "password", "value": "{{rabbitPassword}}", "type": "string"}]},
+            "url": {"raw": "{{rabbitManagementUrl}}/api/exchanges/%2F/cuentas.events/publish", "host": ["{{rabbitManagementUrl}}"], "path": ["api", "exchanges", "%2F", "cuentas.events", "publish"]}
+          }
+        },
+        {
+          "name": "OK RabbitMQ — publica cuenta.creada de firebase-uid-revisor-cm271",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('El mensaje se enrutó a una cola', () => pm.expect(pm.response.json().routed).to.eql(true));"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"properties\": {\"content_type\": \"application/json\", \"message_id\": \"{{$guid}}\"}, \"routing_key\": \"cuenta.creada\", \"payload\": \"{\\\"usuarioId\\\": \\\"firebase-uid-revisor-cm271\\\", \\\"email\\\": \\\"ana.perez@ejemplo.test\\\", \\\"fechaNacimiento\\\": \\\"1990-01-01\\\", \\\"creadaEn\\\": \\\"2026-10-09T15:04:05.123Z\\\"}\", \"payload_encoding\": \"string\"}", "options": {"raw": {"language": "json"}}},
+            "auth": {"type": "basic", "basic": [{"key": "username", "value": "{{rabbitUser}}", "type": "string"}, {"key": "password", "value": "{{rabbitPassword}}", "type": "string"}]},
+            "url": {"raw": "{{rabbitManagementUrl}}/api/exchanges/%2F/cuentas.events/publish", "host": ["{{rabbitManagementUrl}}"], "path": ["api", "exchanges", "%2F", "cuentas.events", "publish"]}
+          }
+        },
+        {
+          "name": "OK Espera a que Perfil replique las fechas de nacimiento",
+          "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["// El consumidor de eventos es asíncrono: se espera antes de las carpetas que agregan fechas.", "setTimeout(function () {}, 1500);"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));"]}}],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{base_url}}/actuator/health", "host": ["{{base_url}}"], "path": ["actuator", "health"]}
+          }
+        }
+      ]
+    },
+    {
       "name": "CM-16 — Crear perfil profesional",
       "item": [
         {
@@ -5318,7 +5354,7 @@
           "item": [
             {
               "name": "OK POST /profiles — crea el perfil del Usuario (guarda hu24_profile)",
-              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_profile', pm.response.json().id);"]}}],
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu24_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_profile', pm.response.json().id);", "H.replicated();"]}}],
               "request": {
                 "method": "POST",
                 "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
@@ -5327,7 +5363,7 @@
             },
             {
               "name": "OK POST /profiles — crea el perfil de otro Usuario (guarda hu24_other_profile)",
-              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_other_profile', pm.response.json().id);"]}}],
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu24_other_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_other_profile', pm.response.json().id);", "H.replicated();"]}}],
               "request": {
                 "method": "POST",
                 "header": [{"key": "X-User-Id", "value": "{{hu24_other_uid}}"}],
@@ -6030,6 +6066,84 @@
                 "body": {"mode": "raw", "raw": "{\"company\": \"Cinco S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
                 "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "work-experiences"]}
               }
+            },
+            {
+              "name": "OK POST /profiles — crea el perfil de la persona nacida el 15-mar-2008 (guarda hu24_born_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_born_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu24_born_uid'), '2008-03-15');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_born_profile', pm.response.json().id);", "H.replicated();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_born_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "201 inicio a los 15 años (CA-2.4.20)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {company: 'Acme S.A.', startDate: '2023-03', provenance: 'MANUAL'});"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_born_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"CURRENT\", \"startDate\": \"2023-03\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_born_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_born_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 inicio antes de los 15 años (CA-2.4.21)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_BEFORE_MINIMUM_AGE\", \"La experiencia laboral no puede iniciar antes del mes en que cumpliste 15 años.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_born_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"CURRENT\", \"startDate\": \"2023-02\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_born_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_born_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 sin inicio, fin a los 15 años (CA-2.4.22)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.experience(b, {company: 'Fin S.A.', startDate: null, endDate: '2023-03'});"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_born_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Fin S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"endDate\": \"2023-03\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_born_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_born_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "422 sin inicio, fin antes de los 15 años (CA-2.4.23)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"endDate\", \"END_DATE_BEFORE_MINIMUM_AGE\", \"La fecha de fin no puede ser anterior al mes en que cumpliste 15 años.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_born_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"endDate\": \"2023-02\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_born_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_born_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "OK POST /profiles — crea el perfil de una persona sin fecha de nacimiento replicada (guarda hu24_nobirth_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_nobirth_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_nobirth_profile', pm.response.json().id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_nobirth_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "503 experiencia sin réplica (CA-2.4.36)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(503, \"BIRTH_DATE_UNAVAILABLE\", \"Ocurrió un error. Inténtalo de nuevo.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_nobirth_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_nobirth_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_nobirth_profile}}", "work-experiences"]}
+              }
+            },
+            {
+              "name": "201 sin fechas con réplica vacía (CA-2.4.53)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "pm.test('El 503 anterior no guardó nada: solo está la experiencia sin fechas', () => pm.expect(b.workExperiences.length).to.eql(1));", "H.experience(b, {company: 'Sin Fechas S.A.', startDate: null, endDate: null});"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_nobirth_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"company\": \"Sin Fechas S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"UNKNOWN_END\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_nobirth_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_nobirth_profile}}", "work-experiences"]}
+              }
             }
           ]
         },
@@ -6038,7 +6152,7 @@
           "item": [
             {
               "name": "OK POST /profiles — crea el perfil del Usuario (guarda hu24_profile)",
-              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_profile', pm.response.json().id);"]}}],
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu24_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_profile', pm.response.json().id);", "H.replicated();"]}}],
               "request": {
                 "method": "POST",
                 "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
@@ -6047,7 +6161,7 @@
             },
             {
               "name": "OK POST /profiles — crea el perfil de otro Usuario (guarda hu24_other_profile)",
-              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_other_profile', pm.response.json().id);"]}}],
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu24_other_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_other_profile', pm.response.json().id);", "H.replicated();"]}}],
               "request": {
                 "method": "POST",
                 "header": [{"key": "X-User-Id", "value": "{{hu24_other_uid}}"}],
@@ -6248,7 +6362,7 @@
           "item": [
             {
               "name": "OK POST /profiles — crea el perfil del Usuario (guarda hu24_profile)",
-              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_profile', pm.response.json().id);"]}}],
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu24_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_profile', pm.response.json().id);", "H.replicated();"]}}],
               "request": {
                 "method": "POST",
                 "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
@@ -6257,7 +6371,7 @@
             },
             {
               "name": "OK POST /profiles — crea el perfil de otro Usuario (guarda hu24_other_profile)",
-              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_other_profile', pm.response.json().id);"]}}],
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu24_other_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_other_profile', pm.response.json().id);", "H.replicated();"]}}],
               "request": {
                 "method": "POST",
                 "header": [{"key": "X-User-Id", "value": "{{hu24_other_uid}}"}],
@@ -6832,6 +6946,54 @@
                 "body": {"mode": "raw", "raw": "{\"institution\": \"Seis\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
                 "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
               }
+            },
+            {
+              "name": "OK POST /profiles — crea el perfil de la persona nacida el 15-mar-2008 (guarda hu24_born_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_born_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu24_born_uid'), '2008-03-15');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_born_profile', pm.response.json().id);", "H.replicated();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_born_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "201 formación en el mes de nacimiento (CA-2.4.31)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "H.education(b, {institution: 'Escuela', startDate: '2008-03', provenance: 'MANUAL'});"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_born_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Escuela\", \"degree\": \"Curso\", \"level\": \"TECHNICAL\", \"startDate\": \"2008-03\", \"inProgress\": true}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_born_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_born_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "422 formación antes del nacimiento (CA-2.4.32)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"startDate\", \"START_DATE_BEFORE_BIRTH\", \"La fecha no puede ser anterior a tu fecha de nacimiento.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_born_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Escuela\", \"degree\": \"Curso\", \"level\": \"TECHNICAL\", \"startDate\": \"2008-02\", \"inProgress\": true}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_born_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_born_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "OK POST /profiles — crea el perfil de una persona sin fecha de nacimiento replicada (guarda hu24_nobirth_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_nobirth_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_nobirth_profile', pm.response.json().id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_nobirth_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "503 formación sin réplica (CA-2.4.52)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(503, \"BIRTH_DATE_UNAVAILABLE\", \"Ocurrió un error. Inténtalo de nuevo.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_nobirth_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_nobirth_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_nobirth_profile}}", "educations"]}
+              }
             }
           ]
         },
@@ -6840,7 +7002,7 @@
           "item": [
             {
               "name": "OK POST /profiles — crea el perfil del Usuario (guarda hu24_profile)",
-              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_profile', pm.response.json().id);"]}}],
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu24_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_profile', pm.response.json().id);", "H.replicated();"]}}],
               "request": {
                 "method": "POST",
                 "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
@@ -6849,7 +7011,7 @@
             },
             {
               "name": "OK POST /profiles — crea el perfil de otro Usuario (guarda hu24_other_profile)",
-              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_other_profile', pm.response.json().id);"]}}],
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu24_other_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_other_profile', pm.response.json().id);", "H.replicated();"]}}],
               "request": {
                 "method": "POST",
                 "header": [{"key": "X-User-Id", "value": "{{hu24_other_uid}}"}],
@@ -7061,7 +7223,7 @@
       "item": [
         {
           "name": "OK POST /profiles — crea el perfil (guarda des_profile)",
-          "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('des_uid', 'uid-des-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('des_profile', pm.response.json().id);"]}}],
+          "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('des_uid', 'uid-des-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('des_uid'), '1990-01-01', 400);"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('des_profile', pm.response.json().id);", "H.replicated();"]}}],
           "request": {
             "method": "POST",
             "header": [{"key": "X-User-Id", "value": "{{des_uid}}"}],
@@ -7159,6 +7321,22 @@
           "        return found;",
           "    };",
           "    const KEYS = { 'work-experiences': 'workExperiences', educations: 'educations' };",
+          "    // Publica cuenta.creada con la fecha de nacimiento del Usuario y espera a que el consumidor de Perfil la replique",
+          "    const replicate = (uid, birthDate, waitMs = 600) => {",
+          "        pm.collectionVariables.set('hu24_replicated', 'false');",
+          "        const payload = JSON.stringify({ usuarioId: uid, email: 'ana.perez@ejemplo.test', fechaNacimiento: birthDate, creadaEn: '2026-10-09T15:04:05.123Z' });",
+          "        const message = { properties: { content_type: 'application/json', message_id: pm.variables.replaceIn('{{$guid}}') }, routing_key: 'cuenta.creada', payload, payload_encoding: 'string' };",
+          "        pm.sendRequest({",
+          "            url: pm.variables.get('rabbitManagementUrl') + '/api/exchanges/%2F/cuentas.events/publish',",
+          "            method: 'POST',",
+          "            header: { 'Content-Type': 'application/json' },",
+          "            auth: { type: 'basic', basic: [{ key: 'username', value: pm.variables.get('rabbitUser') }, { key: 'password', value: pm.variables.get('rabbitPassword') }] },",
+          "            body: { mode: 'raw', raw: JSON.stringify(message) }",
+          "        }, (err, res) => pm.collectionVariables.set('hu24_replicated', String(!err && res.code === 200 && res.json().routed === true)));",
+          "        // El consumidor es asíncrono: la petición no sale hasta pasado este tiempo",
+          "        setTimeout(function () {}, waitMs);",
+          "    };",
+          "    const replicated = () => pm.test('El evento cuenta.creada se publicó y se enrutó', () => pm.expect(pm.collectionVariables.get('hu24_replicated')).to.eql('true'));",
           "    // Borra las experiencias (o las formaciones) del perfil de la carpeta, una a una, y comprueba cuántas había",
           "    const clean = (expected, path = 'work-experiences') => {",
           "        const uid = pm.variables.get('hu24_uid');",
@@ -7177,7 +7355,7 @@
           "            next(0);",
           "        });",
           "    };",
-          "    return { typeOk, fast, noLeaks, problem, fieldError, fields, created, noContent, experience, education, clean };",
+          "    return { typeOk, fast, noLeaks, problem, fieldError, fields, created, noContent, experience, education, replicate, replicated, clean };",
           "};",
           "pm.globals.set('hu24Helpers', '(' + factory.toString() + ')()');"
         ]
