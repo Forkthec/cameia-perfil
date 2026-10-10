@@ -534,6 +534,21 @@ class ProfileAppServiceTest {
     }
 
     @Test
+    @DisplayName("Sustituir un rol objetivo que no está en el perfil por un rol inactivo informa primero el error del catálogo")
+    void updateTargetRole_shouldReportCatalogRole_whenRoleIdIsNotInProfile() {
+        var profile = freshProfile();
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+        when(roleRepository.findById(INACTIVE_ROLE.id())).thenReturn(Optional.of(INACTIVE_ROLE));
+
+        assertThatThrownBy(() -> service.updateTargetRole(
+                new UpdateTargetRoleCommand(UUID.randomUUID(), SVC_UID, UUID.randomUUID(), INACTIVE_ROLE.id())))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("professionalRoleId", ErrorCode.PROFESSIONAL_ROLE_DISABLED)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Sustituir conserva el id y la procedencia del rol y cambia el rol del catálogo")
     void updateTargetRole_shouldKeepIdAndProvenance_whenRoleIsReplaced() {
         var profile = freshProfile();
