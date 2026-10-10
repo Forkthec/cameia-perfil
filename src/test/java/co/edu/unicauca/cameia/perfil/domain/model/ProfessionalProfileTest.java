@@ -144,6 +144,22 @@ class ProfessionalProfileTest {
     }
 
     @Test
+    @DisplayName("Sustituir sin rol ni título nuevos conserva los valores anteriores")
+    void updateTargetRole_shouldKeepPreviousValues_whenArgumentsAreNull() {
+        var roleId = UUID.fromString("a0000001-0000-0000-0000-000000000002");
+        var profile = ProfessionalProfile.create(UID);
+        var existing = role(roleId, "Backend Dev");
+        profile.addTargetRole(existing);
+
+        profile.updateTargetRole(existing.getId(), null, null);
+
+        assertThat(profile.getTargetRoles()).singleElement().satisfies(r -> {
+            assertThat(r.getProfessionalRoleId()).isEqualTo(roleId);
+            assertThat(r.getRoleTitle()).isEqualTo("Backend Dev");
+        });
+    }
+
+    @Test
     @DisplayName("Quitar un rol no cambia el orden de los demás")
     void removeTargetRole_shouldKeepOrderOfOthers_whenOneIsRemoved() {
         var a = role(UUID.fromString("a0000001-0000-0000-0000-000000000001"), "Rol A");
