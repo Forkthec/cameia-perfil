@@ -114,6 +114,8 @@ final class ProfessionalProfileMapping {
         e.setId(d.getId());
         e.setProfile(parent);
         e.setSkillName(d.getSkillName());
+        // La clave se reescribe en cada guardado: así la restricción UNIQUE compara siempre con la regla de la aplicación.
+        e.setComparisonKey(d.getName().comparisonKey());
         e.setLevel(d.getLevel());
         e.setProvenance(d.getProvenance());
         return e;

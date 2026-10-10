@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
@@ -130,6 +131,21 @@ class ProfessionalProfileRepositoryAdapterIT {
                 targetRoles, List.of(), List.of(), List.of());
 
         assertThatThrownBy(() -> repository.save(profile)).isInstanceOf(DuplicateTargetRoleException.class);
+    }
+
+    @Test
+    @DisplayName("Dos habilidades con la misma clave de comparación se traducen a la excepción de negocio de duplicado")
+    void save_shouldThrowDuplicateSkill_whenComparisonKeyRepeatsInProfile() {
+        var skills = List.of(
+                new ProfileSkill(UUID.randomUUID(), SkillName.of("Programación"), SkillLevel.BASIC, DataProvenance.MANUAL),
+                new ProfileSkill(UUID.randomUUID(), SkillName.of("programacion"), SkillLevel.ADVANCED, DataProvenance.MANUAL));
+        var profile = ProfessionalProfile.reconstitute(
+                ProfileId.generate(), new FirebaseUid("firebase-it-dup-skill"), null, null, null, null,
+                DataProvenance.MANUAL, ProfileStatus.IN_PROGRESS, ReviewStatus.PENDING_REVIEW,
+                Instant.parse("2026-10-10T00:00:00Z"), Instant.parse("2026-10-10T00:00:00Z"),
+                List.of(), List.of(), List.of(), skills);
+
+        assertThatThrownBy(() -> repository.save(profile)).isInstanceOf(DuplicateSkillException.class);
     }
 
     @Test

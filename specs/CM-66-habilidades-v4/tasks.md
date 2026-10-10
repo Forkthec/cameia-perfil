@@ -1,6 +1,6 @@
 # Tareas — CM-66 (cameia-perfil)
 
-Estado: PR 1a (T-1 a T-3) hecho y verificado en local; spec y plan aprobados por Paula el 9-oct-2026. Una tarjeta a la vez, con la salida real antes de marcar `[x]`.
+Estado: PR 1a (T-1 a T-3) y PR 1b (T-4 a T-6) hechos y verificados en local; spec y plan aprobados por Paula el 9-oct-2026. Una tarjeta a la vez, con la salida real antes de marcar `[x]`.
 
 ## Reglas para todas las tarjetas
 
@@ -156,7 +156,7 @@ Estado: PR 1a (T-1 a T-3) hecho y verificado en local; spec y plan aprobados por
 
 **Resultado T-3.** Rojo: no capturado (el agregado y las excepciones se escribieron antes que las pruebas; Desvío 34 de la cola). Verde: `clean verify` BUILD SUCCESS, 776 unitarias + 207 de integración, 0 fallos (`ejecucion/verify-CM-66-1.log`). Cobertura de lo tocado: `SkillName` 17/17 y 6/6; `ProfileSkill` 11/11; `SingleLineText` 31/31 y 38/38; `ProfessionalProfile` 133/135 y 63/64 (previas); `ProfileAppService` 100/101 y 40/40; `ApiExceptionHandler` 66/66 y 29/30 (previa); `ErrorCatalog` 92/92; `ProfessionalProfileMapping` 98/98 y 26/26; global 97,2 % líneas y 98,4 % ramas. `ProfileAppServiceTest.addSkill_shouldThrowFieldErrors_whenCommandHasNullRequiredFields` reemplaza a la de procedencia desconocida.
 
-## [ ] T-4 · Migración V8, entidad, mapeo y traducción del `UNIQUE` — ≤ 30 min, ≈ 130 líneas
+## [x] T-4 · Migración V8, entidad, mapeo y traducción del `UNIQUE` — ≤ 30 min, ≈ 130 líneas
 
 - **Crear** `V8__alinear_habilidad_perfil.sql` (número fijo; `git ls-tree --name-only HEAD src/main/resources/db/migration/` debe terminar en `V7__alinear_educacion.sql`; si no, detente) con el texto exacto de la spec §7.
 - **Modificar** `ProfileSkillEntity` (`nombre_habilidad` `length = 60`; campo `comparisonKey` → `@Column(name = "nombre_normalizado", nullable = false, length = 60)`), `ProfessionalProfileMapping` (`toSkillEntity` escribe `skill.getName().comparisonKey()`; `toSkillDomain` reconstruye con `new SkillName(e.getSkillName())`).
@@ -178,7 +178,9 @@ Estado: PR 1a (T-1 a T-3) hecho y verificado en local; spec y plan aprobados por
 - **Trampa:** las pruebas que construyen `ProfileSkill` con el constructor viejo (`ProfileAppServiceTest`, `ProfessionalProfileTest`, `ProfessionalProfileRepositoryAdapterIT`) pasan a `new ProfileSkill(id, SkillName.of("…"), level, provenance)`.
 - **Comandos:** `./mvnw.cmd -B test`.
 
-## [ ] T-5 · Integración — ≤ 30 min, ≈ 200 líneas
+**Resultado T-4 (10-oct-2026).** `V8__alinear_habilidad_perfil.sql` tal como la spec §7 (la última migración previa era `V7__alinear_educacion.sql`). `ProfessionalProfileRepositoryAdapter.save` ya hacía `saveAndFlush` y traducía por `violates(...)` (lo dejó CM-70); se agregó `uq_habilidad_perfil_nombre` → `DuplicateSkillException`. Rojo: no capturado (migración y mapeo antes que `SkillSchemaIT`; Desvío 34). Verde: `SkillSchemaIT` 8 pruebas (migración sobre datos de V7: «  Programación   Web » → `programacion web`; `ck_` de nombre, nivel y procedencia y `uq_` con su `SQLState`; misma clave en otro perfil; 61 caracteres → `22001`; nombres estándar) y `ProfessionalProfileRepositoryAdapterIT.save_shouldThrowDuplicateSkill_whenComparisonKeyRepeatsInProfile`. Se quitó `getComparisonKey()` de la entidad porque nadie lo lee.
+
+## [x] T-5 · Integración — ≤ 30 min, ≈ 200 líneas
 
 - **Crear** `presentation/SkillsEndToEndIT.java` (forma de `WorkHistoryEndToEndIT`): `addSkill_shouldReturn201WithManualProvenance_whenSkillIsValid` («Python», `INTERMEDIATE`); `addSkill_shouldReturn409_whenNameDiffersOnlyInAccents` («Programación» y luego «programacion» → 409 con `errors[0].field` `skillName`); `addSkill_shouldIgnoreUnexpectedFields_whenBodyHasThem`; `addSkill_shouldReturn422_whenNameIsOneMebibyte`; `addSkill_shouldRejectControlCharacter_whenNameHasNul`; `removeSkill_shouldReturn204_whenDraftHasOnlyOne`; `removeSkill_shouldKeepOtherProfileSkill_whenIdBelongsToAnotherProfile`; `removeSkill_shouldHaveNoExtraEffect_whenRepeatedTwentyTimes` (FIA-02: perfil en Borrador con dos habilidades; 20 `DELETE` de la misma → un 204 y diecinueve 404 `SKILL_NOT_FOUND`; queda una); `addSkill_shouldHaveNoExtraEffect_whenRepeatedTwentyTimes` (FIA-02: el mismo `POST` de «Python» 20 veces → un 201 y diecinueve 409 `SKILL_ALREADY_EXISTS`; una sola habilidad).
 - **Crear** `infrastructure/persistence/SkillSchemaIT.java`: `migration_shouldFillComparisonKey_whenAppliedOnDataFromV7` (Flyway `target("7")` sobre un contenedor propio, fila «Programación», migrar → `nombre_normalizado` `programacion`); `constraint_shouldReject_whenRowBreaksIt` (parametrizada: nombre `'  '` → `23514` `ck_habilidad_perfil_nombre_presente`; nivel `'EXPERT'` → `ck_habilidad_perfil_nivel`; procedencia `'HUMAN'`; dos filas del mismo perfil con la misma clave → `23505` `uq_habilidad_perfil_nombre`); `constraints_shouldHaveStandardNames_whenSchemaIsMigrated` (`pk_habilidad_perfil`, `fk_habilidad_perfil_perfil`, `ix_habilidad_perfil_perfil_id`).
@@ -187,13 +189,17 @@ Estado: PR 1a (T-1 a T-3) hecho y verificado en local; spec y plan aprobados por
 - **Agregar** a `ColumnLengthConsistencyIT`: `habilidad_perfil.nombre_habilidad` y `nombre_normalizado` = `SkillName.MAX_LENGTH`. A `OpenApiDocumentIT`: `maxLength` 60 y `allowableValues` de `level`.
 - **Comandos:** `./mvnw.cmd -B "-Dit.test=SkillsEndToEndIT,SkillSchemaIT,ProfessionalProfileRepositoryAdapterIT,ProfileWriteLockIT,ColumnLengthConsistencyIT,OpenApiDocumentIT" verify`.
 
-## [ ] T-6 · OpenAPI, catálogo y cierre del PR 1 — ≤ 25 min
+**Resultado T-5.** `SkillsEndToEndIT` 14 pruebas (201 MANUAL con nombre recortado; 409 por tildes, mayúsculas y espacios con `errors[skillName]`; campos extra ignorados; 1 MiB → 422; NUL → 422; 21.ª y repetida con 20 → `SKILL_LIMIT_REACHED`; 204 en Borrador; 409 `SKILL_NOT_ALLOWED` y la habilidad queda; 204 con dos en perfil activo; habilidad ajena 404; perfil ajeno 403; FIA-02 con veinte repeticiones del alta y de la baja). `ProfileWriteLockIT` (+3): dos altas con 19 dejan 20, el mismo nombre dos veces deja uno, dos bajas con 2 en perfil activo dejan una. `ColumnLengthConsistencyIT` (+1) y `OpenApiDocumentIT` (+1).
+
+## [x] T-6 · OpenAPI, catálogo y cierre del PR 1 — ≤ 25 min
 
 - `ProfileController` (`addSkill`, `removeSkill`): `@ApiResponse` 201/204, 401, 403, 404, 409 (`SKILL_ALREADY_EXISTS`, `SKILL_LIMIT_REACHED`, `SKILL_NOT_ALLOWED`), 415, 422, 409 `PROFILE_UPDATE_IN_PROGRESS`, con ejemplos con `code`. `ProfileResponse.ProfileSkillItem` con `@Schema`.
 - `docs/errores.md`: filas de la spec §8; el «Pendiente con destino» de la última habilidad pasa a `SKILL_NOT_ALLOWED` 409; `SKILL_ALREADY_EXISTS` cita `errors[skillName]` y la traducción del `UNIQUE`.
 - **Cierre:** `./mvnw.cmd -B clean verify`; cobertura (≥ 90 % líneas y ramas) de las clases de la spec §13 y global sin bajar; diff ≤ 1000.
 
 # PR 2 (`CM-66-postman-habilidades`)
+
+**Resultado T-6.** OpenAPI y `docs/errores.md` quedaron en 1a (el enumerado exige la documentación en la misma capa). Cierre de 1b: `clean verify` BUILD SUCCESS, 776 unitarias + 235 de integración, 0 fallos (`ejecucion/verify-CM-66-1b.log`). Cobertura: `SkillName` 17/17 y 6/6; `ProfessionalProfileMapping` 99/99 y 26/26; `ProfessionalProfileRepositoryAdapter` 39/40 y 22/24 (previas: ramas del bloqueo de la creación); `ProfileSkillEntity` 11/12 (constructor sin argumentos que usa Hibernate); global 97,2 % líneas y 98,4 % ramas.
 
 ## [ ] T-7 · Postman y Newman — ≤ 30 min, ≈ 550 líneas
 
