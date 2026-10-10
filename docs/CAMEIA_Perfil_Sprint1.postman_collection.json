@@ -5047,7 +5047,7 @@
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
                   "pm.test('no ofrece el rol inactivo', () => pm.expect(json.map(r => r.id)).to.not.include('a0000007-0000-0000-0000-000000000006'));",
-                  "pm.test('ofrece roles activos', () => pm.expect(json.length).to.be.above(0));",
+                  "pm.test('ofrece los demás roles del catálogo', () => pm.expect(json.map(r => r.id)).to.include('a0000001-0000-0000-0000-000000000002'));",
                   "pm.test('ningún elemento expone estado', () => pm.expect(json.every(r => !('estado' in r) && !('status' in r))).to.eql(true));",
                   "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
                   "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
@@ -5083,7 +5083,7 @@
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
                   "pm.test('no ofrece el rol inactivo', () => pm.expect(json.map(r => r.id)).to.not.include('a0000007-0000-0000-0000-000000000006'));",
-                  "pm.test('ofrece roles activos', () => pm.expect(json.length).to.be.above(0));",
+                  "pm.test('ofrece los demás roles del catálogo', () => pm.expect(json.map(r => r.id)).to.include('a0000001-0000-0000-0000-000000000002'));",
                   "pm.test('ningún elemento expone estado', () => pm.expect(json.every(r => !('estado' in r) && !('status' in r))).to.eql(true));",
                   "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
                   "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
@@ -5109,6 +5109,48 @@
                 {
                   "key": "lang",
                   "value": "en"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "OK GET /professional-roles?estado=INACTIVE — el parámetro se ignora",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no ofrece el rol inactivo', () => pm.expect(json.map(r => r.id)).to.not.include('a0000007-0000-0000-0000-000000000006'));",
+                  "pm.test('ofrece los demás roles del catálogo', () => pm.expect(json.map(r => r.id)).to.include('a0000001-0000-0000-0000-000000000002'));",
+                  "pm.test('ningún elemento expone estado', () => pm.expect(json.every(r => !('estado' in r) && !('status' in r))).to.eql(true));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/professional-roles?estado=INACTIVE",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "professional-roles"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "INACTIVE"
                 }
               ]
             }
