@@ -1,13 +1,12 @@
 package co.edu.unicauca.cameia.perfil.presentation.advice;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.Constraint;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -36,7 +35,10 @@ class ErrorCatalogTest {
             ErrorCode.END_DATE_REQUIRED, ErrorCode.END_DATE_NOT_ALLOWED, ErrorCode.END_DATE_BEFORE_START_DATE,
             ErrorCode.COMPANY_TOO_LONG, ErrorCode.POSITION_TOO_LONG, ErrorCode.INSTITUTION_TOO_LONG,
             ErrorCode.DEGREE_TOO_LONG, ErrorCode.SKILL_NAME_TOO_LONG,
-            ErrorCode.DESCRIPTION_TOO_LONG, ErrorCode.FIELD_OF_STUDY_TOO_LONG);
+            ErrorCode.DESCRIPTION_TOO_LONG, ErrorCode.FIELD_OF_STUDY_TOO_LONG,
+            ErrorCode.COMPANY_INVALID_CHARACTERS, ErrorCode.POSITION_INVALID_CHARACTERS,
+            ErrorCode.DESCRIPTION_INVALID_CHARACTERS, ErrorCode.INSTITUTION_INVALID_CHARACTERS,
+            ErrorCode.DEGREE_INVALID_CHARACTERS);
 
     @Test
     @DisplayName("Todo código es una respuesta, un campo de Bean Validation o un campo del dominio, uno solo")
@@ -104,16 +106,17 @@ class ErrorCatalogTest {
         assertThat(missing).isEmpty();
     }
 
+    /**
+     * Nombres de las restricciones de Bean Validation del campo: toda anotación marcada con {@code @Constraint}, salvo
+     * {@code DomainRule}, cuyo código sale de la regla del dominio y no de la tabla.
+     */
     private static List<String> constraintNames(Field field) {
         var names = new ArrayList<String>();
-        if (field.isAnnotationPresent(NotBlank.class)) {
-            names.add("NotBlank");
-        }
-        if (field.isAnnotationPresent(NotNull.class)) {
-            names.add("NotNull");
-        }
-        if (field.isAnnotationPresent(Size.class)) {
-            names.add("Size");
+        for (Annotation annotation : field.getAnnotations()) {
+            var type = annotation.annotationType();
+            if (type.isAnnotationPresent(Constraint.class) && !type.getSimpleName().equals("DomainRule")) {
+                names.add(type.getSimpleName());
+            }
         }
         return names;
     }

@@ -2,6 +2,7 @@ package co.edu.unicauca.cameia.perfil.domain.model;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException.FieldError;
 
 import java.time.YearMonth;
 import java.util.Objects;
@@ -17,6 +18,16 @@ import java.util.UUID;
  * </ul>
  */
 public final class WorkExperience {
+
+    /** Rechazo de una empresa con un carácter de control. */
+    public static final FieldError COMPANY_CHARACTERS =
+            new FieldError("company", ErrorCode.COMPANY_INVALID_CHARACTERS, "La empresa tiene caracteres no permitidos.");
+    /** Rechazo de un cargo con un carácter de control. */
+    public static final FieldError POSITION_CHARACTERS =
+            new FieldError("position", ErrorCode.POSITION_INVALID_CHARACTERS, "El cargo tiene caracteres no permitidos.");
+    /** Rechazo de una descripción con un carácter de control distinto de tabulador, salto de línea y retorno. */
+    public static final FieldError DESCRIPTION_CHARACTERS =
+            new FieldError("description", ErrorCode.DESCRIPTION_INVALID_CHARACTERS, "La descripción tiene caracteres no permitidos.");
 
     private static final int MAX_TEXT_LENGTH = 500;
     private static final int MAX_DESCRIPTION_LENGTH = 2000;
