@@ -209,10 +209,39 @@ Las once reglas comunes de `specs/CM-274-experiencia-formacion-v4/tasks.md` («R
 
 # PR 2 (`CM-54-postman-informacion-general`)
 
-## [ ] T-7 · Postman y Newman — ≤ 30 min, ≈ 450 líneas
+## [x] T-7 · Postman y Newman — ≤ 30 min, ≈ 450 líneas
 
 - Carpeta `HU-2.3 — Información general` / `PATCH profiles/{id}`; `pre-request` con Usuario `uid-pm-{{$guid}}` y creación del perfil; utilidades `expectProblem`/`expectFieldError` del script de la colección, creadas por CM-274 PR 4).
 - Peticiones: las de la columna «Postman» de la spec §4 y una por causa de §6 (`name` `""`, espacios, U+00A0, 254, 255, 256, 255 con emoji, control; `summary` 1999, 2000, 2001, 2000 emojis, vacío en Borrador con `GET` posterior, vacío en Activo, `<script>`; `preferredModality` `hybrid` y `""`; dos campos a la vez; `{}` → 200 sin cambios; `{"name":` → 422 `REQUEST_BODY_INVALID_FORMAT`; `text/plain` → 415; sin `X-User-Id` → 401; ajeno → 403; inexistente → 404; `provenance` ignorado). Cada una con estado, `Content-Type`, `code`, `errors[]`, `requestId` y sin traza.
 - **Comandos:** `docker compose down -v`; `docker compose up -d --build`; `npx newman run docs/CAMEIA_Perfil_Sprint1.postman_collection.json -e docs/perfil-local.postman_environment.json --folder "HU-2.3 — Información general" --reporters cli,junit --reporter-junit-export target/newman/hu23.xml`, y después la colección completa sin `--folder` para comprobar que nada anterior se rompió. Pegar las dos salidas.
 - **SEG-04:** `docker compose logs app | Select-String -Pattern 'Analista|<script>'` → 0 líneas.
 - **DES-02:** carpeta `DES-02 — HU-2.3` (crear perfil con `X-User-Id: uid-des-{{$guid}}` y `PATCH` válido), `npx newman run docs/CAMEIA_Perfil_Sprint1.postman_collection.json -e docs/perfil-local.postman_environment.json --folder "DES-02 — HU-2.3" -n 105 --reporters cli,json --reporter-json-export target/newman/des02-hu23.json` y el script de p95 de CM-274 T-E3 (cambiando el nombre del archivo); p95 ≤ 2000 ms con `n=100`.
+
+**Resultado (10-oct-2026).** Generador `ejecucion/herramientas/hu23_postman.py` (idempotente: reescribe las carpetas `HU-2.3 — Información general` y `DES-02 — HU-2.3` justo antes de la de HU-2.4 y reutiliza las utilidades `H` de la colección). La carpeta tiene 61 peticiones: las 14 nombradas en la columna «Postman» de la sección 4, una por causa de la sección 6 (nombre vacío, solo espacios, tabulador y salto, U+00A0, U+FEFF, 256 con `a`, con emoji y con `ñ`, U+0000, salto de línea; resumen de 2001 con `a` y con emojis, de 1 MiB, con U+0000; modalidad en minúsculas, fuera de la lista y vacía; varios campos a la vez), cuerpo ilegible, vacío, arreglo y objeto, `text/plain`, sin identidad, perfil ajeno con su `GET` posterior, inexistente, id mal escrito y la secuencia de perfil Activo (renombrar, vaciar el resumen con `""` y con espacios, vaciar con un nombre válido en el mismo cuerpo sin guardar nada). Los caracteres invisibles viajan como escapes JSON, no como caracteres. Newman contra la imagen empaquetada con base limpia (`docker compose down -v`, rol `a0000007-…06` en `INACTIVE`): carpeta, 63 peticiones, 0 fallidas, 400 aserciones (`newman-CM-54-2.log`); colección completa, 461 peticiones, 0 fallidas, 2 071 aserciones (`newman-CM-54-2-completa.log`). Con una copia mutada de la colección fallan 7 aserciones (`newman-CM-54-2-mutada.log`). DES-02 con n=100: p95 de 33, 36 y 33 ms, límite 2 000 ms (`newman-CM-54-2-des02.log`). SEG-04: 0 líneas con «Analista» ni «<script>» en `docker compose logs app`; las 2 líneas `ERROR` son el 503 `BIRTH_DATE_UNAVAILABLE` esperado de la carpeta de HU-2.4, que se registra en `ERROR` por ser un estado de servidor. Diferencia con la tarjeta: el resumen de 1 MiB se arma en el `pre-request` de la carpeta (`hu23_mib`) en lugar de escribirlo en la colección.
+
+# Autoverificación de CM-54 (10-oct-2026)
+
+Lista de la sección 22 de la spec, corrida por quien ejecutó. La verificación independiente y la revisión de código (V-20) son de Paula.
+
+| # | Resultado | Evidencia |
+|---|---|---|
+| V-01 | PASA | Los 20 métodos de prueba nombrados en la sección 4 y en los atributos existen (`git grep -l "void <método>" -- src/test`) |
+| V-02 | PASA | Las 14 peticiones nombradas en la columna «Postman» de la sección 4 están en la carpeta `HU-2.3 — Información general` (comprobado por nombre contra la colección) |
+| V-03 | PASA | Los mensajes de las secciones 5 y 6 están en las pruebas de `ProfileControllerTest`, `ProfileNameTest`, `ProfessionalSummaryTest`, `GeneralInfoEndToEndIT` y en las aserciones de Newman (`H.fields` compara `message` con `eql`) |
+| V-04 | PASA | `clean verify`: capa 1a, 713 unitarias + 193 de integración (`verify-CM-54-1a.log`); capa 1b, 713 + 207 (`verify-CM-54-1.log`); 0 fallos, 0 omitidas |
+| V-05 | PASA | 33 peticiones reales contra la aplicación empaquetada, ningún 5xx (`adversarial-CM-54-1.log`): U+0000 en `name` y en `summary`, `"name": {}`, `text/plain`, `{}`, cuerpo vacío, arreglo, JSON truncado; el cuerpo de 1 MiB, en `GeneralInfoEndToEndIT` y en Newman |
+| V-06 | PASA | Newman: `H.problem` y `H.fields` comprueban `application/problem+json` con `charset=UTF-8`, `code`, `requestId`, `errors[]` y la ausencia de trazas en cada 4xx |
+| V-07 | PASA | Petición `422 nombre, resumen y modalidad a la vez`: tres elementos en `errors` |
+| V-08 | PASA | `200 resumen vacío lo borra (CA-2.3.4)` y `OK GET posterior: el resumen sigue vacío`: `summary` y `summaryProvenance` en `null` |
+| V-09 | PASA | `ProfileWriteLockIT`: las dos órdenes de la carrera (`…shouldNeverLeaveActiveProfileWithoutSummary_whenCompletionRunsAtTheSameTime` y `…shouldRejectClear_whenCompletionHoldsTheLock`) |
+| V-10 | PASA | `200 ignora status, provenance, firebaseUid e id`: `provenance` sigue `MANUAL`; `GeneralInfoEndToEndIT.updateProfileInfo_shouldIgnoreUnexpectedFields_whenBodyHasThem` |
+| V-11 | PASA | `GeneralInfoEndToEndIT.updateProfileInfo_shouldHaveNoExtraEffect_whenRepeatedTwentyTimes`; encontró que `createdAt` cambiaba (Desvío 29, corregido) |
+| V-12 | PASA | `ProfileName`, `ProfessionalSummary`, `UpdateProfileInfoRequest`, `UpdateProfileInfoCommand`, `ProfileResponse`, `ErrorCatalog` al 100 % de líneas y ramas; `ProfileAppService` 93/94 y 32/32 y `ProfessionalProfile` 129/131 y 55/56 (líneas previas, Desvío 13); global 97,1 % de líneas y 97,6 % de ramas, sin bajar |
+| V-13 | PASA | Newman: carpeta, 63 peticiones, 0 fallidas, 400 aserciones; colección completa, 461 peticiones, 0 fallidas, 2 071 aserciones |
+| V-14 | PASA | DES-02 con n=100: p95 de 33, 36 y 33 ms (límite 2 000 ms) |
+| V-15 | PASA con nota | 0 líneas con el nombre ni el resumen de las peticiones; 2 líneas `ERROR`, ambas el 503 `BIRTH_DATE_UNAVAILABLE` esperado de la carpeta de HU-2.4 |
+| V-16 | PASA | `ErrorCodeDocumentationTest` dentro de `clean verify` |
+| V-17 | PASA | Ningún identificador `CM-NNN` en las líneas agregadas de `src` |
+| V-18 | PASA | `git diff origin/develop..HEAD -- pom.xml` vacío |
+| V-19 | PASA | Capa 1a, 910 líneas; capa 1b, 403; capa 2, 673 (`git diff --shortstat` contra su base) |
+| V-20 | PENDIENTE (Paula) | `/code-review high` y `/security-review` se corren en el worktree de revisión `perfil-rev-CM-54` (Prompt H) |
