@@ -259,7 +259,7 @@
 - **Commit:** `CM-70 | feat(perfil): agregar y sustituir roles objetivo solo con roles activos y procedencia MANUAL`.
 - **Resultado (10-oct):** rojo: `ProfileAppServiceTest` Tests run: 39, Errors: 39 (`Unresolved compilation problems`: el comando de 3 componentes no existía). Verde: `ProfileAppServiceTest` 53/53, `ProfessionalProfileTest` 27/27, `ProfileControllerTest` 115/115, `ErrorCatalogTest`, `ErrorCodeDocumentationTest`, `ApiExceptionHandlerTest`, `ArquitecturaTest`: 234 pruebas, 0 fallos. Prueba existente cambiada por el CA-2.11.2: se quitó la fila `TARGET_ROLES provenance` de `ProfileControllerTest.fieldCodes` (el campo ya no existe en el contrato; ahora se ignora).
 
-## [ ] T-70.7 · OpenAPI de agregar y sustituir — ≤ 15 min, ≈ 30 líneas
+## [x] T-70.7 · OpenAPI de agregar y sustituir — ≤ 15 min, ≈ 30 líneas
 
 - `ProfileController`, `@ApiResponses` de `POST …/target-roles`: 409 con «Ya existe ese rol objetivo en el perfil (code TARGET_ROLE_ALREADY_EXISTS),
   máximo de 5 roles objetivo (TARGET_ROLE_LIMIT_REACHED) u otra escritura en curso (PROFILE_UPDATE_IN_PROGRESS)»; 422 con «Campos inválidos (code
@@ -268,6 +268,7 @@
   `PROFESSIONAL_ROLE_DISABLED`; 409 suma `PROFILE_UPDATE_IN_PROGRESS` si la base aún no lo lista.
 - **Prueba:** `OpenApiDocumentIT` sigue en verde; si compara descripciones, actualizarla.
 - **Commit:** `CM-70 | docs(perfil): OpenAPI de agregar y sustituir rol objetivo con los estados del backlog`.
+- **Resultado (10-oct):** `OpenApiDocumentIT` Tests run: 1, Failures: 0 (BUILD SUCCESS).
 
 ## [ ] T-70.8 · Concurrencia y repetición — ≤ 30 min, ≈ 160 líneas
 

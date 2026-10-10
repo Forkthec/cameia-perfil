@@ -318,9 +318,9 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o rol profesional inexistente en el catálogo (code PROFESSIONAL_ROLE_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil (code TARGET_ROLE_ALREADY_EXISTS)",
+            @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil (code TARGET_ROLE_ALREADY_EXISTS), el perfil ya tiene el máximo de 5 roles objetivo (TARGET_ROLE_LIMIT_REACHED) u otra escritura del perfil está en curso (PROFILE_UPDATE_IN_PROGRESS)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFESSIONAL_ROLE_ID_REQUIRED, PROVENANCE_REQUIRED, PROVENANCE_INVALID_VALUE), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT), máximo de roles objetivo alcanzado (TARGET_ROLE_LIMIT_REACHED) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFESSIONAL_ROLE_ID_REQUIRED, PROFESSIONAL_ROLE_DISABLED), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/target-roles")
@@ -335,7 +335,7 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Rol objetivo actualizado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFESSIONAL_ROLE_ID_REQUIRED), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador mal escrito (PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFESSIONAL_ROLE_ID_REQUIRED, PROFESSIONAL_ROLE_DISABLED), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador mal escrito (PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -343,7 +343,7 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND), rol objetivo inexistente en el perfil (code TARGET_ROLE_NOT_FOUND) o rol profesional inexistente en el catálogo (code PROFESSIONAL_ROLE_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil (code TARGET_ROLE_ALREADY_EXISTS)",
+            @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil (code TARGET_ROLE_ALREADY_EXISTS) u otra escritura del perfil está en curso (PROFILE_UPDATE_IN_PROGRESS)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PatchMapping("/{id}/target-roles/{roleId}")
