@@ -107,6 +107,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   | `inbox_shouldHaveNoPersonalDataColumns` | `information_schema.columns` de `evento_procesado` | exactamente `message_id`, `tipo`, `procesado_en` |
   | `migration_shouldKeepProfiles_whenProfilesExist` | inserta un `perfil_profesional` con SQL antes de las consultas | sigue existiendo |
 
+**Resultado T-P1.1 (9-oct-2026):** `V5` libre en `origin/develop` (última `V4`). Rojo sin la migración: 13 pruebas, 8 fallas y 5 errores; verde con ella: `BirthDateReplicaSchemaIT` 13/13 (`./mvnw -B -q verify -Dit.test=BirthDateReplicaSchemaIT -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false`, EXIT=0). Comentarios del SQL con tildes, como `V4`.
+
 ### T-P1.2 · Puertos, excepciones y código
 
 - **Crear** `domain/port/BirthDateReplica.java`:
@@ -195,6 +197,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   - `rejection_shouldLogWarn_whenBusinessStatusIs4xx`: lanza `ProfileNotFoundException` → un evento `WARN` con `code=PROFILE_NOT_FOUND` y
     ningún evento `ERROR`. La prueba existente `rejection_shouldLogCodeRequestIdAndUid_whenIdentityPresent` debe seguir en verde.
 - `ErrorCatalogTest.everyErrorCode_shouldBeResponseOrField_whenCatalogLoaded` debe seguir en verde (detecta un código sin fila).
+
+**Resultado T-P1.2 (9-oct-2026):** rojo antes del código: `ApiExceptionHandlerTest` no compilaba (faltaban `BirthDateUnavailableException` y `ErrorCode.BIRTH_DATE_UNAVAILABLE`). Verde después: `ApiExceptionHandlerTest` 48/48, `ErrorCatalogTest` 6/6, `ArquitecturaTest` 8/8 (`./mvnw -B test -Dtest=ApiExceptionHandlerTest,ErrorCatalogTest,ErrorCodeDocumentationTest,ArquitecturaTest`, BUILD SUCCESS; `ErrorCodeDocumentationTest` aún no existe en la cadena, lo crea CM-274 PR 1). `PROFILE_CREATION_TIMEOUT` también pasa a `ERROR` por ser 503.
 
 ### T-P1.3 · Inbox: entidad, repositorio y adaptador
 
