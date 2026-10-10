@@ -131,6 +131,16 @@ public class ProfileAppService {
 
     public ProfessionalProfile getProfile(UUID id, String uid) { return loadForUser(id, uid); }
 
+    /**
+     * Agrega un rol objetivo al perfil de quien llama. La procedencia siempre es manual: el servidor la fija.
+     *
+     * @param cmd perfil, usuario que llama y rol del catálogo a agregar
+     * @return el perfil con el nuevo rol objetivo
+     * @throws ProfessionalRoleNotFoundException si el rol no existe en el catálogo
+     * @throws InvalidFieldsException            si el rol del catálogo está inactivo
+     * @throws MaxTargetRolesExceededException   si el perfil ya tiene el máximo de roles objetivo
+     * @throws DuplicateTargetRoleException      si el rol ya está en el perfil
+     */
     @Transactional
     public ProfessionalProfile addTargetRole(AddTargetRoleCommand cmd) {
         var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
@@ -140,6 +150,16 @@ public class ProfileAppService {
         repository.save(p); return p;
     }
 
+    /**
+     * Sustituye el rol del catálogo de un rol objetivo; conserva su identificador, su procedencia y su lugar en la lista.
+     *
+     * @param cmd perfil, usuario que llama, rol objetivo a sustituir y nuevo rol del catálogo
+     * @return el perfil con el rol objetivo sustituido
+     * @throws ProfessionalRoleNotFoundException si el nuevo rol no existe en el catálogo
+     * @throws InvalidFieldsException            si el nuevo rol del catálogo está inactivo
+     * @throws TargetRoleNotFoundException       si el rol objetivo no está en el perfil
+     * @throws DuplicateTargetRoleException      si el nuevo rol ya está en el perfil
+     */
     @Transactional
     public ProfessionalProfile updateTargetRole(UpdateTargetRoleCommand cmd) {
         var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
