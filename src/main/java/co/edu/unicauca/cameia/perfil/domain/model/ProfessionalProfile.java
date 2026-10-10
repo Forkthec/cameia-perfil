@@ -50,7 +50,7 @@ public final class ProfessionalProfile {
     private DataProvenance provenance;
     private ProfileStatus status;
     private ReviewStatus reviewStatus;
-    private final Instant createdAt;
+    private Instant createdAt;
     private Instant updatedAt;
     private final List<TargetRole> targetRoles;
     private final List<WorkExperience> workExperiences;
@@ -93,6 +93,7 @@ public final class ProfessionalProfile {
         p.provenance = Objects.requireNonNull(provenance);
         p.status = Objects.requireNonNull(status);
         p.reviewStatus = Objects.requireNonNull(reviewStatus);
+        p.createdAt = Objects.requireNonNull(createdAt);
         p.updatedAt = Objects.requireNonNull(updatedAt);
         p.targetRoles.addAll(targetRoles);
         p.workExperiences.addAll(workExperiences);

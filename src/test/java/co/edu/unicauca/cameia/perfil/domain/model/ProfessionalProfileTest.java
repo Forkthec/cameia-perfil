@@ -15,7 +15,9 @@ import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceNotFoundExce
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -579,6 +581,20 @@ class ProfessionalProfileTest {
     private static Education edu(String institution) {
         return Education.create(new EducationDraft(institution, "Ingeniería", EducationLevel.UNDERGRADUATE,
                 YearMonth.of(2018, 1), null, false), new DateBounds(YearMonth.of(2026, 10), null));
+    }
+
+    @Test
+    @DisplayName("Reconstituir un perfil conserva su fecha de creación y su fecha de actualización guardadas")
+    void reconstitute_shouldKeepStoredDates_whenProfileIsRebuilt() {
+        var created = Instant.parse("2026-01-02T03:04:05Z");
+        var updated = Instant.parse("2026-02-03T04:05:06Z");
+
+        var rebuilt = ProfessionalProfile.reconstitute(ProfileId.generate(), new FirebaseUid("uid-rebuild"), null, null, null,
+                null, DataProvenance.MANUAL, ProfileStatus.IN_PROGRESS, ReviewStatus.PENDING_REVIEW, created, updated,
+                List.of(), List.of(), List.of(), List.of());
+
+        assertThat(rebuilt.getCreatedAt()).isEqualTo(created);
+        assertThat(rebuilt.getUpdatedAt()).isEqualTo(updated);
     }
 
     private static ProfessionalProfile buildCompleteProfile() {
