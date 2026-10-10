@@ -371,6 +371,15 @@ class ProfileControllerTest {
     }
 
     @Test
+    @DisplayName("Una empresa con carácter de control y demasiado larga informa los caracteres no permitidos, un solo elemento")
+    void addWorkExperience_shouldReportInvalidCharacters_whenCompanyHasControlAndIsTooLong() throws Exception {
+        var json = "{\"company\":\"A\\u0000" + "a".repeat(101) + "\",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\"}";
+
+        expectFieldError(postExperience(json), "company", "COMPANY_INVALID_CHARACTERS", "La empresa tiene caracteres no permitidos.")
+                .andExpect(jsonPath("$.errors.length()").value(1));
+    }
+
+    @Test
     @DisplayName("Los saltos de línea internos de la descripción se conservan y los de los extremos se recortan")
     void addWorkExperience_shouldKeepInnerLineBreaks_whenDescriptionHasThem() throws Exception {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-exp"));
@@ -1414,6 +1423,19 @@ class ProfileControllerTest {
     void updateProfileInfo_shouldRejectControlCharacter_whenTextHasOne(String field, String value, String code,
             String message) throws Exception {
         expectFieldError(patchInfo(jsonOf(field, value)), field, code, message);
+    }
+
+    @ParameterizedTest(name = "{0} con control y {2} caracteres")
+    @CsvSource(delimiter = '|', textBlock = """
+            name    | A\\u0000 | 300  | PROFILE_NAME_INVALID_CHARACTERS | El nombre tiene caracteres no permitidos.
+            name    | \\u0000  | 300  | PROFILE_NAME_INVALID_CHARACTERS | El nombre tiene caracteres no permitidos.
+            summary | \\u0000  | 2001 | SUMMARY_INVALID_CHARACTERS      | El resumen tiene caracteres no permitidos.
+            """)
+    @DisplayName("Un texto con carácter de control y demasiado largo informa siempre los caracteres no permitidos, un solo elemento")
+    void updateProfileInfo_shouldReportInvalidCharacters_whenNameHasControlAndIsTooLong(String field, String prefix,
+            int padding, String code, String message) throws Exception {
+        expectFieldError(patchInfo(jsonOf(field, prefix + "a".repeat(padding))), field, code, message)
+                .andExpect(jsonPath("$.errors.length()").value(1));
     }
 
     @Test

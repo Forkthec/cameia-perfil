@@ -204,9 +204,24 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             var domainCode = domainRuleCode(fe);
             var code = domainCode != null ? domainCode : ErrorCatalog.fieldCode(owner + "." + fe.getField() + "." + fe.getCode());
             var message = domainCode != null ? fe.getDefaultMessage() : ErrorCatalog.fieldMessage(code);
-            firstPerField.putIfAbsent(fe.getField(), new FieldProblem(fe.getField(), code, message));
+            // Un campo con varias reglas rotas informa una sola, la de mayor prioridad; a igual prioridad, la primera.
+            firstPerField.merge(fe.getField(), new FieldProblem(fe.getField(), code, message),
+                    (kept, other) -> priority(other.code()) < priority(kept.code()) ? other : kept);
         });
         return List.copyOf(firstPerField.values());
+    }
+
+    /**
+     * Orden fijo en que se informa un campo con varias reglas rotas, sin depender del contenido: primero que es
+     * obligatorio o no admitido (0), luego caracteres, valor o formato no válidos (1) y al final el largo (2).
+     * Así quien corrige el largo no recibe después «caracteres no permitidos».
+     */
+    private static int priority(ErrorCode code) {
+        var name = code.name();
+        if (name.endsWith("_REQUIRED") || name.equals("SUMMARY_NOT_ALLOWED")) {
+            return 0;
+        }
+        return name.endsWith("_TOO_LONG") ? 2 : 1;
     }
 
     /** @return el código que una regla del dominio adjuntó a la violación, o {@code null} para cualquier otra restricción */
