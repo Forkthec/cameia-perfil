@@ -300,7 +300,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 - **Resultado (9-oct-2026):** rojo: `ProfileAppServiceTest` no compilaba (el constructor solo recibía dos parámetros). Verde: 28/28 (`./mvnw -B test -Dtest=ProfileAppServiceTest`). Exactamente un `Clock.systemUTC` en `src/main` (el de `ClockConfig`, de CM-279 P1): no se creó otro reloj. El campo `clock` queda sin uso hasta T-B4 y T-C4.
 
-## [ ] T-A5 · Bloqueo del perfil en toda escritura — ≤ 30 min, ≈ 120 líneas
+## [x] T-A5 · Bloqueo del perfil en toda escritura — ≤ 30 min, ≈ 120 líneas
 
 - **Cubre:** REQ-EF-05, REQ-EF-06.
 - **Modificar** `infrastructure/persistence/repository/ProfessionalProfileJpaRepository.java`:
@@ -350,6 +350,8 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
   con la misma comprobación de identidad, existencia (404) y dueño (403) que `loadForUser`, pero con `findByIdForUpdate`. Reemplazar `loadForUser` por `loadForUserForUpdate` en los 13 métodos `@Transactional` que modifican (`updateProfileInfo`, `addWorkExperience`, `removeWorkExperience`, `addEducation`, `removeEducation`, `updateSalaryExpectation`, `addSkill`, `removeSkill`, `requestReview`, `addTargetRole`, `updateTargetRole`, `removeTargetRole`, `completeProfile`). `getProfile` sigue con `loadForUser`.
 - **Pruebas** `ProfileAppServiceTest`: actualizar los `when(repository.findById(...))` de las escrituras a `findByIdForUpdate`; nueva `writes_shouldLoadProfileForUpdate_whenProfileChanges` (parametrizada por los 13 casos de uso: `verify(repository).findByIdForUpdate(ProfileId.of(PROFILE_ID))` y `verify(repository, never()).findById(any())`); `getProfile_shouldNotLock_whenReading`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileAppServiceTest,ErrorCatalogTest" test`.
+
+- **Resultado (10-oct-2026):** rojo: `ProfileAppServiceTest` no compilaba (el puerto no tenía `findByIdForUpdate`). Verde: `./mvnw -q -B "-Dtest=ProfileAppServiceTest,ErrorCatalogTest" test` sin fallos. `getProfile` sigue con `loadForUser` (sin bloqueo); los 13 casos de uso que modifican usan `loadForUserForUpdate`. El adaptador captura `PersistenceException` y `PessimisticLockingFailureException`; si la integración de T-A6 muestra otra excepción, se reporta aquí.
 
 ## [ ] T-A6 · Prueba de integración del bloqueo — ≤ 30 min, ≈ 160 líneas
 

@@ -19,6 +19,8 @@ public enum ErrorCode {
     PROFILE_LIMIT_REACHED,
     /** La creación del perfil esperó demasiado a otra creación del mismo usuario que no terminó. */
     PROFILE_CREATION_TIMEOUT,
+    /** Otra escritura retuvo el perfil más que la espera máxima; no cambió nada. */
+    PROFILE_UPDATE_IN_PROGRESS,
     /** La fecha de nacimiento del usuario aún no se replicó desde cuentas; se puede reintentar. */
     BIRTH_DATE_UNAVAILABLE,
     /** El perfil ya está finalizado y no admite más cambios de estado. */

@@ -83,7 +83,7 @@ class ProfileAppServiceTest {
     @Test
     void updateProfileInfo_appliesNameAndSummary() {
         var profile = freshProfile();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, "Ana Sofía", "Dev backend", null, null));
         assertThat(profile.getName().value()).isEqualTo("Ana Sofía");
         assertThat(profile.getSummary().value()).isEqualTo("Dev backend");
@@ -92,7 +92,7 @@ class ProfileAppServiceTest {
 
     @Test
     void updateProfileInfo_throwsNotFoundWhenProfileMissing() {
-        when(repository.findById(any())).thenReturn(Optional.empty());
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.updateProfileInfo(
                 new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, null, null, null)))
                 .isInstanceOf(ProfileNotFoundException.class);
@@ -102,7 +102,7 @@ class ProfileAppServiceTest {
     void updateProfileInfo_nullFieldsDoNotOverwriteExistingValues() {
         var profile = freshProfile();
         profile.updateName(new ProfileName("Nombre original"));
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, "nuevo resumen", null, null));
         assertThat(profile.getName().value()).isEqualTo("Nombre original");
         assertThat(profile.getSummary().value()).isEqualTo("nuevo resumen");
@@ -111,7 +111,7 @@ class ProfileAppServiceTest {
     @Test
     void addWorkExperience_addsEntryAndSaves() {
         var profile = freshProfile();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.addWorkExperience(new AddWorkExperienceCommand(
                 UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2022-01", null, "CURRENT", "MANUAL"));
         assertThat(profile.getWorkExperiences()).hasSize(1);
@@ -122,7 +122,7 @@ class ProfileAppServiceTest {
     @Test
     @DisplayName("Una fecha de inicio con mes 13 no guarda la experiencia y marca su campo")
     void addWorkExperience_shouldThrowStartDateInvalid_whenStartDateIsMalformed() {
-        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
                 UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2020-13", null, "CURRENT", "MANUAL")))
                 .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
@@ -134,7 +134,7 @@ class ProfileAppServiceTest {
     @Test
     @DisplayName("Un estado laboral que no existe no guarda la experiencia y marca su campo")
     void addWorkExperience_shouldThrowEmploymentStatusInvalid_whenStatusIsUnknown() {
-        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
                 UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2020-01", null, "FREELANCE", "MANUAL")))
                 .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
@@ -146,7 +146,7 @@ class ProfileAppServiceTest {
     @Test
     @DisplayName("Una fecha de fin anterior al inicio no guarda la experiencia")
     void addWorkExperience_shouldThrowEndDateBeforeStart_whenEndIsBeforeStart() {
-        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
                 UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2022-05", "2021-01", "ENDED", "MANUAL")))
                 .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
@@ -158,7 +158,7 @@ class ProfileAppServiceTest {
     @Test
     @DisplayName("Una procedencia que no existe no guarda la habilidad")
     void addSkill_shouldThrowProvenanceInvalid_whenProvenanceIsUnknown() {
-        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.addSkill(new AddSkillCommand(
                 UUID.randomUUID(), SVC_UID, "Java", "BASIC", "HUMANO")))
                 .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
@@ -171,7 +171,7 @@ class ProfileAppServiceTest {
     @DisplayName("Una educación con solo el año de inicio se guarda en enero de ese año")
     void addEducation_shouldReadJanuary_whenStartDateIsOnlyYear() {
         var profile = freshProfile();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.addEducation(new AddEducationCommand(UUID.randomUUID(), SVC_UID, "Unicauca", "Ingeniería",
                 null, "UNDERGRADUATE", "2018", null, false, "MANUAL"));
         assertThat(profile.getEducations()).singleElement()
@@ -181,7 +181,7 @@ class ProfileAppServiceTest {
     @Test
     @DisplayName("Un nivel de formación que no existe no guarda la educación")
     void addEducation_shouldThrowEducationLevelInvalid_whenLevelIsUnknown() {
-        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.addEducation(new AddEducationCommand(UUID.randomUUID(), SVC_UID,
                 "Unicauca", "Ingeniería", null, "DOCTORADO", "2018", null, false, "MANUAL")))
                 .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
@@ -195,7 +195,7 @@ class ProfileAppServiceTest {
     void updateProfileInfo_shouldClearSummary_whenSummaryIsBlank() {
         var profile = freshProfile();
         profile.updateSummary(new ProfessionalSummary("Resumen anterior"));
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
 
         service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, "   ", null, null));
 
@@ -207,7 +207,7 @@ class ProfileAppServiceTest {
     @DisplayName("Una modalidad y una procedencia de la lista se guardan en el perfil")
     void updateProfileInfo_shouldApplyModalityAndProvenance_whenBothAreOptions() {
         var profile = freshProfile();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.updateProfileInfo(new UpdateProfileInfoCommand(
                 UUID.randomUUID(), SVC_UID, null, null, "REMOTE", "AI_EDITED"));
         assertThat(profile.getPreferredModality()).isEqualTo(WorkModality.REMOTE);
@@ -222,7 +222,7 @@ class ProfileAppServiceTest {
         profile.addTargetRole(new TargetRole(UUID.randomUUID(), UUID.randomUUID(), "Backend", DataProvenance.MANUAL));
         var roleId = profile.getTargetRoles().get(0).getId();
         var catalogRole = new ProfessionalRole(UUID.randomUUID(), "Frontend Developer", "Desarrollo");
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         when(roleRepository.findById(catalogRole.id())).thenReturn(Optional.of(catalogRole));
 
         service.updateTargetRole(new UpdateTargetRoleCommand(UUID.randomUUID(), SVC_UID, roleId, catalogRole.id()));
@@ -236,7 +236,7 @@ class ProfileAppServiceTest {
     @DisplayName("Editar un rol objetivo que no está en el perfil no guarda nada")
     void updateTargetRole_shouldThrowTargetRoleNotFound_whenRoleIsNotInProfile() {
         var catalogRole = new ProfessionalRole(UUID.randomUUID(), "Frontend Developer", "Desarrollo");
-        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         when(roleRepository.findById(catalogRole.id())).thenReturn(Optional.of(catalogRole));
 
         assertThatThrownBy(() -> service.updateTargetRole(new UpdateTargetRoleCommand(
@@ -248,7 +248,7 @@ class ProfileAppServiceTest {
     @Test
     @DisplayName("Una modalidad preferida que no existe no actualiza el perfil")
     void updateProfileInfo_shouldThrowModalityInvalid_whenModalityIsUnknown() {
-        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.updateProfileInfo(new UpdateProfileInfoCommand(
                 UUID.randomUUID(), SVC_UID, null, null, "PRESENCIAL", null)))
                 .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
@@ -265,7 +265,7 @@ class ProfileAppServiceTest {
                 YearMonth.of(2022, 1), null,
                 EmploymentStatus.CURRENT, DataProvenance.MANUAL));
         var expId = profile.getWorkExperiences().get(0).getId();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.removeWorkExperience(UUID.randomUUID(), SVC_UID, expId);
         assertThat(profile.getWorkExperiences()).isEmpty();
         verify(repository).save(profile);
@@ -274,7 +274,7 @@ class ProfileAppServiceTest {
     @Test
     void updateSalaryExpectation_setsAmountAndSaves() {
         var profile = freshProfile();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.updateSalaryExpectation(new UpdateSalaryExpectationCommand(UUID.randomUUID(), SVC_UID, new BigDecimal("3500000")));
         assertThat(profile.getSalaryExpectation().amount()).isEqualByComparingTo("3500000");
         verify(repository).save(profile);
@@ -283,7 +283,7 @@ class ProfileAppServiceTest {
     @Test
     void addSkill_addsSkillAndSaves() {
         var profile = freshProfile();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.addSkill(new AddSkillCommand(UUID.randomUUID(), SVC_UID, "Java", "ADVANCED", "MANUAL"));
         assertThat(profile.getProfileSkills()).hasSize(1);
         assertThat(profile.getProfileSkills().get(0).getSkillName()).isEqualTo("Java");
@@ -295,7 +295,7 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         profile.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
         var skillId = profile.getProfileSkills().get(0).getId();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.removeSkill(UUID.randomUUID(), SVC_UID, skillId);
         assertThat(profile.getProfileSkills()).isEmpty();
         verify(repository).save(profile);
@@ -304,7 +304,7 @@ class ProfileAppServiceTest {
     @Test
     void requestReview_throwsIncompleteWhenProfileLacksRequiredFields() {
         var profile = freshProfile();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         assertThatThrownBy(() -> service.requestReview(UUID.randomUUID(), SVC_UID))
                 .isInstanceOf(IncompleteProfileException.class);
         verify(repository, never()).save(any());
@@ -313,7 +313,7 @@ class ProfileAppServiceTest {
     @Test
     void requestReview_changesStatusToInReview() {
         var profile = completeProfile();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.requestReview(UUID.randomUUID(), COMPLETE_UID);
         assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_REVIEW);
         verify(repository).save(profile);
@@ -324,7 +324,7 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         var roleId = UUID.randomUUID();
         var catRole = new ProfessionalRole(roleId, "Backend Developer", "Desarrollo");
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         when(roleRepository.findById(roleId)).thenReturn(Optional.of(catRole));
         service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), SVC_UID, roleId, "MANUAL"));
         assertThat(profile.getTargetRoles()).hasSize(1);
@@ -337,7 +337,7 @@ class ProfileAppServiceTest {
         var profile = completeProfile();
         profile.complete();
         var roleId = profile.getTargetRoles().get(0).getId();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         assertThatThrownBy(() -> service.removeTargetRole(UUID.randomUUID(), COMPLETE_UID, roleId))
                 .isInstanceOf(LastTargetRoleException.class);
         verify(repository, never()).save(any());
@@ -346,7 +346,7 @@ class ProfileAppServiceTest {
     @Test
     void completeProfile_setsStatusToCompleted() {
         var profile = completeProfile();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.completeProfile(UUID.randomUUID(), COMPLETE_UID);
         assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
         verify(repository).save(profile);
@@ -355,10 +355,63 @@ class ProfileAppServiceTest {
     @Test
     void completeProfile_throwsIncompleteWhenNotReady() {
         var profile = freshProfile();
-        when(repository.findById(any())).thenReturn(Optional.of(profile));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         assertThatThrownBy(() -> service.completeProfile(UUID.randomUUID(), SVC_UID))
                 .isInstanceOf(IncompleteProfileException.class);
         verify(repository, never()).save(any());
+    }
+
+    // ── bloqueo del perfil en toda escritura ───────────────────────────────
+
+    /** Los 13 casos de uso que modifican un perfil, cada uno con una llamada que no necesita datos válidos. */
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> writeUseCases() {
+        var id = UUID.randomUUID();
+        return java.util.stream.Stream.of(
+                use("updateProfileInfo", s -> s.updateProfileInfo(new UpdateProfileInfoCommand(id, SVC_UID, null, null, null, null))),
+                use("addWorkExperience", s -> s.addWorkExperience(new AddWorkExperienceCommand(
+                        id, SVC_UID, "ACME", "Dev", null, "2022-01", null, "CURRENT", "MANUAL"))),
+                use("removeWorkExperience", s -> s.removeWorkExperience(id, SVC_UID, UUID.randomUUID())),
+                use("addEducation", s -> s.addEducation(new AddEducationCommand(id, SVC_UID, "Unicauca", "Ingeniería",
+                        null, "UNDERGRADUATE", "2018-01", null, false, "MANUAL"))),
+                use("removeEducation", s -> s.removeEducation(id, SVC_UID, UUID.randomUUID())),
+                use("updateSalaryExpectation", s -> s.updateSalaryExpectation(
+                        new UpdateSalaryExpectationCommand(id, SVC_UID, new BigDecimal("3500000")))),
+                use("addSkill", s -> s.addSkill(new AddSkillCommand(id, SVC_UID, "Java", "ADVANCED", "MANUAL"))),
+                use("removeSkill", s -> s.removeSkill(id, SVC_UID, UUID.randomUUID())),
+                use("requestReview", s -> s.requestReview(id, SVC_UID)),
+                use("addTargetRole", s -> s.addTargetRole(new AddTargetRoleCommand(id, SVC_UID, UUID.randomUUID(), "MANUAL"))),
+                use("updateTargetRole", s -> s.updateTargetRole(
+                        new UpdateTargetRoleCommand(id, SVC_UID, UUID.randomUUID(), UUID.randomUUID()))),
+                use("removeTargetRole", s -> s.removeTargetRole(id, SVC_UID, UUID.randomUUID())),
+                use("completeProfile", s -> s.completeProfile(id, SVC_UID)));
+    }
+
+    private static org.junit.jupiter.params.provider.Arguments use(String name,
+            java.util.function.Consumer<ProfileAppService> call) {
+        return org.junit.jupiter.params.provider.Arguments.of(name, call);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+    @org.junit.jupiter.params.provider.MethodSource("writeUseCases")
+    @DisplayName("Toda escritura carga el perfil bloqueando su fila")
+    void writes_shouldLoadProfileForUpdate_whenProfileChanges(String name, java.util.function.Consumer<ProfileAppService> call) {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> call.accept(service)).isInstanceOf(ProfileNotFoundException.class);
+
+        verify(repository).findByIdForUpdate(any());
+        verify(repository, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("Leer un perfil no bloquea su fila")
+    void getProfile_shouldNotLock_whenReading() {
+        when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
+
+        service.getProfile(UUID.randomUUID(), SVC_UID);
+
+        verify(repository).findById(any());
+        verify(repository, never()).findByIdForUpdate(any());
     }
 
     // ── loadProfile ───────────────────────────────────────────────────────

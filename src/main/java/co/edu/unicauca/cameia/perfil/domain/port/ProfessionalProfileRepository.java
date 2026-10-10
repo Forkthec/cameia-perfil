@@ -27,6 +27,17 @@ public interface ProfessionalProfileRepository {
     Optional<ProfessionalProfile> findById(ProfileId id);
 
     /**
+     * Lee el perfil y bloquea su fila hasta que termine la transacción en curso, para que dos escrituras
+     * sobre el mismo perfil se ejecuten una después de la otra. Exige una transacción abierta.
+     *
+     * @param id identificador del perfil
+     * @return el perfil bloqueado, o vacío si no existe
+     * @throws co.edu.unicauca.cameia.perfil.domain.exception.ProfileUpdateInProgressException si la fila
+     *         sigue bloqueada después de la espera máxima
+     */
+    Optional<ProfessionalProfile> findByIdForUpdate(ProfileId id);
+
+    /**
      * Cuenta los Perfiles Profesionales del Usuario, en cualquier estado.
      *
      * @param firebaseUid dueño
