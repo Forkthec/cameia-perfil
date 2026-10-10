@@ -39,6 +39,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.Clock;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.Optional;
@@ -65,7 +68,8 @@ class ProfileAppServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ProfileAppService(repository, roleRepository);
+        service = new ProfileAppService(repository, roleRepository,
+                Clock.fixed(Instant.parse("2026-10-15T12:00:00Z"), ZoneOffset.UTC));
     }
 
     @Test

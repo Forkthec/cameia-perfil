@@ -292,11 +292,13 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 - **Resultado (9-oct-2026):** rojo: `DomainRuleValidatorTest` y `CodePointSizeValidatorTest` no compilaban (faltaban las restricciones). Verde: `DomainRuleValidatorTest` 32/32, `CodePointSizeValidatorTest` 5/5, `ErrorCatalogTest` 6/6 con la nueva `constraintNames`, `CommandValuesTest` 21/21, `ApiExceptionHandlerTest` 48/48, `ArquitecturaTest` 8/8 (152 pruebas, BUILD SUCCESS). `hasControlCharacter` y `InvalidFieldsException.of(FieldError)` ya existían por T-A1 y T-A2. Se agregó `ApiExceptionHandlerDomainRuleTest` (2 pruebas) porque la tarjeta no probaba el cambio de `fieldProblems` por la ruta HTTP real. Los 5 códigos `*_INVALID_CHARACTERS` se documentan en `docs/errores.md` en T-A7. hibernate-validator llega con `spring-boot-starter-validation` (verificado en `pom.xml`).
 
-## [ ] T-A4 · Reloj UTC — ≤ 15 min, ≈ 30 líneas
+## [x] T-A4 · Reloj UTC — ≤ 15 min, ≈ 30 líneas
 
 - **Reutilizar** `infrastructure/config/ClockConfig.java`, que crea CM-279 (bloque P1) con `@Bean Clock clock()` = `Clock.systemUTC()`. **No crear** otra clase de reloj: dos `@Bean Clock` hacen fallar el arranque (`NoUniqueBeanDefinitionException`). Comprueba con `git grep -n "Clock.systemUTC" -- src/main` que existe exactamente uno; si no existe, detente y reporta (falta P1 en la base).
 - **Modificar** `ProfileAppService`: nuevo parámetro de constructor `Clock clock` (tercer parámetro) guardado en un campo `final`; aún no se usa en reglas (lo usan T-B4 y T-C4). Actualiza `ProfileAppServiceTest.setUp`: `service = new ProfileAppService(repository, roleRepository, Clock.fixed(Instant.parse("2026-10-15T12:00:00Z"), ZoneOffset.UTC));`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileAppServiceTest" test`.
+
+- **Resultado (9-oct-2026):** rojo: `ProfileAppServiceTest` no compilaba (el constructor solo recibía dos parámetros). Verde: 28/28 (`./mvnw -B test -Dtest=ProfileAppServiceTest`). Exactamente un `Clock.systemUTC` en `src/main` (el de `ClockConfig`, de CM-279 P1): no se creó otro reloj. El campo `clock` queda sin uso hasta T-B4 y T-C4.
 
 ## [ ] T-A5 · Bloqueo del perfil en toda escritura — ≤ 30 min, ≈ 120 líneas
 

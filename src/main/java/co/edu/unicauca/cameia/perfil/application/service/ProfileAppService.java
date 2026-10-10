@@ -31,6 +31,7 @@ import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.YearMonth;
 import java.util.UUID;
 
@@ -48,10 +49,13 @@ public class ProfileAppService {
 
     private final ProfessionalProfileRepository repository;
     private final ProfessionalRoleRepository roleRepository;
+    /** Reloj en UTC; las reglas de fechas de la experiencia y la formación lo usan para saber qué mes es hoy. */
+    private final Clock clock;
 
-    ProfileAppService(ProfessionalProfileRepository repository, ProfessionalRoleRepository roleRepository) {
+    ProfileAppService(ProfessionalProfileRepository repository, ProfessionalRoleRepository roleRepository, Clock clock) {
         this.repository = repository;
         this.roleRepository = roleRepository;
+        this.clock = clock;
     }
 
     @Transactional
