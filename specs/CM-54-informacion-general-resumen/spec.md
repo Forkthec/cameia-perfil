@@ -100,7 +100,8 @@ Fase B = borde (Bean Validation sobre el `record` ya normalizado); D = dominio.
 | `provenance` | cualquier valor | `"AI_SUGGESTED"`, `"x"` | — | se ignora | — |
 | cuerpo | `{}` | — | — | 200 sin cambios | — |
 | cuerpo | JSON mal formado, arreglo, objeto en un texto (`"name": {}`) | — | Jackson | 422 `REQUEST_BODY_INVALID_FORMAT` | «Revisa el formato de los datos enviados.» |
-| cuerpo | número en un texto (`"name": 123`) | — | — | se convierte en `"123"` (V1 de CM-274) | — |
+| cuerpo | número o booleano en un texto (`"name": 123`, `"name": true`) | — | — | se convierte en `"123"` o `"true"` (V1 de CM-274) | — |
+| cuerpo | un campo con varias reglas rotas a la vez (por ejemplo, un nombre con carácter de control y de 300 caracteres) | — | B | 422 con un solo elemento para el campo, siempre el mismo: obligatorio, luego caracteres o valor, luego largo (D9) | el del código elegido |
 | cuerpo | `Content-Type: text/plain` | — | Spring | 415 `MEDIA_TYPE_NOT_ALLOWED` | «Tipo de contenido no admitido.» |
 | ruta | `{id}` no UUID / inexistente | `"x"` / `00000000-0000-0000-0000-000000000000` | — | 422 `PROFILE_ID_INVALID_FORMAT` / 404 `PROFILE_NOT_FOUND` | «El identificador del perfil no es válido.» / «No encontramos lo que buscabas.» |
 | encabezado | `X-User-Id` ausente, en blanco, 129 caracteres | — | — | 401 `IDENTITY_REQUIRED` | «Tu sesión expiró. Inicia sesión de nuevo.» |
@@ -135,7 +136,7 @@ Rutas que hoy llegan al 500 y su destino: U+0000 en `name` o `summary` (→ 422,
 | Enumerados | `preferredModality` válido, desconocido, minúsculas, vacío | §6 |
 | Duplicados | No hay unicidad del nombre del perfil (un Usuario tiene un perfil en el Plan Free) | Justificado |
 | Estado | vaciar el resumen en `IN_PROGRESS`, `IN_REVIEW` (200) y `COMPLETED` (422); renombrar en `COMPLETED` (200) | `ProfessionalProfileTest`, E2E |
-| Propiedad | ajeno 403; inexistente 404; `firebaseUid` en el cuerpo ignorado | §4 |
+| Propiedad | ajeno 403; inexistente 404; `firebaseUid` en el cuerpo ignorado; perfil ajeno con cuerpo inválido: 422, porque la validación del borde corre antes de comprobar el dueño y su mensaje describe solo el cuerpo enviado, sin revelar nada del perfil | §4; `ProfileControllerTest.updateProfileInfo_shouldReturn422_whenProfileIsForeignAndBodyIsInvalid` |
 | Concurrencia | vaciar el resumen mientras otra pestaña finaliza: con el bloqueo, o la finalización ve el resumen y luego el `PATCH` recibe 422, o el `PATCH` borra primero y la finalización recibe 422 `PROFILE_INCOMPLETE` | `ProfileWriteLockIT.updateProfileInfo_shouldNeverLeaveActiveProfileWithoutSummary_whenCompletionRunsAtTheSameTime` |
 | Falla parcial | Una sola transacción, sin efectos externos | Justificado |
 | Dependencias | Ninguna externa | Justificado |
@@ -220,7 +221,7 @@ Anexo, cuadro 9: **HE-02** declara AC-0001, AC-0003, AC-0006 y MAN-02; se agrega
 
 ## 16. Fuera de alcance (con destino)
 
-CA-2.3.2 (HU-2.8) y CA-2.3.6 (HU-2.14; 409 al editar un archivado) · CA-2.3.14 y el guardado automático (cliente) · la parte de CM-247 de la interfaz (Juan José Arias Chacua; se avisa en el documento de Frontend que el servidor ya borra el resumen) · publicar `perfil.profesional-actualizado` (CM-67) · `salaryExpectation` (fuera del MVP).
+CA-2.3.2 (HU-2.8) y CA-2.3.6 (HU-2.14; 409 al editar un archivado) · CA-2.3.14 y el guardado automático (cliente) · la parte de CM-247 de la interfaz (Juan José Arias Chacua; se avisa en el documento de Frontend que el servidor ya borra el resumen) · publicar `perfil.profesional-actualizado` (CM-67) · `salaryExpectation` (fuera del MVP) · restricciones `CHECK` de nombre, resumen y modalidad en `perfil_profesional` (pendiente de la segunda parte de CM-283, D10) · tope de tamaño del cuerpo de la petición (DevOps, por una tarea que abre Vela; hoy el servicio lee y valida cuerpos de decenas de MiB antes de responder 422, sin error 5xx).
 
 ## 17. Decisiones
 
@@ -234,6 +235,8 @@ CA-2.3.2 (HU-2.8) y CA-2.3.6 (HU-2.14; 409 al editar un archivado) · CA-2.3.14 
 | D6 | `""` en `preferredModality` es valor inválido (422 `PREFERRED_MODALITY_INVALID_VALUE`) | No es una opción y el campo está fuera de HU-2.3 | Tratarlo como borrar; tratarlo como ausente | Paula, 9-oct-2026 |
 | D7 | No se agrega un campo de «origen de ejecución de IA» | Lo define HU-2.8 (fuera del MVP); un campo sin nombre fijado sería contrato sin uso | `summaryAiRunId: null` siempre | Paula, 9-oct-2026 |
 | D8 | Caracteres de control: «El nombre tiene caracteres no permitidos.» y «El resumen tiene caracteres no permitidos.»; el resumen admite tabulador, salto de línea y retorno | Mismo criterio que CM-274 (D11); el texto se pide a Vela para el backlog | Un código común; quitarlos en silencio | Paula, 9-oct-2026 |
+| D9 | Un campo con varias reglas rotas informa una sola, por orden fijo: obligatorio o no admitido, luego caracteres, valor o formato, y al final el largo | El mensaje dependía del orden interno de las violaciones y cambiaba con el contenido; quien corrige el largo recibía después «caracteres no permitidos». Aplica también a los campos de experiencia y formación | Dejar el orden indefinido; informar todas las reglas del campo | Paula, 10-oct-2026 |
+| D10 | Sin `CHECK` en `perfil_profesional` para nombre, resumen y modalidad en esta CM | Evita tocar el esquema aquí; el código y las pruebas ya impiden los valores. Queda como pendiente de la segunda parte de CM-283 | Migración con `ck_perfil_nombre_no_vacio`, `ck_perfil_resumen_no_vacio` y `ck_perfil_modalidad` | Paula, 10-oct-2026 |
 
 ## 18. Preguntas abiertas
 

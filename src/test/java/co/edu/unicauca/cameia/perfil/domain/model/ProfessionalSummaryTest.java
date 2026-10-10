@@ -36,6 +36,16 @@ class ProfessionalSummaryTest {
         assertThatThrownBy(() -> ProfessionalSummary.of(blank)).isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test
+    @DisplayName("Un resumen descompuesto se compone a NFC y se cuenta ya compuesto: 2000 se aceptan y 2001 se rechazan")
+    void of_shouldComposeNfc_whenSummaryIsDecomposed() {
+        assertThat(ProfessionalSummary.of("  José  ").value()).isEqualTo("José");
+        assertThat(ProfessionalSummary.of("é".repeat(2000)).value()).isEqualTo("é".repeat(2000));
+        assertThatThrownBy(() -> ProfessionalSummary.of("é".repeat(2001)))
+                .isInstanceOfSatisfying(InvalidFieldsException.class,
+                        e -> assertThat(e.getErrors()).containsExactly(TOO_LONG));
+    }
+
     @ParameterizedTest(name = "{0} × {1}")
     @MethodSource("limits")
     @DisplayName("El largo se mide en puntos de código: 1999 y 2000 se aceptan, 2001 se rechaza")

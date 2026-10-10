@@ -108,6 +108,26 @@ class GeneralInfoEndToEndIT {
     }
 
     @Test
+    @DisplayName("Un nombre de 255 y un resumen de 2000 puntos de código con emojis se guardan completos y se releen iguales")
+    void updateProfileInfo_shouldPersistLimits_whenNameHas255AndSummaryHas2000CodePoints() throws Exception {
+        var uid = newUid();
+        var profileId = api.createProfile(uid);
+        var name = "😀".repeat(255);
+        var summary = "😀".repeat(2000);
+
+        var response = patch(uid, profileId, "{\"name\":\"" + name + "\",\"summary\":\"" + summary + "\"}");
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        var reloaded = api.json(api.send("GET", "/api/v1/profiles/" + profileId, uid, null));
+        assertThat(reloaded.get("name").asString()).isEqualTo(name);
+        assertThat(reloaded.get("summary").asString()).isEqualTo(summary);
+        assertThat(jdbc.queryForObject("SELECT char_length(nombre) FROM perfil_profesional WHERE id = ?::uuid",
+                Integer.class, profileId)).isEqualTo(255);
+        assertThat(jdbc.queryForObject("SELECT char_length(resumen) FROM perfil_profesional WHERE id = ?::uuid",
+                Integer.class, profileId)).isEqualTo(2000);
+    }
+
+    @Test
     @DisplayName("Un perfil activo se renombra y sigue activo")
     void updateProfileInfo_shouldRenameAndKeepActive_whenProfileIsCompleted() throws Exception {
         var uid = newUid();

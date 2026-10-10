@@ -51,6 +51,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -1436,6 +1437,42 @@ class ProfileControllerTest {
             int padding, String code, String message) throws Exception {
         expectFieldError(patchInfo(jsonOf(field, prefix + "a".repeat(padding))), field, code, message)
                 .andExpect(jsonPath("$.errors.length()").value(1));
+    }
+
+    @ParameterizedTest(name = "modalidad [{0}]")
+    @ValueSource(strings = {"HYBRID ", " HYBRID\\t"})
+    @DisplayName("Una modalidad válida con espacios o tabuladores alrededor se acepta y llega recortada al servicio")
+    void updateProfileInfo_shouldTrimModality_whenValueHasSpaces(String value) throws Exception {
+        when(profileAppService.updateProfileInfo(any(UpdateProfileInfoCommand.class)))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-info")));
+
+        patchInfo(jsonOf("preferredModality", value)).andExpect(status().isOk());
+
+        var command = ArgumentCaptor.forClass(UpdateProfileInfoCommand.class);
+        verify(profileAppService).updateProfileInfo(command.capture());
+        assertThat(command.getValue().preferredModality()).isEqualTo("HYBRID");
+    }
+
+    @ParameterizedTest(name = "resumen {0}")
+    @ValueSource(strings = {"\\u00a0", "\\ufeff", "\\u00a0\\ufeff"})
+    @DisplayName("Un resumen de solo espacios invisibles llega al servicio como vacío, para que lo borre")
+    void updateProfileInfo_shouldClearSummary_whenSummaryIsOnlyInvisibleSpaces(String literal) throws Exception {
+        when(profileAppService.updateProfileInfo(any(UpdateProfileInfoCommand.class)))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-info")));
+
+        patchInfo(jsonOf("summary", literal)).andExpect(status().isOk());
+
+        var command = ArgumentCaptor.forClass(UpdateProfileInfoCommand.class);
+        verify(profileAppService).updateProfileInfo(command.capture());
+        assertThat(command.getValue().summary()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Un cuerpo inválido sobre un perfil ajeno responde 422 antes de comprobar el dueño, sin llegar al servicio")
+    void updateProfileInfo_shouldReturn422_whenProfileIsForeignAndBodyIsInvalid() throws Exception {
+        expectFieldError(patchInfo("{\"name\":\"\"}"), "name", "PROFILE_NAME_REQUIRED", "Ingresa un nombre para el perfil.");
+
+        verify(profileAppService, never()).updateProfileInfo(any());
     }
 
     @Test

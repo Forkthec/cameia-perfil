@@ -4,6 +4,8 @@ import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
+import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.ProfessionalProfileEntity;
+import jakarta.persistence.Column;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -56,6 +58,17 @@ class ColumnLengthConsistencyIT {
                 "resumen", ProfessionalSummary.MAX_LENGTH);
 
         assertColumnLengths("perfil_profesional", expected);
+    }
+
+    @Test
+    @DisplayName("El largo declarado en la entidad del perfil para nombre y resumen es el del dominio")
+    void profileEntityColumnLengths_shouldMatchDomainLimits_whenAnnotationsAreRead() throws Exception {
+        assertThat(columnLength("name")).isEqualTo(ProfileName.MAX_LENGTH);
+        assertThat(columnLength("summary")).isEqualTo(ProfessionalSummary.MAX_LENGTH);
+    }
+
+    private static int columnLength(String attribute) throws NoSuchFieldException {
+        return ProfessionalProfileEntity.class.getDeclaredField(attribute).getAnnotation(Column.class).length();
     }
 
     /** Migra la base y compara el largo de cada columna con el límite del dominio. */
