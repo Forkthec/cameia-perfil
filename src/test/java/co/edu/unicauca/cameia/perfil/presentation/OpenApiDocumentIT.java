@@ -63,4 +63,25 @@ class OpenApiDocumentIT {
                 .isEqualTo("a0000001-0000-0000-0000-000000000003");
         assertThat(JsonPath.<java.util.List<String>>read(body, schema + ".required")).containsExactly("professionalRoleId");
     }
+
+    @Test
+    @DisplayName("El DELETE del rol objetivo publica un ejemplo con code por cada respuesta de error y avisa que ignora el cuerpo")
+    void apiDocs_shouldDescribeDeleteTargetRoleErrorExamples_whenRequested() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var body = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString()).body();
+
+        var operation = "$.paths['/api/v1/profiles/{id}/target-roles/{roleId}'].delete";
+        assertThat(JsonPath.<String>read(body, operation + ".description")).contains("cuerpo");
+        for (var status : java.util.List.of("401", "403", "404", "409", "422")) {
+            // Un ejemplo se publica como «example»; varios, como «examples».
+            var content = JsonPath.<java.util.List<java.util.Map<String, Object>>>read(
+                    body, operation + ".responses." + status + ".content.*").get(0);
+            assertThat(content.containsKey("example") || content.containsKey("examples"))
+                    .as("ejemplo de la respuesta " + status).isTrue();
+            assertThat(content.toString()).as("respuesta " + status).contains("code=", "requestId=");
+        }
+        assertThat(JsonPath.<java.util.List<Object>>read(body, operation + ".responses.409.content.*").get(0).toString())
+                .contains("TARGET_ROLE_NOT_ALLOWED", "PROFILE_UPDATE_IN_PROGRESS");
+    }
 }
