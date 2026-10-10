@@ -88,6 +88,8 @@ Las demás filas no aplican: sin cambios de identidad, cuerpo, rutas ni integrac
 | AC-0003 | SEG-04 | registro sin datos personales | `ApiExceptionHandlerTest` (prueba del registro existente, con `code=PLAN_LIMIT`) |
 | AC-0002 | DES-02 | p95 ≤ 2 s | Newman `responseTime < 2000` |
 | MAN-01 | ≥ 90 % | `ProfileLimitReachedException`, `ErrorCatalog`, `ProfileCreationAppService` | JaCoCo |
+| AC-0001 | IA-01 | no aplica: el cupo de perfiles no produce ni consume una salida de IA | — |
+| MAN-02 | adaptador externo | no aplica: sin adaptador de proveedor externo; el cupo se cuenta con el puerto del repositorio del perfil | — |
 
 ## 9. Contrato y aviso a Frontend
 
@@ -106,6 +108,11 @@ retirar `PROFILE_LIMIT_REACHED`.
 
 Fuera de alcance: Plan Premium y su mensaje «Alcanzaste el máximo de 5 Perfiles Profesionales de tu plan.» (CA-2.2.6, 2.12.11; requiere la réplica de
 `entitlements.actualizados`, HU-2.12, Sprint 3); reactivar un perfil archivado (CA-2.14.3, HU-2.14); el Paywall (Frontend).
+
+**Destino de H271-4 (conteo de perfiles archivados, HU-2.14, Product Owner).** Hoy no existe el archivado, así que `ProfileCreationAppService`
+cuenta todos los perfiles del Usuario y el resultado coincide con el CA, que habla de perfiles «no archivados» (RN-021). Al llegar HU-2.14 el
+conteo debe excluir los archivados y `PlanLimitIT` debe sumar `createProfile_shouldCreate_whenOnlyProfileIsArchived`. El destino es HU-2.14,
+que decide Vela: si la tarea de archivar no existe, se pide por comunicación a Vela en el documento del Product Owner.
 
 ## 11. Línea base, lista de verificación y dictamen
 
