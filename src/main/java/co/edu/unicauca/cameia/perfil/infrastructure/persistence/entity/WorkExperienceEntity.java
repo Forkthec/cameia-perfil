@@ -28,16 +28,16 @@ public class WorkExperienceEntity {
     @JoinColumn(name = "perfil_id", nullable = false)
     private ProfessionalProfileEntity profile;
 
-    @Column(name = "empresa", nullable = false, length = 500)
+    @Column(name = "empresa", nullable = false, length = 100)
     private String company;
 
-    @Column(name = "cargo", nullable = false, length = 500)
+    @Column(name = "cargo", nullable = false, length = 100)
     private String position;
 
-    @Column(name = "descripcion", length = 2000)
+    @Column(name = "descripcion", length = 500)
     private String description;
 
-    @Column(name = "fecha_inicio", nullable = false)
+    @Column(name = "fecha_inicio")
     private LocalDate startDate;
 
     @Column(name = "fecha_fin")
