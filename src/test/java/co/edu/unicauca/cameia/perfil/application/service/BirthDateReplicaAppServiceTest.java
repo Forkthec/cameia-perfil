@@ -155,6 +155,25 @@ class BirthDateReplicaAppServiceTest {
         assertNothingTouched();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"1915-10-09", "1900-01-01", "0001-01-01", "-9999-01-01"})
+    @DisplayName("Una fecha con más de 110 años cumplidos se rechaza sin tocar el Inbox")
+    void recordAccountCreated_shouldReject_whenBirthDateImpliesMoreThan110Years(String birthDate) {
+        assertThatThrownBy(() -> service.recordAccountCreated(created(MESSAGE_ID, UID, LocalDate.parse(birthDate))))
+                .isInstanceOfSatisfying(InvalidAccountEventException.class,
+                        e -> assertThat(e.getReason()).isEqualTo(Reason.BIRTH_DATE_OUT_OF_RANGE));
+        assertNothingTouched();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1915-10-10", "1916-10-09"})
+    @DisplayName("Una fecha con 110 años cumplidos o menos se guarda")
+    void recordAccountCreated_shouldStore_whenBirthDateImpliesUpTo110Years(String birthDate) {
+        service.recordAccountCreated(created(MESSAGE_ID, UID, LocalDate.parse(birthDate)));
+
+        assertThat(replica.contents()).containsEntry(UID, LocalDate.parse(birthDate));
+    }
+
     @Test
     @DisplayName("Nacer un 29 de febrero se guarda tal cual")
     void recordAccountCreated_shouldStoreLeapDay_whenBornOnFebruary29() {

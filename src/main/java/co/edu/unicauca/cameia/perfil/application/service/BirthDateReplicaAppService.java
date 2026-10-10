@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.Period;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -32,6 +33,9 @@ public class BirthDateReplicaAppService {
     static final String ACCOUNT_CREATED = "cuenta.creada";
     static final String ACCOUNT_DELETED = "cuenta.eliminada";
 
+    /** Edad por encima de la cual la fecha se considera un error de digitación; es el mismo límite que valida Cuentas. */
+    private static final int IMPLAUSIBLE_AGE = 110;
+
     private static final Logger log = LoggerFactory.getLogger(BirthDateReplicaAppService.class);
 
     private final BirthDateReplica replica;
@@ -49,7 +53,7 @@ public class BirthDateReplicaAppService {
      *
      * @param command identificador del mensaje, identidad y fecha de nacimiento tomados del evento
      * @throws InvalidAccountEventException si el identificador del mensaje falta o no es un UUID, la identidad falta, está en
-     *         blanco o mide más de 128 caracteres, o la fecha de nacimiento falta o es posterior a hoy en UTC
+     *         blanco o mide más de 128 caracteres, o la fecha de nacimiento falta, es posterior a hoy en UTC o implica más de 110 años cumplidos
      */
     @Transactional
     public void recordAccountCreated(ReplicateBirthDateCommand command) {
@@ -113,13 +117,19 @@ public class BirthDateReplicaAppService {
         return new FirebaseUid(raw);
     }
 
-    /** La fecha de nacimiento debe existir y no puede ser posterior a hoy en UTC. */
+    /**
+     * La fecha de nacimiento debe existir, no ser posterior a hoy en UTC ni implicar más de 110 años cumplidos. La cota inferior
+     * evita que una fecha que PostgreSQL no guarda acabe en la cola de fallidos como si fuera un fallo técnico.
+     */
     private LocalDate birthDate(LocalDate raw) {
         if (raw == null) {
             throw new InvalidAccountEventException(Reason.BIRTH_DATE_REQUIRED);
         }
         if (raw.isAfter(LocalDate.now(clock))) {
             throw new InvalidAccountEventException(Reason.BIRTH_DATE_IN_THE_FUTURE);
+        }
+        if (Period.between(raw, LocalDate.now(clock)).getYears() > IMPLAUSIBLE_AGE) {
+            throw new InvalidAccountEventException(Reason.BIRTH_DATE_OUT_OF_RANGE);
         }
         return raw;
     }
