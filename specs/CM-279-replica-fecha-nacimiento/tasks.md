@@ -339,6 +339,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   - `recordAccountCreated_shouldNotLogBirthDate_whenStored` (`OutputCaptureExtension`): la salida contiene el uid y `MESSAGE_ID` y no
     contiene `2008-03-15`.
 
+**Resultado T-P1.4 (9-oct-2026):** rojo: `BirthDateReplicaAppServiceTest` no compilaba (faltaban los comandos y el servicio). Verde: 25/25 y `ArquitecturaTest` 8/8 (`./mvnw -B test -Dtest=BirthDateReplicaAppServiceTest,ArquitecturaTest`, 33 pruebas, BUILD SUCCESS). No existía ningún bean `Clock` en la rama base: `ClockConfig` se crea aquí.
+
 ### T-P1.5 · Réplica: entidad, repositorio, adaptador y transacción
 
 - **Crear** `infrastructure/persistence/entity/BirthDateReplicaEntity.java` (`@Entity @Table(name = "fecha_nacimiento_usuario")`,
