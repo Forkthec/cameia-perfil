@@ -735,17 +735,21 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 # PR 5 — Postman de la formación y cierre (`CM-274-postman-formacion`)
 
-## [ ] T-E1 · Peticiones de `educations` — ≤ 30 min, ≈ 550 líneas
+## [x] T-E1 · Peticiones de `educations` — ≤ 30 min, ≈ 550 líneas
 
 - Igual que T-D2 para la sección 6.2: los cuatro obligatorios a la vez; `institution` y `degree` 149/150/151; `level` `DOCTORATE`, `undergraduate`, vacío; `startDate` `"2024"`; en curso con fin; mes actual y siguiente; fin antes del inicio; `inProgress: "abc"`; sexta formación (409); última formación de un perfil Activo (409, armando el perfil completo y finalizándolo); una de dos en Activo (204); Borrador con una (204); de otro perfil (404); inexistente (404); 403 en `POST` y `DELETE`.
 
 - **Resultado (10-oct-2026, PR 5a: subcarpeta `POST educations` de T-E1):** 59 peticiones (610 líneas, con la limpieza de las utilidades generalizada a formaciones): los cuatro obligatorios a la vez (CA-2.4.6), `institution` y `degree` de 149, 150 y 151 (también con emoji y carácter nulo), `level` ausente, vacío, `DOCTORATE` y `undergraduate`, `startDate` ausente, `2024-13`, `2024`, `13/2024` y mes siguiente, `endDate` con otro formato, mes siguiente, en curso con fin y fin antes del inicio, `inProgress` `"abc"` y objeto, cuerpo ilegible y vacío, 415, 401 (ausente y de 129 caracteres), 403 con comprobación del otro perfil, 404, UUID inválido, campos no esperados ignorados (`fieldOfStudy` no vuelve), y el máximo: quinta formación 201 y sexta 409 `EDUCATION_LIMIT_REACHED`. Newman de la carpeta contra la imagen empaquetada (`ejecucion/newman-CM-274-5a.log`): 231 peticiones (las anteriores más las nuevas y su limpieza), 0 fallidas, 1 113 aserciones; segunda corrida sobre la misma base: igual. Con una copia que cambia el mensaje del nivel, el conteo de la limpieza y el máximo esperado fallan 5 aserciones. `docker compose logs app`: 0 líneas ` ERROR ` y 0 con datos de las peticiones. `DELETE educations/{eduId}`, DES-02, el README y la corrida completa van en el PR 5b.
 
-## [ ] T-E2 · Entorno local — ≤ 10 min
+- **Resultado (10-oct-2026, PR 5b: `DELETE educations/{eduId}`, resto de T-E1):** 23 peticiones (252 líneas con la carpeta DES-02): formación de otro perfil (404 `EDUCATION_NOT_FOUND`), inexistente (404), perfil ajeno (403) con comprobación de que el otro perfil conserva la suya, `eduId` y `id` que no son UUID (422), perfil inexistente (404), sin identidad (401), única formación en Borrador (204) y el mismo borrado repetido (404), y el flujo del perfil Activo con dos formaciones: quitar una (204, CA-2.4.46) y quitar la última (409 `EDUCATION_NOT_ALLOWED` con el texto del CA-2.4.37, el perfil sigue `COMPLETED` con esa formación). Con una copia que cambia el `code` esperado del 404 y del 409 fallan 3 aserciones.
+
+## [x] T-E2 · Entorno local — ≤ 10 min
 
 - **Comprobar** que existe `docs/perfil-local.postman_environment.json` (lo crea CM-279 P2) con `base_url` `http://localhost:8082`; si falta, créalo con esa sola variable (sin secretos) y repórtalo. **Modificar** `README.md`: sección «Pruebas de API con Newman» con los comandos de la spec sección 14 y de T-E3 (si CM-279 P2 ya la creó, agrega solo lo que falte).
 
-## [ ] T-E3 · Corrida completa de Newman — ≤ 20 min
+- **Resultado (10-oct-2026, PR 5b):** `docs/perfil-local.postman_environment.json` ya existía (lo creó la capa de eventos de cuenta) con `base_url` `http://localhost:8082` y sin secretos; no se tocó. `README.md` gana la sección «Pruebas de API con Newman» con la corrida completa, la carpeta suelta y la medición DES-02. Se comprobó con una corrida real que la colección completa necesita el rol `a0000007-…06` del catálogo en `INACTIVE` (sin él fallan 13 aserciones de las carpetas de roles objetivo: `ejecucion/newman-CM-274-5b-sin-rol-inactivo.log`) y el README lo dice.
+
+## [x] T-E3 · Corrida completa de Newman — ≤ 20 min
 
 - `docker compose down -v`; `docker compose up -d --build`; esperar `GET /actuator/health` 200; `npx newman run docs/CAMEIA_Perfil_Sprint1.postman_collection.json -e docs/perfil-local.postman_environment.json --reporters cli,junit --reporter-junit-export target/newman/perfil.xml`. Pegar la salida completa (peticiones, aserciones, fallos, tiempo máximo por petición). Si algo falla aquí y no en las pruebas automáticas, agrega primero la prueba automática que falta y luego corrige. Revisar los logs: `docker compose logs app | Select-String -Pattern ' ERROR '` → 0 líneas; `docker compose logs app | Select-String -Pattern 'Bancolombia|Universidad|<script>|2008-03-15'` → 0 líneas (SEG-04).
 - **DES-02:** agrega a la colección la carpeta `DES-02 — HU-2.4` con tres peticiones (crear perfil con `X-User-Id: uid-des-{{$guid}}` nuevo por iteración; `POST …/work-experiences` válido; `DELETE` de esa experiencia), cada una con `pm.test` de estado. Corre `npx newman run docs/CAMEIA_Perfil_Sprint1.postman_collection.json -e docs/perfil-local.postman_environment.json --folder "DES-02 — HU-2.4" -n 105 --reporters cli,json --reporter-json-export target/newman/des02.json` y calcula el p95 sin las 5 primeras iteraciones:
@@ -753,6 +757,8 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
   node -e "const ex=require('./target/newman/des02.json').run.executions;const g={};ex.filter(e=>e.cursor.iteration>=5).forEach(e=>{(g[e.item.name]??=[]).push(e.response.responseTime)});for(const [k,v] of Object.entries(g)){v.sort((a,b)=>a-b);console.log(k,'n='+v.length,'p95='+v[Math.ceil(v.length*0.95)-1]+' ms')}"
   ```
   Se espera `n=100` por petición y p95 ≤ 2000 ms. Pega la salida en la fila DES-02 de la spec (sección 15, «Resultado real»).
+
+- **Resultado (10-oct-2026, PR 5b):** corrida completa con `docker compose down -v`, `up -d --build`, `GET /actuator/health` 200 y el rol `a0000007-…06` en `INACTIVE` (`ejecucion/newman-CM-274-5b.log`): 368 peticiones (colección y limpieza), 0 fallidas, 1 582 aserciones, tiempo medio 31 ms, máximo 1 980 ms. El máximo es `GET /v3/api-docs`, que genera el OpenAPI en su primera llamada (32 kB); ninguna petición de HU-2.4 pasó de 1 s. Segunda corrida de la carpeta HU-2.4 sobre la misma base: 254 peticiones, 0 fallidas, 1 218 aserciones. `docker compose logs app`: 0 líneas ` ERROR ` y 0 coincidencias con `Bancolombia|Universidad|<script>|2008-03-15` (SEG-04). **DES-02** (`ejecucion/newman-CM-274-5b-des02.log`, 105 iteraciones, se descartan 5): `n=100` por petición; crear perfil p95 = 35 ms, `POST …/work-experiences` p95 = 49 ms, `DELETE …/work-experiences/{expId}` p95 = 40 ms (límite 2 000 ms). Los resultados de DES-02 y SEG-04 quedan en la sección 15 de la spec. Staging queda PENDIENTE de DevOps.
 
 ---
 

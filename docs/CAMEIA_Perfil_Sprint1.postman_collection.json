@@ -6834,6 +6834,258 @@
               }
             }
           ]
+        },
+        {
+          "name": "DELETE educations/{eduId}",
+          "item": [
+            {
+              "name": "OK POST /profiles — crea el perfil del Usuario (guarda hu24_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_profile', pm.response.json().id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "OK POST /profiles — crea el perfil de otro Usuario (guarda hu24_other_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu24_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu24_other_profile', pm.response.json().id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "OK POST /educations — el otro Usuario agrega una (guarda hu24_other_edu)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "pm.collectionVariables.set('hu24_other_edu', H.education(b, {institution: \"Universidad del Cauca\"}).id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_other_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_other_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_other_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "OK POST /educations — agrega una (guarda hu24_edu)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "pm.collectionVariables.set('hu24_edu', H.education(b, {institution: \"Universidad del Cauca\"}).id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "404 formación de otro perfil (CA-2.4.58)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"EDUCATION_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations/{{hu24_other_edu}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations", "{{hu24_other_edu}}"]}
+              }
+            },
+            {
+              "name": "404 formación inexistente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"EDUCATION_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations/00000000-0000-0000-0000-000000000000", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations", "00000000-0000-0000-0000-000000000000"]}
+              }
+            },
+            {
+              "name": "403 DELETE formación ajena",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(403, \"PROFILE_NOT_ALLOWED\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_other_profile}}/educations/{{hu24_other_edu}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_other_profile}}", "educations", "{{hu24_other_edu}}"]}
+              }
+            },
+            {
+              "name": "OK GET perfil ajeno conserva su formación",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('La formación ajena sigue', () => pm.expect(pm.response.json().educations.map(x => x.id)).to.include(pm.collectionVariables.get('hu24_other_edu')));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_other_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_other_profile}}"]}
+              }
+            },
+            {
+              "name": "422 id de la formación no es un UUID",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"EDUCATION_ID_INVALID_FORMAT\", \"El identificador de la formación no es válido.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations/x", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations", "x"]}
+              }
+            },
+            {
+              "name": "422 id del perfil no es un UUID",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"PROFILE_ID_INVALID_FORMAT\", \"El identificador del perfil no es válido.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/no-es-uuid/educations/{{hu24_edu}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "no-es-uuid", "educations", "{{hu24_edu}}"]}
+              }
+            },
+            {
+              "name": "404 perfil inexistente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"PROFILE_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/00000000-0000-0000-0000-000000000000/educations/{{hu24_edu}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "00000000-0000-0000-0000-000000000000", "educations", "{{hu24_edu}}"]}
+              }
+            },
+            {
+              "name": "401 sin X-User-Id",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(401, \"IDENTITY_REQUIRED\", \"Tu sesión expiró. Inicia sesión de nuevo.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations/{{hu24_edu}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations", "{{hu24_edu}}"]}
+              }
+            },
+            {
+              "name": "204 única formación en Borrador (CA-2.4.11)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.noContent();"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations/{{hu24_edu}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations", "{{hu24_edu}}"]}
+              }
+            },
+            {
+              "name": "404 la misma formación otra vez",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"EDUCATION_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations/{{hu24_edu}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations", "{{hu24_edu}}"]}
+              }
+            },
+            {
+              "name": "OK POST /educations — agrega la formación A (guarda hu24_edu)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "pm.collectionVariables.set('hu24_edu', H.education(b, {institution: \"Universidad A\"}).id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad A\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "OK POST /educations — agrega la formación B (guarda hu24_edu2)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "pm.collectionVariables.set('hu24_edu2', H.education(b, {institution: \"Universidad B\"}).id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad B\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"endDate\": \"2022-12\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "OK PATCH /profiles/{id} — nombre y resumen",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"Perfil de prueba HU-2.4\", \"summary\": \"Resumen de prueba.\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}"]}
+              }
+            },
+            {
+              "name": "OK POST /skills — agrega una habilidad",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"ADVANCED\", \"provenance\": \"MANUAL\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "OK POST /target-roles — agrega un rol objetivo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"professionalRoleId\": \"a0000001-0000-0000-0000-000000000002\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/target-roles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "target-roles"]}
+              }
+            },
+            {
+              "name": "OK POST /completion — el perfil queda activo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Perfil activo', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "completion"]}
+              }
+            },
+            {
+              "name": "204 una de dos formaciones en Activo (CA-2.4.46)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.noContent();"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations/{{hu24_edu2}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations", "{{hu24_edu2}}"]}
+              }
+            },
+            {
+              "name": "409 última formación de un perfil Activo (CA-2.4.37)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"EDUCATION_NOT_ALLOWED\", \"No puedes quedarte sin formación académica con el perfil activo. Agrega otra antes de eliminar esta.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}/educations/{{hu24_edu}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}", "educations", "{{hu24_edu}}"]}
+              }
+            },
+            {
+              "name": "OK GET perfil sigue Activo con una formación",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Sigue activo', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));", "pm.test('Conserva la última formación', () => pm.expect(pm.response.json().educations.map(x => x.id)).to.eql([pm.collectionVariables.get('hu24_edu')]));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu24_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu24_profile}}"]}
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "DES-02 — HU-2.4",
+      "item": [
+        {
+          "name": "OK POST /profiles — crea el perfil (guarda des_profile)",
+          "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('des_uid', 'uid-des-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('des_profile', pm.response.json().id);"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "X-User-Id", "value": "{{des_uid}}"}],
+            "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+          }
+        },
+        {
+          "name": "OK POST /work-experiences — agrega una experiencia (guarda des_exp)",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('des_exp', pm.response.json().workExperiences[0].id);"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "X-User-Id", "value": "{{des_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"company\": \"Acme S.A.\", \"position\": \"Desarrolladora Backend\", \"employmentStatus\": \"ENDED\", \"startDate\": \"2024-01\", \"endDate\": \"2024-12\"}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{base_url}}/api/v1/profiles/{{des_profile}}/work-experiences", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{des_profile}}", "work-experiences"]}
+          }
+        },
+        {
+          "name": "OK DELETE /work-experiences/{expId} — borra la experiencia",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 204', () => pm.response.to.have.status(204));"]}}],
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "X-User-Id", "value": "{{des_uid}}"}],
+            "url": {"raw": "{{base_url}}/api/v1/profiles/{{des_profile}}/work-experiences/{{des_exp}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{des_profile}}", "work-experiences", "{{des_exp}}"]}
+          }
         }
       ]
     }

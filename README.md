@@ -149,6 +149,28 @@ Los valores sensibles están vacíos y el `.env` real no se versiona.
 
 Las pruebas que necesitan base de datos (las `*IT`) levantan su propio PostgreSQL 16 con Testcontainers, así que `./mvnw -B clean verify` solo requiere Docker encendido. Surefire ejecuta las `*Test` y Failsafe las `*IT`, ambas dentro de `verify`. `docker compose run --rm verify` hace lo mismo dentro de un contenedor, usando el Docker del equipo.
 
+### Pruebas de API con Newman
+
+La colección `docs/CAMEIA_Perfil_Sprint1.postman_collection.json` y el entorno `docs/perfil-local.postman_environment.json` (`base_url` `http://localhost:8082`, sin secretos) se corren contra la aplicación empaquetada y una base real, no contra las pruebas automáticas:
+
+```bash
+docker compose down -v
+docker compose up -d --build
+# esperar a que GET http://localhost:8082/actuator/health responda 200
+npx newman run docs/CAMEIA_Perfil_Sprint1.postman_collection.json -e docs/perfil-local.postman_environment.json --reporters cli,junit --reporter-junit-export target/newman/perfil.xml
+```
+
+- **Base limpia.** Las carpetas de las primeras historias usan identidades fijas y las de roles objetivo esperan el rol `a0000007-0000-0000-0000-000000000006` del catálogo en `INACTIVE`; después de `docker compose up` se prepara con `docker exec cameia-perfil-db psql -U cameia_perfil -d cameia_perfil -c "UPDATE rol_profesional SET estado = 'INACTIVE' WHERE id = 'a0000007-0000-0000-0000-000000000006'"`.
+- **Una sola carpeta.** `--folder "HU-2.4 — Experiencia laboral y formación académica"` corre solo esa historia. Sus subcarpetas crean su propio Usuario con `uid-pm-{{$guid}}` y borran lo que agregan, así que se repiten sin vaciar la base.
+- **Desempeño (DES-02).** La carpeta `DES-02 — HU-2.4` mide crear un perfil, agregar una experiencia y borrarla. Con 105 iteraciones se descartan las 5 primeras y se calcula el percentil 95 de cada petición, que debe ser menor o igual a 2000 ms:
+
+```bash
+npx newman run docs/CAMEIA_Perfil_Sprint1.postman_collection.json -e docs/perfil-local.postman_environment.json --folder "DES-02 — HU-2.4" -n 105 --reporters cli,json --reporter-json-export target/newman/des02.json
+node -e "const ex=require('./target/newman/des02.json').run.executions;const g={};ex.filter(e=>e.cursor.iteration>=5).forEach(e=>{(g[e.item.name]??=[]).push(e.response.responseTime)});for(const [k,v] of Object.entries(g)){v.sort((a,b)=>a-b);console.log(k,'n='+v.length,'p95='+v[Math.ceil(v.length*0.95)-1]+' ms')}"
+```
+
+Al terminar, `docker compose logs app` no debe tener líneas ` ERROR ` ni textos de las peticiones (empresas, instituciones, descripciones).
+
 ### Convención de nombres
 
 - Clase: `<ClaseBajoPrueba>Test` para unitarias, `<ClaseBajoPrueba>IT` para integración.
