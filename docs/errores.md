@@ -68,6 +68,7 @@ Responden igual que Bean Validation: 422 `VALIDATION_FAILED` con «Revisa los ca
 | `SUMMARY_NOT_ALLOWED` | `PATCH …` | `summary` | «No puedes quedarte sin resumen profesional con el perfil activo.» (CA-2.3.12) | `ProfessionalProfile.updateSummary` | `ProfessionalProfileTest.updateSummary_shouldRejectClear_whenProfileIsCompleted` |
 | `SUMMARY_TOO_LONG` | `PATCH …` | `summary` | «El resumen no puede superar los 2000 caracteres.» | `ProfessionalSummary` | La misma |
 | `SALARY_EXPECTATION_OUT_OF_RANGE` | `PATCH …/salary-expectation` | `amount` | «La expectativa salarial no puede ser negativa.» o «La expectativa salarial no puede tener más de 13 dígitos.» | `SalaryExpectation` | La misma |
+| `PROFESSIONAL_ROLE_DISABLED` | `POST …/target-roles`, `PATCH …/target-roles/{roleId}` | `professionalRoleId` | «No encontramos ese rol en el catálogo.» (texto de CA-2.11.12) | `ProfessionalRole.requireSelectable` | `ProfessionalRoleTest.requireSelectable_shouldRejectField_whenRoleIsInactive` |
 | `COMPANY_TOO_LONG` | `POST …/work-experiences` | `company` | «La empresa no puede superar los 500 caracteres.» | `WorkExperience` | La misma |
 | `POSITION_TOO_LONG` | `POST …/work-experiences` | `position` | «El cargo no puede superar los 500 caracteres.» | `WorkExperience` | La misma |
 | `INSTITUTION_TOO_LONG` | `POST …/educations` | `institution` | «La institución no puede superar los 500 caracteres.» | `Education` | La misma |

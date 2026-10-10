@@ -86,7 +86,7 @@
 - **Commit:** `CM-70 | feat(perfil): estado del catálogo de roles y restricciones de rol_objetivo`.
 - **Resultado (10-oct):** sin la migración, `TargetRoleSchemaIT`: Tests run: 9, Failures: 5, Errors: 4 (BUILD FAILURE). Con `V5_1`: Tests run: 9, Failures: 0, Errors: 0 (BUILD SUCCESS).
 
-## [ ] T-70.2 · Estado del rol en el dominio y en el adaptador — ≤ 30 min, ≈ 150 líneas
+## [x] T-70.2 · Estado del rol en el dominio y en el adaptador — ≤ 30 min, ≈ 150 líneas
 
 - **Modificar** `domain/model/ProfessionalRole.java`:
   ```java
@@ -137,6 +137,7 @@
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfessionalRoleTest,ProfileAppServiceTest,ProfessionalRoleControllerTest" test` y
   `./mvnw.cmd -B "-Dit.test=ProfessionalRoleRepositoryAdapterIT" verify`.
 - **Commit:** `CM-70 | feat(perfil): el rol del catálogo conoce su estado y rechaza su elección si está inactivo`.
+- **Resultado (10-oct):** `ProfessionalRoleTest`, `ProfileAppServiceTest`, `ProfessionalRoleControllerTest`, `ErrorCatalogTest`, `ErrorCodeDocumentationTest` en verde; `ProfessionalRoleRepositoryAdapterIT`: Tests run: 5, Failures: 0 (BUILD SUCCESS). No se capturó la salida roja previa: el código se escribió antes que las pruebas (desvío de proceso anotado en la cola). El código `PROFESSIONAL_ROLE_DISABLED` se documentó aquí (fila en `docs/errores.md` y `ErrorCatalogTest`) y no en T-70.5, porque `ErrorCodeDocumentationTest` y `ErrorCatalogTest` fallan en la capa sin eso.
 
 ## [ ] T-70.3 · La unicidad del Rol Objetivo responde 409 — ≤ 25 min, ≈ 80 líneas
 

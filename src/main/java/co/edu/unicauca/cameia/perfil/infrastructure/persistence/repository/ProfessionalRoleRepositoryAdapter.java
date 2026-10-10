@@ -13,6 +13,9 @@ import java.util.UUID;
 @Repository
 class ProfessionalRoleRepositoryAdapter implements ProfessionalRoleRepository {
 
+    /** Valor de la columna {@code estado} de un rol que el catálogo ofrece. */
+    private static final String ACTIVE = "ACTIVE";
+
     private final ProfessionalRoleJpaRepository jpa;
 
     ProfessionalRoleRepositoryAdapter(ProfessionalRoleJpaRepository jpa) {
@@ -43,6 +46,6 @@ class ProfessionalRoleRepositoryAdapter implements ProfessionalRoleRepository {
     private ProfessionalRole toDomain(ProfessionalRoleEntity e, String lang) {
         String nombre = "en".equals(lang) ? e.getNombreEn() : e.getNombre();
         String categoria = "en".equals(lang) ? e.getCategoriaEn() : e.getCategoria();
-        return new ProfessionalRole(e.getId(), nombre, categoria);
+        return new ProfessionalRole(e.getId(), nombre, categoria, ACTIVE.equals(e.getEstado()));
     }
 }

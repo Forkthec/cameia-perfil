@@ -221,7 +221,7 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         profile.addTargetRole(new TargetRole(UUID.randomUUID(), UUID.randomUUID(), "Backend", DataProvenance.MANUAL));
         var roleId = profile.getTargetRoles().get(0).getId();
-        var catalogRole = new ProfessionalRole(UUID.randomUUID(), "Frontend Developer", "Desarrollo");
+        var catalogRole = new ProfessionalRole(UUID.randomUUID(), "Frontend Developer", "Desarrollo", true);
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         when(roleRepository.findById(catalogRole.id())).thenReturn(Optional.of(catalogRole));
 
@@ -235,7 +235,7 @@ class ProfileAppServiceTest {
     @Test
     @DisplayName("Editar un rol objetivo que no está en el perfil no guarda nada")
     void updateTargetRole_shouldThrowTargetRoleNotFound_whenRoleIsNotInProfile() {
-        var catalogRole = new ProfessionalRole(UUID.randomUUID(), "Frontend Developer", "Desarrollo");
+        var catalogRole = new ProfessionalRole(UUID.randomUUID(), "Frontend Developer", "Desarrollo", true);
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         when(roleRepository.findById(catalogRole.id())).thenReturn(Optional.of(catalogRole));
 
@@ -323,7 +323,7 @@ class ProfileAppServiceTest {
     void addTargetRole_addsRoleAndSaves() {
         var profile = freshProfile();
         var roleId = UUID.randomUUID();
-        var catRole = new ProfessionalRole(roleId, "Backend Developer", "Desarrollo");
+        var catRole = new ProfessionalRole(roleId, "Backend Developer", "Desarrollo", true);
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         when(roleRepository.findById(roleId)).thenReturn(Optional.of(catRole));
         service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), SVC_UID, roleId, "MANUAL"));

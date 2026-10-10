@@ -25,7 +25,7 @@ class ErrorCatalogTest {
      * la excepción, porque puede llevar un límite. Un código nuevo del dominio se agrega aquí.
      */
     private static final Set<ErrorCode> DOMAIN_FIELD_CODES = EnumSet.of(
-            ErrorCode.PROFILE_NAME_REQUIRED, ErrorCode.PROFILE_NAME_TOO_LONG,
+            ErrorCode.PROFILE_NAME_REQUIRED, ErrorCode.PROFILE_NAME_TOO_LONG, ErrorCode.PROFESSIONAL_ROLE_DISABLED,
             ErrorCode.SUMMARY_NOT_ALLOWED, ErrorCode.SUMMARY_TOO_LONG,
             ErrorCode.SALARY_EXPECTATION_OUT_OF_RANGE,
             ErrorCode.PREFERRED_MODALITY_INVALID_VALUE, ErrorCode.PROVENANCE_INVALID_VALUE,

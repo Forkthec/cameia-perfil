@@ -29,6 +29,8 @@ public enum ErrorCode {
     PROFILE_INCOMPLETE,
     /** El rol profesional del catálogo no existe. */
     PROFESSIONAL_ROLE_NOT_FOUND,
+    /** El rol del catálogo existe pero no está activo; no se puede elegir. */
+    PROFESSIONAL_ROLE_DISABLED,
     /** El perfil ya tiene el máximo de roles objetivo. */
     TARGET_ROLE_LIMIT_REACHED,
     /** El rol objetivo ya está agregado al perfil. */
