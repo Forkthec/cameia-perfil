@@ -13,11 +13,11 @@ import org.springframework.context.annotation.Configuration;
  *
  * Nombres CONFIRMADOS en el C2 del equipo (kebab-case, hecho pasado):
  *   - perfil-profesional-actualizado  → produce este microservicio
- *   - cuenta-eliminada                → produce Cuentas, consume aquí
  *   - suscripcion-actualizada         → produce Cuentas, consume aquí
  *   - consumo-registrado              → produce Auditoría, consume aquí
  *
- * TODO CM-XXX: configurar DLQ, prefetch, retry y TTL cuando se implemente el consumidor real.
+ * Las colas de los eventos de cuenta viven en {@link AccountEventsRabbitConfig}.
+ * TODO CM-XXX: configurar DLQ, prefetch, retry y TTL de las colas restantes cuando se implemente su consumidor real.
  * TODO CM-XXX: externalizar nombres de colas a application.yml con prefijo cameia.rabbit.*
  */
 @Configuration
@@ -25,7 +25,6 @@ public class RabbitConfig {
 
     // ── Nombres de colas (CONFIRMADO C2) ────────────────────────────────────
     public static final String QUEUE_PERFIL_ACTUALIZADO   = "perfil-profesional-actualizado";
-    public static final String QUEUE_CUENTA_ELIMINADA     = "cuenta-eliminada";
     public static final String QUEUE_SUSCRIPCION_ACT      = "suscripcion-actualizada";
     public static final String QUEUE_CONSUMO_REGISTRADO   = "consumo-registrado";
 
@@ -40,7 +39,6 @@ public class RabbitConfig {
     // ── Colas ────────────────────────────────────────────────────────────────
 
     @Bean Queue queuePerfilActualizado() { return new Queue(QUEUE_PERFIL_ACTUALIZADO, true); }
-    @Bean Queue queueCuentaEliminada()   { return new Queue(QUEUE_CUENTA_ELIMINADA,   true); }
     @Bean Queue queueSuscripcionAct()    { return new Queue(QUEUE_SUSCRIPCION_ACT,    true); }
     @Bean Queue queueConsumoRegistrado() { return new Queue(QUEUE_CONSUMO_REGISTRADO, true); }
 
@@ -48,9 +46,6 @@ public class RabbitConfig {
 
     @Bean Binding bindingPerfilActualizado(TopicExchange cameiaExchange, Queue queuePerfilActualizado) {
         return BindingBuilder.bind(queuePerfilActualizado).to(cameiaExchange).with(QUEUE_PERFIL_ACTUALIZADO);
-    }
-    @Bean Binding bindingCuentaEliminada(TopicExchange cameiaExchange, Queue queueCuentaEliminada) {
-        return BindingBuilder.bind(queueCuentaEliminada).to(cameiaExchange).with(QUEUE_CUENTA_ELIMINADA);
     }
     @Bean Binding bindingSuscripcionAct(TopicExchange cameiaExchange, Queue queueSuscripcionAct) {
         return BindingBuilder.bind(queueSuscripcionAct).to(cameiaExchange).with(QUEUE_SUSCRIPCION_ACT);
@@ -62,6 +57,10 @@ public class RabbitConfig {
     // ── Serialización JSON ───────────────────────────────────────────────────
     @Bean
     JacksonJsonMessageConverter messageConverter() {
-        return new JacksonJsonMessageConverter();
+        var converter = new JacksonJsonMessageConverter();
+        // Se usa el tipo del parámetro del consumidor y se ignora el encabezado __TypeId__: un mensaje no debe elegir qué
+        // clase se instancia.
+        converter.setAlwaysConvertToInferredType(true);
+        return converter;
     }
 }
