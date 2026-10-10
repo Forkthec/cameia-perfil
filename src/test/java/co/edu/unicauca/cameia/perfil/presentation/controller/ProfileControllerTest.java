@@ -779,6 +779,24 @@ class ProfileControllerTest {
     }
 
     @Test
+    @DisplayName("Eliminar un rol objetivo ignora el cuerpo de la petición y responde 204")
+    void removeTargetRole_shouldIgnoreBody_whenBodyIsSent() throws Exception {
+        var profileId = UUID.randomUUID();
+        var roleId = UUID.randomUUID();
+        when(profileAppService.removeTargetRole(profileId, "uid-ctrl-delrole", roleId))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-delrole")));
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/target-roles/{roleId}", profileId, roleId)
+                        .header("X-User-Id", "uid-ctrl-delrole")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"x\":1}"))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+
+        verify(profileAppService).removeTargetRole(profileId, "uid-ctrl-delrole", roleId);
+    }
+
+    @Test
     @DisplayName("Eliminar el último rol de un perfil activo responde 409 con su código y su mensaje, sin errors")
     void removeTargetRole_shouldReturn409_whenLastRoleOfActiveProfile() throws Exception {
         when(profileAppService.removeTargetRole(any(), any(), any()))
