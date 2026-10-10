@@ -779,6 +779,22 @@ class ProfileControllerTest {
     }
 
     @Test
+    @DisplayName("Eliminar el último rol de un perfil activo responde 409 con su código y su mensaje, sin errors")
+    void removeTargetRole_shouldReturn409_whenLastRoleOfActiveProfile() throws Exception {
+        when(profileAppService.removeTargetRole(any(), any(), any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException());
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/target-roles/{roleId}",
+                        UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-delrole"))
+                .andExpect(status().isConflict())
+                .andExpect(header().string("Content-Type", containsString("application/problem+json")))
+                .andExpect(jsonPath("$.code").value("TARGET_ROLE_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.detail").value("No puedes quedarte sin roles objetivo con el perfil activo."))
+                .andExpect(jsonPath("$.errors").doesNotExist());
+    }
+
+    @Test
     @DisplayName("PATCH de rol objetivo sin professionalRoleId responde 422 con su código y no llega al servicio")
     void patchTargetRole_shouldReturn422_whenProfessionalRoleIdMissing() throws Exception {
         mockMvc.perform(patch("/api/v1/profiles/{id}/target-roles/{roleId}", UUID.randomUUID(), UUID.randomUUID())

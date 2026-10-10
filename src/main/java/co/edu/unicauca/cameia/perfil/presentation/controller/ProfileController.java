@@ -363,7 +363,9 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o rol objetivo que no es de este perfil (code TARGET_ROLE_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "No se puede eliminar el único rol objetivo de un perfil COMPLETED (code TARGET_ROLE_NOT_ALLOWED) o identificador mal escrito (PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
+            @ApiResponse(responseCode = "409", description = "No se puede eliminar el único rol objetivo de un perfil activo (code TARGET_ROLE_NOT_ALLOWED) u otra escritura en curso (PROFILE_UPDATE_IN_PROGRESS)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @DeleteMapping("/{id}/target-roles/{roleId}")

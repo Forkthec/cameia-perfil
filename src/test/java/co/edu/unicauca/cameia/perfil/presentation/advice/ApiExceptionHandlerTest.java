@@ -134,7 +134,7 @@ class ApiExceptionHandlerTest {
                 new Object[]{new ProfessionalRoleNotFoundException(), 404, "PROFESSIONAL_ROLE_NOT_FOUND"},
                 new Object[]{new MaxTargetRolesExceededException(5), 409, "TARGET_ROLE_LIMIT_REACHED"},
                 new Object[]{new DuplicateTargetRoleException(), 409, "TARGET_ROLE_ALREADY_EXISTS"},
-                new Object[]{new LastTargetRoleException(), 422, "TARGET_ROLE_NOT_ALLOWED"},
+                new Object[]{new LastTargetRoleException(), 409, "TARGET_ROLE_NOT_ALLOWED"},
                 new Object[]{new DuplicateSkillException(), 409, "SKILL_ALREADY_EXISTS"},
                 new Object[]{new WorkExperienceNotFoundException(), 404, "WORK_EXPERIENCE_NOT_FOUND"},
                 new Object[]{new EducationNotFoundException(), 404, "EDUCATION_NOT_FOUND"},
@@ -342,7 +342,7 @@ class ApiExceptionHandlerTest {
         toThrow = () -> new LastTargetRoleException();
 
         mockMvc.perform(get("/boom"))
-                .andExpect(status().isUnprocessableContent())
+                .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errors").doesNotExist());
     }
 
