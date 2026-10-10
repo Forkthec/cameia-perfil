@@ -419,7 +419,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 # PR 2 — Experiencia laboral (`CM-274-experiencia-laboral`, sobre el PR 1)
 
-## [ ] T-B1 · Petición de la experiencia: normalización, restricciones y OpenAPI — ≤ 30 min, ≈ 140 líneas
+## [x] T-B1 · Petición de la experiencia: normalización, restricciones y OpenAPI — ≤ 30 min, ≈ 140 líneas
 
 - **Modificar** `presentation/dto/AddWorkExperienceRequest.java`:
   ```java
@@ -469,7 +469,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
   - Cada caso comprueba `Content-Type` `application/problem+json;charset=UTF-8` y que el cuerpo no contiene `"trace"`, `"exception"` ni `co.edu`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileControllerTest,ErrorCatalogTest" test`.
 
-## [ ] T-B2 · `WorkExperienceDraft`, `DateBounds` y fábricas de la experiencia — ≤ 30 min, ≈ 150 líneas
+## [x] T-B2 · `WorkExperienceDraft`, `DateBounds` y fábricas de la experiencia — ≤ 30 min, ≈ 150 líneas
 
 - **Crear** `domain/model/WorkExperienceDraft.java`:
   ```java
@@ -526,7 +526,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
   - `rebuild_shouldNotValidate_whenStoredTextIsLongerThanLimit`: empresa de 150 → se reconstruye sin excepción.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=WorkExperienceTest" test`.
 
-## [ ] T-B3 · Servicio y comando de la experiencia — ≤ 25 min, ≈ 90 líneas
+## [x] T-B3 · Servicio y comando de la experiencia — ≤ 25 min, ≈ 90 líneas
 
 - **Modificar** `application/command/AddWorkExperienceCommand.java`: el constructor compacto solo hace `Objects.requireNonNull(profileId, "profileId")`; quitar las demás validaciones (las hace el dominio con su código).
 - **No modificar** `domain/model/FieldValues.java` (lo movió T-A9 desde `CommandValues`): `yearMonth` conserva aquí `yearOnly` y se pasa `false`; T-C3 lo quita. No se agrega ningún método nuevo: el estado ausente se resuelve en el servicio (abajo), para no crear un método de 4 parámetros.
@@ -556,14 +556,14 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
   - `addWorkExperience_shouldUseUtcClockMonth_whenStartIsCurrentMonth`: reloj `2026-10-31T23:59:59Z`, inicio `2026-10` → se guarda; reloj `2026-10-31T23:59:59Z`, inicio `2026-11` → `START_DATE_IN_THE_FUTURE`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileAppServiceTest,FieldValuesTest" test`.
 
-## [ ] T-B4 · Máximo de 4 experiencias — ≤ 15 min, ≈ 70 líneas
+## [x] T-B4 · Máximo de 4 experiencias — ≤ 15 min, ≈ 70 líneas
 
 - **Crear** `domain/exception/WorkExperienceLimitReachedException.java` (`WORK_EXPERIENCE_LIMIT_REACHED`, «Ya tienes el máximo de 4 experiencias laborales.»); `ErrorCatalog.RESPONSES`: `entry(WORK_EXPERIENCE_LIMIT_REACHED, CONFLICT, "Máximo de experiencias alcanzado", null)`.
 - **Modificar** `ProfessionalProfile`: `public static final int MAX_WORK_EXPERIENCES = 4;` y en `addWorkExperience`: `if (workExperiences.size() >= MAX_WORK_EXPERIENCES) throw new WorkExperienceLimitReachedException();` antes de agregar. Javadoc en español del método.
 - **Pruebas** `ProfessionalProfileTest`: `addWorkExperience_shouldAcceptFourth_whenProfileHasThree`; `addWorkExperience_shouldRejectFifth_whenProfileHasFour` (y la lista sigue con 4); `removeWorkExperience_shouldRemoveOnly_whenCompletedProfileHasOne` (perfil `COMPLETED` con 1 experiencia → se elimina, estado sigue `COMPLETED`). `ProfileControllerTest.addWorkExperience_shouldReturn409_whenLimitReached`: 409, `code` `WORK_EXPERIENCE_LIMIT_REACHED`, `detail` literal, sin `errors`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfessionalProfileTest,ProfileControllerTest" test`.
 
-## [ ] T-B5 · Migración V6, entidad, mapeo y respuesta — ≤ 30 min, ≈ 150 líneas
+## [x] T-B5 · Migración V6, entidad, mapeo y respuesta — ≤ 30 min, ≈ 150 líneas
 
 - **Comprobar:** `git ls-tree --name-only origin/develop src/main/resources/db/migration/` termina en `V5__replica_fecha_nacimiento.sql` (de CM-279). Si falta ese archivo o ya existe un V6, detente y reporta (el número es fijo por el plan de ejecución; no se toma «el siguiente libre»).
 - **Crear** `V6__alinear_experiencia_laboral.sql` con el texto exacto siguiente:
@@ -592,6 +592,8 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 - **Modificar** `ProfileResponse.WorkExperienceItem.from`: `startDate` `null` si no hay; agregar `@Schema` en cada componente de `WorkExperienceItem` (descripción, ejemplo, `nullable` en `description`, `startDate`, `endDate`).
 - **Trampa:** `ProfessionalProfileRepositoryAdapterIT` y `ProfileValueRulesTest` construyen experiencias con el constructor viejo: cámbialos a `WorkExperience.create(...)` o `rebuild(...)` según lo que prueben.
 - **Comandos:** `./mvnw.cmd -B test` (todo en verde).
+
+- **Resultado (10-oct-2026, PR 2a):** El PR 2 se partió en 2a (T-B1 a T-B5, rama `CM-274-experiencia-laboral`) y 2b (T-B6 y T-B7: integración, OpenAPI y cierre) por tamaño (Desvío 17 de la cola). Rojo previo no capturado: el código se escribió antes que las pruebas (precedente de CM-70). Verde: `clean verify` BUILD SUCCESS, 542 unitarias + 125 IT, 0 fallos (`ejecucion/verify-CM-274-2a.log`); las 125 IT existentes pasan contra V6. Newman contra la imagen empaquetada con base limpia: 111 peticiones, 0 fallidas, 361 aserciones (`ejecucion/newman-CM-274-2a.log`); dos peticiones de Postman existentes cambian de límite (empresa 101 en lugar de 501 y descripción 501 en lugar de 2001) porque el contrato cambió. Adversarial sin 5xx (`ejecucion/adversarial-CM-274-2a.log`): carácter nulo → 422, JSON mal formado → 422, 1 MiB de descripción → 422, texto con marcado se guarda literal, campos extra e `id` ignorados, procedencia `AI_SUGGESTED` del cuerpo → `MANUAL`, sin tipo de contenido → 415, quinta experiencia → 409. Cobertura: `WorkExperience` 67/69 y 38/40; `WorkExperienceDraft` 1/1; `DateBounds` 3/3; `ProfessionalProfile` 119/121 y 47/48; `WorkExperienceLimitReachedException` 2/2; `FieldValues` 14/14 y 12/12; `ProfileAppService` 68/70 y 14/14; `ProfessionalProfileMapping` 100/100 y 24/26; `AddWorkExperienceRequest` 8/8; `ErrorCatalog` 77/77 y 2/2; global 96,7 % líneas y 94,4 % ramas. Pendiente de cobertura: `ProfileResponse.WorkExperienceItem` 2/4 ramas (inicio `null`), que cubre 2b. Decisiones: `DESCRIPTION_TOO_LONG`, `COMPANY_TOO_LONG` y `POSITION_TOO_LONG` pasan al catálogo de campos del borde (`@CodePointSize`) y siguen también en el dominio; `ErrorCatalogTest` mantiene cada código en un solo grupo.
 
 ## [ ] T-B6 · Pruebas de integración de la experiencia — ≤ 30 min, ≈ 220 líneas
 
