@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.presentation;
 
+import co.edu.unicauca.cameia.perfil.support.ReplicatedBirthDates;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +20,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import java.net.http.HttpResponse;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
@@ -71,6 +73,7 @@ class WorkHistoryEndToEndIT {
     @AfterEach
     void cleanUp() {
         jdbc.update("DELETE FROM perfil_profesional WHERE firebase_uid LIKE 'uid-work-%'");
+        ReplicatedBirthDates.deleteByPrefix(jdbc, "uid-work-");
     }
 
     @Test
@@ -474,6 +477,162 @@ class WorkHistoryEndToEndIT {
         return api.send("POST", "/api/v1/profiles/" + profileId + "/work-experiences", uid, body);
     }
 
+    // ── Fecha de nacimiento (réplica local) ───────────────────────────────
+
+    private static final String UNAVAILABLE_DETAIL = "Ocurrió un error. Inténtalo de nuevo.";
+    private static final String ENDED_FROM_2024 =
+            "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"ENDED\",\"startDate\":\"2024-01\",\"endDate\":\"2024-12\"}";
+
+    @Test
+    @DisplayName("Una experiencia que empieza en el mes en que se cumplen 15 años se guarda")
+    void addWorkExperience_shouldReturn201_whenStartIsMonthOfFifteenthBirthday() throws Exception {
+        var uid = newUidBornOn(LocalDate.of(2008, 3, 15));
+        var profileId = api.createProfile(uid);
+
+        var response = add(uid, profileId,
+                "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\",\"startDate\":\"2023-03\"}");
+
+        assertThat(response.statusCode()).isEqualTo(201);
+    }
+
+    @Test
+    @DisplayName("Una experiencia que empieza un mes antes de cumplir 15 años responde 422 y no se guarda")
+    void addWorkExperience_shouldReturn422_whenStartIsBeforeFifteenthBirthday() throws Exception {
+        var uid = newUidBornOn(LocalDate.of(2008, 3, 15));
+        var profileId = api.createProfile(uid);
+
+        var response = add(uid, profileId,
+                "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\",\"startDate\":\"2023-02\"}");
+
+        assertFieldError(response, "startDate", "START_DATE_BEFORE_MINIMUM_AGE",
+                "La experiencia laboral no puede iniciar antes del mes en que cumpliste 15 años.");
+        assertThat(count("experiencia_laboral", profileId)).isZero();
+    }
+
+    @Test
+    @DisplayName("Sin inicio, una experiencia que termina en el mes en que se cumplen 15 años se guarda")
+    void addWorkExperience_shouldReturn201_whenNoStartAndEndIsMonthOfFifteenthBirthday() throws Exception {
+        var uid = newUidBornOn(LocalDate.of(2008, 3, 15));
+        var profileId = api.createProfile(uid);
+
+        var response = add(uid, profileId,
+                "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"ENDED\",\"endDate\":\"2023-03\"}");
+
+        assertThat(response.statusCode()).isEqualTo(201);
+    }
+
+    @Test
+    @DisplayName("Sin inicio, una experiencia que termina antes de cumplir 15 años responde 422 y no se guarda")
+    void addWorkExperience_shouldReturn422_whenNoStartAndEndIsBeforeFifteenthBirthday() throws Exception {
+        var uid = newUidBornOn(LocalDate.of(2008, 3, 15));
+        var profileId = api.createProfile(uid);
+
+        var response = add(uid, profileId,
+                "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"ENDED\",\"endDate\":\"2023-02\"}");
+
+        assertFieldError(response, "endDate", "END_DATE_BEFORE_MINIMUM_AGE",
+                "La fecha de fin no puede ser anterior al mes en que cumpliste 15 años.");
+        assertThat(count("experiencia_laboral", profileId)).isZero();
+    }
+
+    @Test
+    @DisplayName("Quien nació el 29 de febrero puede empezar en febrero de los 15 años")
+    void addWorkExperience_shouldReturn201_whenBornOnLeapDayAndStartIsFebruary() throws Exception {
+        var uid = newUidBornOn(LocalDate.of(2008, 2, 29));
+        var profileId = api.createProfile(uid);
+
+        var response = add(uid, profileId,
+                "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\",\"startDate\":\"2023-02\"}");
+
+        assertThat(response.statusCode()).isEqualTo(201);
+    }
+
+    @Test
+    @DisplayName("Una formación que empieza en el mes de nacimiento se guarda")
+    void addEducation_shouldReturn201_whenStartIsBirthMonth() throws Exception {
+        var uid = newUidBornOn(LocalDate.of(2008, 3, 15));
+        var profileId = api.createProfile(uid);
+
+        var response = addEducation(uid, profileId,
+                "{\"institution\":\"Escuela\",\"degree\":\"Curso\",\"level\":\"TECHNICAL\",\"startDate\":\"2008-03\",\"inProgress\":true}");
+
+        assertThat(response.statusCode()).isEqualTo(201);
+    }
+
+    @Test
+    @DisplayName("Una formación que empieza un mes antes del nacimiento responde 422 y no se guarda")
+    void addEducation_shouldReturn422_whenStartIsBeforeBirthMonth() throws Exception {
+        var uid = newUidBornOn(LocalDate.of(2008, 3, 15));
+        var profileId = api.createProfile(uid);
+
+        var response = addEducation(uid, profileId,
+                "{\"institution\":\"Escuela\",\"degree\":\"Curso\",\"level\":\"TECHNICAL\",\"startDate\":\"2008-02\",\"inProgress\":true}");
+
+        assertFieldError(response, "startDate", "START_DATE_BEFORE_BIRTH", "La fecha no puede ser anterior a tu fecha de nacimiento.");
+        assertThat(count("educacion", profileId)).isZero();
+    }
+
+    @Test
+    @DisplayName("Sin fecha de nacimiento replicada, una experiencia con fechas responde 503 y no se guarda")
+    void addWorkExperience_shouldReturn503_whenReplicaIsEmptyAndRecordHasDates() throws Exception {
+        var uid = "uid-work-" + UUID.randomUUID();
+        var profileId = api.createProfile(uid);
+
+        var response = add(uid, profileId, ENDED_FROM_2024);
+
+        assertUnavailable(response);
+        assertThat(count("experiencia_laboral", profileId)).isZero();
+    }
+
+    @Test
+    @DisplayName("Sin fecha de nacimiento replicada, una formación responde 503 y no se guarda")
+    void addEducation_shouldReturn503_whenReplicaIsEmpty() throws Exception {
+        var uid = "uid-work-" + UUID.randomUUID();
+        var profileId = api.createProfile(uid);
+
+        var response = addEducation(uid, profileId, EDUCATION_ENDED);
+
+        assertUnavailable(response);
+        assertThat(count("educacion", profileId)).isZero();
+    }
+
+    @Test
+    @DisplayName("Sin fecha de nacimiento replicada, una experiencia sin ninguna fecha se guarda")
+    void addWorkExperience_shouldReturn201_whenReplicaIsEmptyAndRecordHasNoDates() throws Exception {
+        var uid = "uid-work-" + UUID.randomUUID();
+        var profileId = api.createProfile(uid);
+
+        var response = add(uid, profileId, "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"UNKNOWN_END\"}");
+
+        assertThat(response.statusCode()).isEqualTo(201);
+    }
+
+    @Test
+    @DisplayName("Un registro inválido sin fecha de nacimiento replicada responde 422 y no 503")
+    void addWorkExperience_shouldReturn422_whenRecordIsInvalidAndReplicaIsEmpty() throws Exception {
+        var uid = "uid-work-" + UUID.randomUUID();
+        var profileId = api.createProfile(uid);
+
+        var response = add(uid, profileId,
+                "{\"company\":\"\",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\",\"startDate\":\"2024-01\"}");
+
+        assertFieldError(response, "company", "COMPANY_REQUIRED", "Ingresa la empresa.");
+    }
+
+    @Test
+    @DisplayName("Tras un 503, cuando llega la fecha de nacimiento, el mismo registro se guarda")
+    void addWorkExperience_shouldReturn201_whenBirthDateArrivesAfterA503() throws Exception {
+        var uid = "uid-work-" + UUID.randomUUID();
+        var profileId = api.createProfile(uid);
+        assertUnavailable(add(uid, profileId, ENDED_FROM_2024));
+
+        ReplicatedBirthDates.insertAdult(jdbc, uid);
+        var retry = add(uid, profileId, ENDED_FROM_2024);
+
+        assertThat(retry.statusCode()).isEqualTo(201);
+        assertThat(count("experiencia_laboral", profileId)).isEqualTo(1);
+    }
+
     /** Agrega lo que pide finalizar (nombre, resumen, formación, habilidad y un rol objetivo) y finaliza el perfil. */
     private void completeProfile(String uid, String profileId) throws Exception {
         var base = "/api/v1/profiles/" + profileId;
@@ -488,7 +647,42 @@ class WorkHistoryEndToEndIT {
         assertThat(completion.statusCode()).as(completion.body()).isEqualTo(200);
     }
 
-    private static String newUid() {
-        return "uid-work-" + UUID.randomUUID();
+    /** Identidad nueva con su fecha de nacimiento replicada, como la dejaría el evento de cuenta creada. */
+    private String newUid() {
+        var uid = "uid-work-" + UUID.randomUUID();
+        ReplicatedBirthDates.insertAdult(jdbc, uid);
+        return uid;
+    }
+
+    /** Identidad nueva cuya fecha de nacimiento replicada es la indicada. */
+    private String newUidBornOn(LocalDate birthDate) {
+        var uid = "uid-work-" + UUID.randomUUID();
+        ReplicatedBirthDates.insert(jdbc, uid, birthDate);
+        return uid;
+    }
+
+    private int count(String table, String profileId) {
+        return jdbc.queryForObject("SELECT count(*) FROM " + table + " WHERE perfil_id = ?::uuid", Integer.class, profileId);
+    }
+
+    /** Comprueba un 422 con un solo error de campo: su campo, código y mensaje literal. */
+    private void assertFieldError(HttpResponse<String> response, String field, String code, String message) {
+        assertThat(response.statusCode()).isEqualTo(422);
+        var errors = api.json(response).get("errors");
+        assertThat(errors.size()).isEqualTo(1);
+        assertThat(errors.get(0).get("field").asString()).isEqualTo(field);
+        assertThat(errors.get(0).get("code").asString()).isEqualTo(code);
+        assertThat(errors.get(0).get("message").asString()).isEqualTo(message);
+    }
+
+    /** Comprueba el 503 de la fecha de nacimiento: tipo de contenido, código, texto y que no filtra detalles internos. */
+    private void assertUnavailable(HttpResponse<String> response) {
+        assertThat(response.statusCode()).isEqualTo(503);
+        assertThat(response.headers().firstValue("Content-Type").orElse(""))
+                .contains("application/problem+json").containsIgnoringCase("charset=UTF-8");
+        var body = api.json(response);
+        assertThat(body.get("code").asString()).isEqualTo("BIRTH_DATE_UNAVAILABLE");
+        assertThat(body.get("detail").asString()).isEqualTo(UNAVAILABLE_DETAIL);
+        assertThat(response.body()).doesNotContain("Exception", "SQL", "1990");
     }
 }

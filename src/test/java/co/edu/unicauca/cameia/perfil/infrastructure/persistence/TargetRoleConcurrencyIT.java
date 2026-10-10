@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
+import co.edu.unicauca.cameia.perfil.support.ReplicatedBirthDates;
 import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
@@ -68,12 +69,20 @@ class TargetRoleConcurrencyIT {
     void cleanUp() {
         executor.shutdownNow();
         jdbc.update("delete from perfil_profesional where firebase_uid like 'uid-roles-%'");
+        ReplicatedBirthDates.deleteByPrefix(jdbc, "uid-roles-");
+    }
+
+    /** Identidad nueva con su fecha de nacimiento replicada, como la dejaría el evento de cuenta creada. */
+    private String newUid() {
+        var uid = "uid-roles-" + UUID.randomUUID();
+        ReplicatedBirthDates.insertAdult(jdbc, uid);
+        return uid;
     }
 
     @Test
     @DisplayName("El mismo rol enviado dos veces a la vez se guarda una sola vez y la segunda recibe el duplicado")
     void addTargetRole_shouldStoreOnce_whenSameRoleArrivesTwiceAtOnce() throws Exception {
-        var uid = "uid-roles-" + UUID.randomUUID();
+        var uid = newUid();
         var profileId = profileCreationAppService.createProfile(new CreateProfileCommand(uid)).getId().value();
 
         var outcomes = runTogether(2, i -> roleId(2), uid, profileId);
@@ -86,7 +95,7 @@ class TargetRoleConcurrencyIT {
     @Test
     @DisplayName("Seis roles distintos a la vez dejan cinco y el sexto recibe el máximo")
     void addTargetRole_shouldNeverExceedFive_whenSixArriveAtOnce() throws Exception {
-        var uid = "uid-roles-" + UUID.randomUUID();
+        var uid = newUid();
         var profileId = profileCreationAppService.createProfile(new CreateProfileCommand(uid)).getId().value();
 
         var outcomes = runTogether(6, i -> roleId(i + 1), uid, profileId);
@@ -99,7 +108,7 @@ class TargetRoleConcurrencyIT {
     @Test
     @DisplayName("El mismo rol enviado veinte veces seguidas se guarda una vez y las otras diecinueve reciben el duplicado")
     void addTargetRole_shouldStoreOnce_whenSameRoleIsSentTwentyTimes() {
-        var uid = "uid-roles-" + UUID.randomUUID();
+        var uid = newUid();
         var profileId = profileCreationAppService.createProfile(new CreateProfileCommand(uid)).getId().value();
         var duplicates = 0;
 
@@ -118,7 +127,7 @@ class TargetRoleConcurrencyIT {
     @Test
     @DisplayName("Dos eliminaciones a la vez en un perfil activo con dos roles dejan uno: la segunda recibe el último rol")
     void removeTargetRole_shouldKeepOneRole_whenTwoRemovalsArriveOnActiveProfile() throws Exception {
-        var uid = "uid-roles-" + UUID.randomUUID();
+        var uid = newUid();
         var profileId = profileCreationAppService.createProfile(new CreateProfileCommand(uid)).getId().value();
         profileAppService.updateProfileInfo(new UpdateProfileInfoCommand(
                 profileId, uid, "Perfil de prueba", "Resumen de prueba con más de diez caracteres.", null, null));

@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.presentation;
 
+import co.edu.unicauca.cameia.perfil.support.ReplicatedBirthDates;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -52,6 +53,7 @@ class TargetRolesEndToEndIT {
     @AfterEach
     void cleanUp() {
         jdbc.update("DELETE FROM perfil_profesional WHERE firebase_uid LIKE 'uid-e2e-%'");
+        ReplicatedBirthDates.deleteByPrefix(jdbc, "uid-e2e-");
         jdbc.update("UPDATE rol_profesional SET estado = 'ACTIVE' WHERE id = ?::uuid", INACTIVE_ROLE);
     }
 
@@ -259,6 +261,7 @@ class TargetRolesEndToEndIT {
     }
 
     private String createProfile(String uid) throws Exception {
+        ReplicatedBirthDates.insertAdult(jdbc, uid);
         var response = send("POST", "/api/v1/profiles", uid, null);
         assertThat(response.statusCode()).isEqualTo(201);
         return json(response).get("id").asString();

@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.presentation;
 
+import co.edu.unicauca.cameia.perfil.support.ReplicatedBirthDates;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,7 @@ class WorkHistoryNovemberUtcIT {
     @AfterEach
     void cleanUp() {
         jdbc.update("DELETE FROM perfil_profesional WHERE firebase_uid LIKE 'uid-nov-%'");
+        ReplicatedBirthDates.deleteByPrefix(jdbc, "uid-nov-");
     }
 
     @Test
@@ -61,6 +63,7 @@ class WorkHistoryNovemberUtcIT {
     void addWorkExperience_shouldAcceptNovember_whenUtcIsAlreadyNovember() throws Exception {
         var api = new ApiTestClient(port);
         var uid = "uid-nov-" + UUID.randomUUID();
+        ReplicatedBirthDates.insertAdult(jdbc, uid);
         var profileId = api.createProfile(uid);
 
         var response = api.send("POST", "/api/v1/profiles/" + profileId + "/work-experiences", uid,

@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
+import co.edu.unicauca.cameia.perfil.support.ReplicatedBirthDates;
 import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
@@ -81,6 +82,7 @@ class ProfileWriteLockIT {
     @BeforeEach
     void createProfile() {
         uid = "uid-lock-" + UUID.randomUUID();
+        ReplicatedBirthDates.insertAdult(jdbcTemplate, uid);
         profileId = profileCreationAppService.createProfile(new CreateProfileCommand(uid)).getId().value();
     }
 
@@ -88,6 +90,7 @@ class ProfileWriteLockIT {
     void cleanUp() {
         executor.shutdownNow();
         jdbcTemplate.update("delete from perfil_profesional where firebase_uid like 'uid-lock-%'");
+        ReplicatedBirthDates.deleteByPrefix(jdbcTemplate, "uid-lock-");
     }
 
     /** Abre una transacción que bloquea el perfil y lo retiene hasta soltar el cierre o agotar la espera dada. */
