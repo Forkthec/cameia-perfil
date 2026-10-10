@@ -5,6 +5,12 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
+import java.time.YearMonth;
+
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.assignableTo;
+import static com.tngtech.archunit.core.domain.JavaCall.Predicates.target;
+import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
+import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
@@ -107,4 +113,12 @@ class ArquitecturaTest {
             .as("Las clases de infrastructure.persistence.entity terminan en Entity")
             .because("el C4 dibuja el mismo concepto dos veces, como agregado y como clase JPA; "
                     + "sin el sufijo alguien termina anotando el agregado con @Entity");
+
+    @ArchTest
+    static final ArchRule applicationDoesNotParseRawValues = noClasses()
+            .that().resideInAPackage(APPLICATION)
+            .should().callMethod(YearMonth.class, "parse", CharSequence.class)
+            .orShould().callMethodWhere(target(name("valueOf")).and(target(owner(assignableTo(Enum.class)))))
+            .as("La capa de aplicación no convierte textos en opciones ni en meses por su cuenta")
+            .because("las opciones y los meses se leen con FieldValues, que los rechaza con su propio código y mensaje");
 }

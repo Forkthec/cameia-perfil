@@ -1,12 +1,12 @@
 package co.edu.unicauca.cameia.perfil.presentation.dto.validation;
 
-import co.edu.unicauca.cameia.perfil.application.command.CommandValues;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException.FieldError;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
+import co.edu.unicauca.cameia.perfil.domain.model.FieldValues;
 import co.edu.unicauca.cameia.perfil.domain.model.SingleLineText;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import jakarta.validation.Constraint;
@@ -59,12 +59,12 @@ public @interface DomainRule {
         DESCRIPTION(text -> rejectControl(text, true, WorkExperience.DESCRIPTION_CHARACTERS), Set.of(DESCRIPTION_INVALID_CHARACTERS)),
         INSTITUTION(text -> rejectControl(text, false, Education.INSTITUTION_CHARACTERS), Set.of(INSTITUTION_INVALID_CHARACTERS)),
         DEGREE(text -> rejectControl(text, false, Education.DEGREE_CHARACTERS), Set.of(DEGREE_INVALID_CHARACTERS)),
-        EMPLOYMENT_STATUS(text -> CommandValues.option(EmploymentStatus.class, text, EMPLOYMENT_STATUS_INVALID_VALUE, "employmentStatus"),
+        EMPLOYMENT_STATUS(text -> FieldValues.option(EmploymentStatus.class, text, EMPLOYMENT_STATUS_INVALID_VALUE, "employmentStatus"),
                 Set.of(EMPLOYMENT_STATUS_INVALID_VALUE)),
-        EDUCATION_LEVEL(text -> CommandValues.option(EducationLevel.class, text, EDUCATION_LEVEL_INVALID_VALUE, "level"),
+        EDUCATION_LEVEL(text -> FieldValues.option(EducationLevel.class, text, EDUCATION_LEVEL_INVALID_VALUE, "level"),
                 Set.of(EDUCATION_LEVEL_INVALID_VALUE)),
-        START_DATE(text -> CommandValues.yearMonth(text, false, START_DATE_INVALID_FORMAT, "startDate"), Set.of(START_DATE_INVALID_FORMAT)),
-        END_DATE(text -> CommandValues.yearMonth(text, false, END_DATE_INVALID_FORMAT, "endDate"), Set.of(END_DATE_INVALID_FORMAT));
+        START_DATE(text -> FieldValues.yearMonth(text, false, START_DATE_INVALID_FORMAT, "startDate"), Set.of(START_DATE_INVALID_FORMAT)),
+        END_DATE(text -> FieldValues.yearMonth(text, false, END_DATE_INVALID_FORMAT, "endDate"), Set.of(END_DATE_INVALID_FORMAT));
 
         private final Consumer<String> validation;
         private final Set<ErrorCode> reportedCodes;

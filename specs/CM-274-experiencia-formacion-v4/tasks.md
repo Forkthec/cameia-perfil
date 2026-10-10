@@ -376,7 +376,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 - **Resultado (10-oct-2026):** rojo: `ErrorCodeDocumentationTest` falló en sus dos pruebas. Sin fila en `docs/errores.md`: `PROFILE_UPDATE_IN_PROGRESS` y los cinco `*_INVALID_CHARACTERS`; sin prueba que los nombre: `PROFILE_UPDATE_IN_PROGRESS`, `WORK_EXPERIENCE_ID_INVALID_FORMAT`, `EDUCATION_ID_INVALID_FORMAT` y `TARGET_ROLE_ID_INVALID_FORMAT` (estos tres ya estaban documentados con una prueba que no los nombraba). Se agregaron las seis filas, `ApiExceptionHandlerTest.profileUpdateInProgress_shouldReturn409_whenThrown` y tres casos de `ProfileControllerTest.frameworkError_shouldReturnCommonShape_whenRequestIsRejected`. Verde: `ErrorCodeDocumentationTest, ApiExceptionHandlerTest, ProfileControllerTest, ErrorCatalogTest, ErrorCodeTest` → 172 pruebas, 0 fallos.
 
-## [ ] T-A9 · Lectura de opciones y fechas en el dominio, vigilada por ArchUnit — ≤ 25 min, ≈ 90 líneas
+## [x] T-A9 · Lectura de opciones y fechas en el dominio, vigilada por ArchUnit — ≤ 25 min, ≈ 90 líneas
 
 - **Por qué:** CM-271 dejó a esta tarea mover `CommandValues` al dominio y prohibir `Enum.valueOf` y `YearMonth.parse` sueltos en `application` (hallazgo de su sección 11). Convertir un texto en una opción o en un mes es una regla de forma del dominio, y `@DomainRule` (T-A3) la ejecuta desde el borde.
 - **Mover** `application/command/CommandValues.java` a `domain/model/FieldValues.java` con los mismos métodos públicos (`option`, `yearMonth` y las constantes de mensaje) y su Javadoc en español (ya lo está). Actualizar las referencias (`git grep -n CommandValues -- src`): `ProfileAppService`, `DomainRule` (T-A3) y `CommandValuesTest` → `domain/model/FieldValuesTest`.
@@ -393,6 +393,8 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 - **Pruebas:** `ArquitecturaTest` en verde; para comprobar que la regla muerde, agrega temporalmente un `EmploymentStatus.valueOf("X")` en `ProfileAppService`, corre la prueba, pega la falla y quítalo.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ArquitecturaTest,FieldValuesTest" test`.
 - **Orden:** después de T-A3; si T-A3 aún no está, detente.
+
+- **Resultado (10-oct-2026):** `CommandValues` pasó a `domain/model/FieldValues` y su prueba a `FieldValuesTest` (movidos con `git mv`; referencias en `ProfileAppService`, `DomainRule` y `docs/errores.md`). Nueva regla `ArquitecturaTest.applicationDoesNotParseRawValues`. Verde: `ArquitecturaTest, FieldValuesTest, DomainRuleValidatorTest, ProfileAppServiceTest` → 104 pruebas, 0 fallos. La regla muerde: con un `EmploymentStatus.valueOf("X")` temporal en `ProfileAppService.loadProfile` falló con `Method <ProfileAppService.loadProfile(java.util.UUID)> calls method <EmploymentStatus.valueOf(java.lang.String)> in (ProfileAppService.java:178)`; el temporal se retiró (el archivo ya no contiene `valueOf("X")`).
 
 ## [ ] T-A10 · Creación del perfil alineada: 2 s y 409 — ≤ 20 min, ≈ 80 líneas
 

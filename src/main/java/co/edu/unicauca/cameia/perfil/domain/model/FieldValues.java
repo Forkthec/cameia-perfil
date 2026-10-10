@@ -1,4 +1,4 @@
-package co.edu.unicauca.cameia.perfil.application.command;
+package co.edu.unicauca.cameia.perfil.domain.model;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
@@ -8,12 +8,12 @@ import java.time.YearMonth;
 import java.util.regex.Pattern;
 
 /**
- * Convierte los textos de un comando en opciones y fechas del dominio.
+ * Convierte los textos de una petición en opciones y fechas del dominio.
  *
  * <p>Un valor que no se puede convertir se rechaza en su campo con su código, sin repetir el valor
  * recibido ni el texto de Java. Los mensajes son los de RT-01 para listas y fechas.</p>
  */
-public final class CommandValues {
+public final class FieldValues {
 
     static final String SELECT_OPTION = "Selecciona una opción.";
     static final String INVALID_DATE = "Ingresa una fecha válida con el formato mm/aaaa.";
@@ -22,7 +22,7 @@ public final class CommandValues {
     private static final Pattern YEAR_MONTH = Pattern.compile("(?!0000)\\d{4}-\\d{2}");
     private static final Pattern YEAR = Pattern.compile("(?!0000)\\d{4}");
 
-    private CommandValues() { }
+    private FieldValues() { }
 
     /**
      * @param type  enumerado del dominio

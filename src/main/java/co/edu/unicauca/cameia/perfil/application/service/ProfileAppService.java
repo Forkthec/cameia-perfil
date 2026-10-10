@@ -4,7 +4,6 @@ import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
 import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
-import co.edu.unicauca.cameia.perfil.application.command.CommandValues;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
@@ -15,6 +14,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
+import co.edu.unicauca.cameia.perfil.domain.model.FieldValues;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
@@ -65,7 +65,7 @@ public class ProfileAppService {
         // Un resumen en blanco lo borra (CA-2.3.4).
         if (cmd.summary() != null) p.updateSummary(cmd.summary().isBlank() ? null : new ProfessionalSummary(cmd.summary()));
         if (cmd.preferredModality() != null) p.updatePreferredModality(
-                CommandValues.option(WorkModality.class, cmd.preferredModality(), PREFERRED_MODALITY_INVALID_VALUE,
+                FieldValues.option(WorkModality.class, cmd.preferredModality(), PREFERRED_MODALITY_INVALID_VALUE,
                         "preferredModality"));
         if (cmd.provenance() != null) p.updateProvenance(provenance(cmd.provenance()));
         repository.save(p); return p;
@@ -76,7 +76,7 @@ public class ProfileAppService {
         var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
         p.addWorkExperience(new WorkExperience(UUID.randomUUID(), cmd.company(), cmd.position(), cmd.description(),
                 startDate(cmd.startDate(), false), endDate(cmd.endDate(), false),
-                CommandValues.option(EmploymentStatus.class, cmd.employmentStatus(), EMPLOYMENT_STATUS_INVALID_VALUE,
+                FieldValues.option(EmploymentStatus.class, cmd.employmentStatus(), EMPLOYMENT_STATUS_INVALID_VALUE,
                         "employmentStatus"),
                 provenance(cmd.provenance())));
         repository.save(p); return p;
@@ -91,7 +91,7 @@ public class ProfileAppService {
     public ProfessionalProfile addEducation(AddEducationCommand cmd) {
         var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
         p.addEducation(new Education(UUID.randomUUID(), cmd.institution(), cmd.degree(), cmd.fieldOfStudy(),
-                CommandValues.option(EducationLevel.class, cmd.level(), EDUCATION_LEVEL_INVALID_VALUE, "level"),
+                FieldValues.option(EducationLevel.class, cmd.level(), EDUCATION_LEVEL_INVALID_VALUE, "level"),
                 startDate(cmd.startDate(), true), endDate(cmd.endDate(), true),
                 cmd.inProgress(), provenance(cmd.provenance())));
         repository.save(p); return p;
@@ -113,7 +113,7 @@ public class ProfileAppService {
     public ProfessionalProfile addSkill(AddSkillCommand cmd) {
         var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
         p.addSkill(new ProfileSkill(UUID.randomUUID(), cmd.skillName(),
-                CommandValues.option(SkillLevel.class, cmd.level(), SKILL_LEVEL_INVALID_VALUE, "level"),
+                FieldValues.option(SkillLevel.class, cmd.level(), SKILL_LEVEL_INVALID_VALUE, "level"),
                 provenance(cmd.provenance())));
         repository.save(p); return p;
     }
@@ -164,15 +164,15 @@ public class ProfileAppService {
     // ── Shared ────────────────────────────────────────────────────────────
 
     private static DataProvenance provenance(String value) {
-        return CommandValues.option(DataProvenance.class, value, PROVENANCE_INVALID_VALUE, "provenance");
+        return FieldValues.option(DataProvenance.class, value, PROVENANCE_INVALID_VALUE, "provenance");
     }
 
     private static YearMonth startDate(String value, boolean yearOnly) {
-        return CommandValues.yearMonth(value, yearOnly, START_DATE_INVALID_FORMAT, "startDate");
+        return FieldValues.yearMonth(value, yearOnly, START_DATE_INVALID_FORMAT, "startDate");
     }
 
     private static YearMonth endDate(String value, boolean yearOnly) {
-        return CommandValues.yearMonth(value, yearOnly, END_DATE_INVALID_FORMAT, "endDate");
+        return FieldValues.yearMonth(value, yearOnly, END_DATE_INVALID_FORMAT, "endDate");
     }
 
     public ProfessionalProfile loadProfile(UUID profileId) { return load(profileId); }
