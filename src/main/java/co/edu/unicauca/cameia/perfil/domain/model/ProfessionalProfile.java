@@ -148,8 +148,8 @@ public final class ProfessionalProfile {
         if (targetRoles.stream().anyMatch(r -> !r.getId().equals(roleId) && r.isSameRoleAs(replacement))) {
             throw new DuplicateTargetRoleException();
         }
-        targetRoles.removeIf(r -> r.getId().equals(roleId));
-        targetRoles.add(replacement);
+        // Sustituir conserva el Rol Objetivo y su lugar en la lista: el backlog no permite reordenar.
+        targetRoles.set(targetRoles.indexOf(existing), replacement);
         touch();
     }
 

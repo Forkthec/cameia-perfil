@@ -43,7 +43,7 @@ Copiar `specs/CM-72-RolesObjetivoEnElPerfil/` desde `C:\Users\paanm\Documents\ca
 - **Commit:** `CM-72 | feat(perfil): el catálogo de roles ofrece solo los roles activos`.
 - **Resultado (10-oct-2026):** rojo antes del cambio: `ProfessionalRoleRepositoryAdapterIT` 7 pruebas, 2 fallos (`findAllByLang_shouldExcludeInactive_whenCatalogHasInactiveRole[1]` y `[2]`, línea 91, el rol inactivo seguía en la lista). Verde después: `ProfessionalRoleRepositoryAdapterIT` 7/7 y `ProfessionalRoleControllerTest` 7/7, BUILD SUCCESS.
 
-## [ ] T-72.2 · Los Roles Objetivo conservan su orden — ≤ 25 min, ≈ 120 líneas
+## [x] T-72.2 · Los Roles Objetivo conservan su orden — ≤ 25 min, ≈ 120 líneas
 
 - **Pruebas que fallan primero** (`ProfessionalProfileTest`; roles con `professionalRoleId` `a0000001-…-000000000001`, `…02`, `…03`, `…04`):
   - `updateTargetRole_shouldKeepPosition_whenRoleIsReplaced`: roles A, B, C; sustituir B por D → orden de `professionalRoleId` = A, D, C y el `id`
@@ -66,6 +66,7 @@ Copiar `specs/CM-72-RolesObjetivoEnElPerfil/` desde `C:\Users\paanm\Documents\ca
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfessionalProfileTest,ProfileControllerTest" test`;
   `./mvnw.cmd -B "-Dit.test=ProfessionalProfileRepositoryAdapterIT" verify`.
 - **Commit:** `CM-72 | fix(perfil): sustituir un rol objetivo conserva su lugar y el perfil los devuelve en orden`.
+- **Resultado (10-oct-2026):** rojo antes del cambio: `ProfessionalProfileTest` 30 pruebas, 1 fallo (`updateTargetRole_shouldKeepPosition_whenRoleIsReplaced`, línea 142, el rol sustituido quedaba al final). `ProfileControllerTest` y `removeTargetRole_shouldKeepOrderOfOthers_whenOneIsRemoved` ya pasaban (regresión). La IT de orden no se vio en rojo porque Surefire falla antes que Failsafe. Verde después: 501 unitarias y `ProfessionalProfileRepositoryAdapterIT` 10/10, BUILD SUCCESS.
 
 ## [ ] T-72.3 · Postman, Newman, autoverificación y cierre — ≤ 30 min, ≈ 150 líneas
 

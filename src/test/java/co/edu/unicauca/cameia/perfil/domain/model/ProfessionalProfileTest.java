@@ -125,6 +125,41 @@ class ProfessionalProfileTest {
     }
 
     @Test
+    @DisplayName("Sustituir un rol deja el nuevo en la misma posición y con el mismo id")
+    void updateTargetRole_shouldKeepPosition_whenRoleIsReplaced() {
+        var a = UUID.fromString("a0000001-0000-0000-0000-000000000001");
+        var b = UUID.fromString("a0000001-0000-0000-0000-000000000002");
+        var c = UUID.fromString("a0000001-0000-0000-0000-000000000003");
+        var d = UUID.fromString("a0000001-0000-0000-0000-000000000004");
+        var profile = ProfessionalProfile.create(UID);
+        var second = role(b, "Rol B");
+        profile.addTargetRole(role(a, "Rol A"));
+        profile.addTargetRole(second);
+        profile.addTargetRole(role(c, "Rol C"));
+
+        profile.updateTargetRole(second.getId(), d, "Rol D");
+
+        assertThat(profile.getTargetRoles()).extracting(TargetRole::getProfessionalRoleId).containsExactly(a, d, c);
+        assertThat(profile.getTargetRoles().get(1).getId()).isEqualTo(second.getId());
+    }
+
+    @Test
+    @DisplayName("Quitar un rol no cambia el orden de los demás")
+    void removeTargetRole_shouldKeepOrderOfOthers_whenOneIsRemoved() {
+        var a = role(UUID.fromString("a0000001-0000-0000-0000-000000000001"), "Rol A");
+        var b = role(UUID.fromString("a0000001-0000-0000-0000-000000000002"), "Rol B");
+        var c = role(UUID.fromString("a0000001-0000-0000-0000-000000000003"), "Rol C");
+        var profile = ProfessionalProfile.create(UID);
+        profile.addTargetRole(a);
+        profile.addTargetRole(b);
+        profile.addTargetRole(c);
+
+        profile.removeTargetRole(a.getId());
+
+        assertThat(profile.getTargetRoles()).extracting(TargetRole::getId).containsExactly(b.getId(), c.getId());
+    }
+
+    @Test
     @DisplayName("Eliminar de un perfil sin roles responde que el rol no existe")
     void removeTargetRole_shouldThrowNotFound_whenProfileHasNoRoles() {
         var profile = ProfessionalProfile.create(UID);

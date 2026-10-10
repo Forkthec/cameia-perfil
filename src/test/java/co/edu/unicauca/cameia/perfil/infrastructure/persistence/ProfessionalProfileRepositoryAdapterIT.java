@@ -91,6 +91,30 @@ class ProfessionalProfileRepositoryAdapterIT {
     }
 
     @Test
+    @DisplayName("Los roles objetivo se leen en el orden en que se agregaron, aunque uno se sustituya")
+    void findById_shouldReturnTargetRolesInInsertionOrder() {
+        var a = UUID.fromString("a0000001-0000-0000-0000-000000000001");
+        var b = UUID.fromString("a0000001-0000-0000-0000-000000000002");
+        var c = UUID.fromString("a0000001-0000-0000-0000-000000000003");
+        var d = UUID.fromString("a0000001-0000-0000-0000-000000000004");
+        var profile = ProfessionalProfile.create(new FirebaseUid("firebase-it-order"));
+        var second = new TargetRole(UUID.randomUUID(), b, "Rol B", DataProvenance.MANUAL);
+        profile.addTargetRole(new TargetRole(UUID.randomUUID(), a, "Rol A", DataProvenance.MANUAL));
+        repository.save(profile);
+        profile.addTargetRole(second);
+        repository.save(profile);
+        profile.addTargetRole(new TargetRole(UUID.randomUUID(), c, "Rol C", DataProvenance.MANUAL));
+        repository.save(profile);
+
+        profile.updateTargetRole(second.getId(), d, "Rol D");
+        repository.save(profile);
+
+        var loaded = repository.findById(profile.getId()).orElseThrow();
+        assertThat(loaded.getTargetRoles()).extracting(TargetRole::getProfessionalRoleId).containsExactly(a, d, c);
+        assertThat(loaded.getTargetRoles().get(1).getId()).isEqualTo(second.getId());
+    }
+
+    @Test
     @DisplayName("Dos Roles Objetivo con el mismo rol del catálogo se traducen a la excepción de negocio de duplicado")
     void save_shouldTranslateUniqueViolation_whenRoleRepeats() {
         var targetRoles = List.of(

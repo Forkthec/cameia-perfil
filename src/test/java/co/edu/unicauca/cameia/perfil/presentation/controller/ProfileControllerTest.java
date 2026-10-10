@@ -122,6 +122,24 @@ class ProfileControllerTest {
     }
 
     @Test
+    @DisplayName("El perfil muestra de cada rol objetivo su id, su rol del catálogo, su nombre y su procedencia")
+    void getProfile_shouldShowTargetRoleFields_whenProfileHasRoles() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ana-002"));
+        profile.addTargetRole(new co.edu.unicauca.cameia.perfil.domain.model.TargetRole(
+                UUID.fromString("44444444-4444-4444-8444-444444444444"),
+                UUID.fromString("a0000001-0000-0000-0000-000000000002"), "Desarrollador Backend",
+                co.edu.unicauca.cameia.perfil.domain.model.DataProvenance.MANUAL));
+        when(profileAppService.getProfile(profile.getId().value(), "uid-ana-002")).thenReturn(profile);
+
+        mockMvc.perform(get("/api/v1/profiles/{id}", profile.getId().value()).header("X-User-Id", "uid-ana-002"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.targetRoles[0].id").value("44444444-4444-4444-8444-444444444444"))
+                .andExpect(jsonPath("$.targetRoles[0].professionalRoleId").value("a0000001-0000-0000-0000-000000000002"))
+                .andExpect(jsonPath("$.targetRoles[0].roleTitle").value("Desarrollador Backend"))
+                .andExpect(jsonPath("$.targetRoles[0].provenance").value("MANUAL"));
+    }
+
+    @Test
     @DisplayName("Crear un perfil ignora el cuerpo: la identidad sale solo del encabezado")
     void postProfiles_shouldIgnoreBody_whenBodySent() throws Exception {
         when(profileCreationAppService.createProfile(new CreateProfileCommand("uid-ana-001")))
