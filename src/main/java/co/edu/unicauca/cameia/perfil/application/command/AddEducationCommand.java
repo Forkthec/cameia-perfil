@@ -3,25 +3,22 @@ package co.edu.unicauca.cameia.perfil.application.command;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Intención de agregar una educación al perfil (CM-18). */
+/**
+ * Intención de agregar una formación académica al perfil. Los textos y las fechas llegan tal cual; las reglas
+ * las aplica el dominio. No lleva procedencia: lo que se agrega por esta ruta es siempre MANUAL.
+ */
 public record AddEducationCommand(
         UUID profileId,
         String uid,
         String institution,
         String degree,
-        String fieldOfStudy,
         String level,
         String startDate,
         String endDate,
-        boolean inProgress,
-        String provenance) {
+        boolean inProgress) {
 
+    /** @throws NullPointerException si falta el perfil */
     public AddEducationCommand {
-        Objects.requireNonNull(profileId, "profileId es obligatorio");
-        if (institution == null || institution.isBlank()) throw new IllegalArgumentException("institution es obligatorio");
-        if (degree == null || degree.isBlank()) throw new IllegalArgumentException("degree es obligatorio");
-        if (startDate == null || startDate.isBlank()) throw new IllegalArgumentException("startDate es obligatorio");
-        Objects.requireNonNull(level, "level es obligatorio");
-        Objects.requireNonNull(provenance, "provenance es obligatorio");
+        Objects.requireNonNull(profileId, "profileId");
     }
 }

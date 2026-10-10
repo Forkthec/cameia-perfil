@@ -71,8 +71,7 @@ public enum ErrorCode {
     /** El perfil ya tiene el máximo de experiencias laborales; no se agregó nada. */
     WORK_EXPERIENCE_LIMIT_REACHED,
     /** La formación académica no existe en el perfil. */
-    EDUCATION_NOT_FOUND,
-    /** La habilidad no existe en el perfil. */
+    EDUCATION_NOT_FOUND,    /** La habilidad no existe en el perfil. */
     SKILL_NOT_FOUND,
     /** Falta el nombre del perfil o está en blanco. */
     PROFILE_NAME_REQUIRED,
@@ -120,8 +119,6 @@ public enum ErrorCode {
     SKILL_NAME_TOO_LONG,
     /** La descripción de la experiencia supera su largo máximo. */
     DESCRIPTION_TOO_LONG,
-    /** El área de estudio de la formación supera su largo máximo. */
-    FIELD_OF_STUDY_TOO_LONG,
     /** La empresa tiene un carácter de control que el campo no admite. */
     COMPANY_INVALID_CHARACTERS,
     /** El cargo tiene un carácter de control que el campo no admite. */

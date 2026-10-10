@@ -84,8 +84,7 @@ final class ErrorCatalog {
             entry(TARGET_ROLE_NOT_FOUND, NOT_FOUND, "Rol objetivo no encontrado", null),
             entry(WORK_EXPERIENCE_NOT_FOUND, NOT_FOUND, "Experiencia no encontrada", null),
             entry(WORK_EXPERIENCE_LIMIT_REACHED, CONFLICT, "Máximo de experiencias alcanzado", null),
-            entry(EDUCATION_NOT_FOUND, NOT_FOUND, "Formación no encontrada", null),
-            entry(SKILL_NOT_FOUND, NOT_FOUND, "Habilidad no encontrada", null));
+            entry(EDUCATION_NOT_FOUND, NOT_FOUND, "Formación no encontrada", null),            entry(SKILL_NOT_FOUND, NOT_FOUND, "Habilidad no encontrada", null));
 
     /** Clave {@code ClaseDelDto.campo.Restricción} → código del campo rechazado. */
     static final Map<String, ErrorCode> FIELD_CODES = Map.ofEntries(
@@ -104,7 +103,8 @@ final class ErrorCatalog {
             Map.entry("AddEducationRequest.degree.NotBlank", DEGREE_REQUIRED),
             Map.entry("AddEducationRequest.level.NotBlank", EDUCATION_LEVEL_REQUIRED),
             Map.entry("AddEducationRequest.startDate.NotBlank", START_DATE_REQUIRED),
-            Map.entry("AddEducationRequest.provenance.NotBlank", PROVENANCE_REQUIRED),
+            Map.entry("AddEducationRequest.institution.CodePointSize", INSTITUTION_TOO_LONG),
+            Map.entry("AddEducationRequest.degree.CodePointSize", DEGREE_TOO_LONG),
             Map.entry("UpdateSalaryExpectationRequest.amount.NotNull", SALARY_EXPECTATION_REQUIRED));
 
     /** Código del campo → mensaje para la persona. */
@@ -121,7 +121,9 @@ final class ErrorCatalog {
             Map.entry(SKILL_LEVEL_REQUIRED, "Elige un nivel."),
             Map.entry(PROFESSIONAL_ROLE_ID_REQUIRED, SELECT_OPTION),
             Map.entry(INSTITUTION_REQUIRED, "Ingresa la institución."),
+            Map.entry(INSTITUTION_TOO_LONG, "La institución no puede superar los 150 caracteres."),
             Map.entry(DEGREE_REQUIRED, "Ingresa el título obtenido."),
+            Map.entry(DEGREE_TOO_LONG, "El título obtenido no puede superar los 150 caracteres."),
             Map.entry(EDUCATION_LEVEL_REQUIRED, "Elige un nivel educativo."),
             Map.entry(SALARY_EXPECTATION_REQUIRED, "Ingresa la expectativa salarial."));
 

@@ -1,6 +1,7 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence.repository;
 
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
+import co.edu.unicauca.cameia.perfil.domain.model.EducationDraft;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
@@ -87,7 +88,6 @@ final class ProfessionalProfileMapping {
         e.setProfile(parent);
         e.setInstitution(d.getInstitution());
         e.setDegree(d.getDegree());
-        e.setFieldOfStudy(d.getFieldOfStudy());
         e.setLevel(d.getLevel());
         e.setStartDate(toFirstDayOfMonth(d.getStartDate()));
         e.setEndDate(d.getEndDate() != null ? toFirstDayOfMonth(d.getEndDate()) : null);
@@ -158,12 +158,11 @@ final class ProfessionalProfileMapping {
     }
 
     private static Education toEducationDomain(EducationEntity e) {
-        return new Education(
-                e.getId(), e.getInstitution(), e.getDegree(), e.getFieldOfStudy(),
-                e.getLevel(),
+        var stored = new EducationDraft(e.getInstitution(), e.getDegree(), e.getLevel(),
                 toYearMonth(e.getStartDate()),
                 e.getEndDate() != null ? toYearMonth(e.getEndDate()) : null,
-                e.isInProgress(), e.getProvenance());
+                e.isInProgress());
+        return Education.rebuild(e.getId(), stored, e.getProvenance());
     }
 
     private static TargetRole toTargetRoleDomain(TargetRoleEntity e) {

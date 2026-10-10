@@ -97,13 +97,19 @@ public record ProfileResponse(
         }
     }
 
+    /** Formación académica del perfil, tal como se guardó. */
     public record EducationItem(
-            UUID id, String institution, String degree, String fieldOfStudy,
-            String level, String startDate, String endDate,
-            boolean inProgress, String provenance) {
+            @Schema(description = "Identificador de la formación") UUID id,
+            @Schema(description = "Institución", example = "Universidad del Cauca") String institution,
+            @Schema(description = "Título obtenido", example = "Ingeniería de Sistemas") String degree,
+            @Schema(description = "Nivel educativo", example = "UNDERGRADUATE", allowableValues = {"TECHNICAL", "UNDERGRADUATE", "POSTGRADUATE"}) String level,
+            @Schema(description = "Mes de inicio AAAA-MM", example = "2021-01") String startDate,
+            @Schema(description = "Mes de fin AAAA-MM; null si está en curso o no se indicó", example = "2025-12", nullable = true) String endDate,
+            @Schema(description = "Si la formación sigue en curso", example = "false") boolean inProgress,
+            @Schema(description = "Procedencia del dato", example = "MANUAL") String provenance) {
         static EducationItem from(Education e) {
             return new EducationItem(
-                    e.getId(), e.getInstitution(), e.getDegree(), e.getFieldOfStudy(),
+                    e.getId(), e.getInstitution(), e.getDegree(),
                     e.getLevel().name(),
                     e.getStartDate().toString(),
                     e.getEndDate() != null ? e.getEndDate().toString() : null,

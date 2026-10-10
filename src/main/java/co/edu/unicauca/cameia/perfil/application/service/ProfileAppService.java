@@ -14,6 +14,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.DateBounds;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRole;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
+import co.edu.unicauca.cameia.perfil.domain.model.EducationDraft;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.FieldValues;
@@ -78,7 +79,7 @@ public class ProfileAppService {
     public ProfessionalProfile addWorkExperience(AddWorkExperienceCommand cmd) {
         var profile = loadForUserForUpdate(cmd.profileId(), cmd.uid());
         var draft = new WorkExperienceDraft(cmd.company(), cmd.position(), cmd.description(),
-                startDate(cmd.startDate(), false), endDate(cmd.endDate(), false),
+                startDate(cmd.startDate()), endDate(cmd.endDate()),
                 employmentStatus(cmd.employmentStatus()));
         profile.addWorkExperience(WorkExperience.create(draft, dateBounds()));
         repository.save(profile);
@@ -103,12 +104,18 @@ public class ProfileAppService {
 
     @Transactional
     public ProfessionalProfile addEducation(AddEducationCommand cmd) {
-        var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
-        p.addEducation(new Education(UUID.randomUUID(), cmd.institution(), cmd.degree(), cmd.fieldOfStudy(),
-                FieldValues.option(EducationLevel.class, cmd.level(), EDUCATION_LEVEL_INVALID_VALUE, "level"),
-                startDate(cmd.startDate(), true), endDate(cmd.endDate(), true),
-                cmd.inProgress(), provenance(cmd.provenance())));
-        repository.save(p); return p;
+        var profile = loadForUserForUpdate(cmd.profileId(), cmd.uid());
+        var draft = new EducationDraft(cmd.institution(), cmd.degree(), educationLevel(cmd.level()),
+                startDate(cmd.startDate()), endDate(cmd.endDate()), cmd.inProgress());
+        profile.addEducation(Education.create(draft, dateBounds()));
+        repository.save(profile);
+        return profile;
+    }
+
+    /** Nivel ausente → {@code null}, que el dominio informa como requerido; un valor desconocido se rechaza aquí con su código. */
+    private static EducationLevel educationLevel(String value) {
+        return value == null ? null
+                : FieldValues.option(EducationLevel.class, value, EDUCATION_LEVEL_INVALID_VALUE, "level");
     }
 
     @Transactional
@@ -200,12 +207,12 @@ public class ProfileAppService {
         return FieldValues.option(DataProvenance.class, value, PROVENANCE_INVALID_VALUE, "provenance");
     }
 
-    private static YearMonth startDate(String value, boolean yearOnly) {
-        return FieldValues.yearMonth(value, yearOnly, START_DATE_INVALID_FORMAT, "startDate");
+    private static YearMonth startDate(String value) {
+        return FieldValues.yearMonth(value, START_DATE_INVALID_FORMAT, "startDate");
     }
 
-    private static YearMonth endDate(String value, boolean yearOnly) {
-        return FieldValues.yearMonth(value, yearOnly, END_DATE_INVALID_FORMAT, "endDate");
+    private static YearMonth endDate(String value) {
+        return FieldValues.yearMonth(value, END_DATE_INVALID_FORMAT, "endDate");
     }
 
     public ProfessionalProfile loadProfile(UUID profileId) { return load(profileId); }

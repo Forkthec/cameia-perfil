@@ -287,8 +287,8 @@ class ProfileController {
             @Valid @RequestBody AddEducationRequest r,
             @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addEducation(
-                new AddEducationCommand(id, uid, r.institution(), r.degree(), r.fieldOfStudy(),
-                        r.level(), r.startDate(), r.endDate(), Boolean.TRUE.equals(r.inProgress()), r.provenance()))));
+                new AddEducationCommand(id, uid, r.institution(), r.degree(),
+                        r.level(), r.startDate(), r.endDate(), Boolean.TRUE.equals(r.inProgress())))));
     }
 
     @Operation(summary = "Eliminar educación del perfil")
