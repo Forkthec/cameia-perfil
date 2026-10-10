@@ -102,7 +102,7 @@ public final class ProfessionalProfile {
         return p;
     }
 
-    // ── Información general (CM-17) ──────────────────────────────────────
+    // ── Información general ──────────────────────────────────────
     public void updateName(ProfileName name) { this.name = name; touch(); }
     /** @param summary resumen nuevo, o {@code null} para borrarlo (CA-2.3.4); un perfil activo no lo pierde (CA-2.3.12) */
     public void updateSummary(ProfessionalSummary summary) {

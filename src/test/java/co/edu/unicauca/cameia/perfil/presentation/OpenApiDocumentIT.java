@@ -144,6 +144,7 @@ class OpenApiDocumentIT {
         assertThat(schema.get("summary").get("maxLength").asInt()).isEqualTo(2000);
         assertThat(schema.get("preferredModality").get("enum").valueStream().map(v -> v.asString()).toList())
                 .containsExactlyInAnyOrder("REMOTE", "HYBRID", "ON_SITE");
+        assertThat(schema.get("preferredModality").get("example").asString()).isEqualTo("HYBRID");
         assertThat(schema.has("provenance")).isFalse();
         var summaryProvenance = schemas.get("ProfileResponse").get("properties").get("summaryProvenance");
         assertThat(summaryProvenance.get("enum").valueStream().map(v -> v.asString()).toList()).containsExactly("MANUAL");

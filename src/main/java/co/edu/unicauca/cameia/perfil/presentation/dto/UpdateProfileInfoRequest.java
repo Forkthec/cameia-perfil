@@ -21,7 +21,8 @@ public record UpdateProfileInfoRequest(
         @Schema(description = "Resumen profesional; vacío lo borra salvo en un perfil activo",
                 example = "Analista con tres años en banca.", maxLength = 2000, nullable = true)
         @CodePointSize(max = 2000) @DomainRule(Rule.SUMMARY) String summary,
-        @Schema(description = "Modalidad de trabajo preferida", allowableValues = {"REMOTE", "HYBRID", "ON_SITE"}, nullable = true)
+        @Schema(description = "Modalidad de trabajo preferida", allowableValues = {"REMOTE", "HYBRID", "ON_SITE"},
+                example = "HYBRID", nullable = true)
         // @NotEmptyIfPresent: una modalidad vacía no es una opción, así que se rechaza en lugar de ignorarse.
         @NotEmptyIfPresent @DomainRule(Rule.PREFERRED_MODALITY) String preferredModality) {
 
