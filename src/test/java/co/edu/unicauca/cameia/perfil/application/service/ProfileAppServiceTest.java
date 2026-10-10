@@ -485,7 +485,10 @@ class ProfileAppServiceTest {
         when(roleRepository.findById(INACTIVE_ROLE.id())).thenReturn(Optional.of(INACTIVE_ROLE));
 
         assertThatThrownBy(() -> service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), SVC_UID, INACTIVE_ROLE.id())))
-                .isInstanceOf(InvalidFieldsException.class);
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("professionalRoleId", ErrorCode.PROFESSIONAL_ROLE_DISABLED)));
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -522,7 +525,9 @@ class ProfileAppServiceTest {
 
         assertThatThrownBy(() -> service.updateTargetRole(
                 new UpdateTargetRoleCommand(UUID.randomUUID(), SVC_UID, original.getId(), INACTIVE_ROLE.id())))
-                .isInstanceOf(InvalidFieldsException.class);
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("professionalRoleId", ErrorCode.PROFESSIONAL_ROLE_DISABLED)));
         assertThat(profile.getTargetRoles()).singleElement()
                 .satisfies(r -> assertThat(r.getProfessionalRoleId()).isEqualTo(ACTIVE_ROLE.id()));
         verify(repository, never()).save(any());
