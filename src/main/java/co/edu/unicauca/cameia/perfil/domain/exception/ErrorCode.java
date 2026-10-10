@@ -71,7 +71,12 @@ public enum ErrorCode {
     /** El perfil ya tiene el máximo de experiencias laborales; no se agregó nada. */
     WORK_EXPERIENCE_LIMIT_REACHED,
     /** La formación académica no existe en el perfil. */
-    EDUCATION_NOT_FOUND,    /** La habilidad no existe en el perfil. */
+    EDUCATION_NOT_FOUND,
+    /** El perfil ya tiene el máximo de formaciones académicas; no se agregó nada. */
+    EDUCATION_LIMIT_REACHED,
+    /** Un perfil activo no puede quedarse sin formación académica; no se eliminó nada. */
+    EDUCATION_NOT_ALLOWED,
+    /** La habilidad no existe en el perfil. */
     SKILL_NOT_FOUND,
     /** Falta el nombre del perfil o está en blanco. */
     PROFILE_NAME_REQUIRED,

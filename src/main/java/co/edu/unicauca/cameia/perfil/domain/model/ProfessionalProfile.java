@@ -2,6 +2,8 @@ package co.edu.unicauca.cameia.perfil.domain.model;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
+import co.edu.unicauca.cameia.perfil.domain.exception.EducationLimitReachedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotAllowedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
@@ -36,6 +38,8 @@ public final class ProfessionalProfile {
     public static final int MAX_TARGET_ROLES = 5;
     /** Máximo de experiencias laborales por perfil. */
     public static final int MAX_WORK_EXPERIENCES = 4;
+    /** Máximo de formaciones académicas por perfil. */
+    public static final int MAX_EDUCATIONS = 5;
 
     private final ProfileId id;
     private final FirebaseUid firebaseUid;
@@ -177,9 +181,42 @@ public final class ProfessionalProfile {
     public void removeWorkExperience(UUID expId) {
         removeById(workExperiences, e -> e.getId().equals(expId), WorkExperienceNotFoundException::new);
     }
-    public void addEducation(Education edu) { educations.add(Objects.requireNonNull(edu)); touch(); }
+
+    /**
+     * Agrega una formación académica.
+     *
+     * @param edu formación ya validada
+     * @throws EducationLimitReachedException si el perfil ya tiene {@value #MAX_EDUCATIONS}
+     */
+    public void addEducation(Education edu) {
+        Objects.requireNonNull(edu);
+        if (educations.size() >= MAX_EDUCATIONS) {
+            throw new EducationLimitReachedException();
+        }
+        educations.add(edu);
+        touch();
+    }
+
+    /**
+     * Elimina una formación de este perfil.
+     *
+     * <p>Un perfil Activo debe conservar al menos una formación: la comprobación y la eliminación ocurren
+     * con la fila del perfil bloqueada, así que dos pestañas que eliminan las dos últimas no pueden tener
+     * éxito las dos. Un identificador ajeno responde «no encontrado» antes que «no permitido».</p>
+     *
+     * @param eduId identificador de la formación
+     * @throws EducationNotFoundException   si el identificador no es una formación de este perfil
+     * @throws EducationNotAllowedException si es la única formación de un perfil Activo
+     */
     public void removeEducation(UUID eduId) {
-        removeById(educations, e -> e.getId().equals(eduId), EducationNotFoundException::new);
+        if (educations.stream().noneMatch(e -> e.getId().equals(eduId))) {
+            throw new EducationNotFoundException();
+        }
+        if (status == ProfileStatus.COMPLETED && educations.size() == 1) {
+            throw new EducationNotAllowedException();
+        }
+        educations.removeIf(e -> e.getId().equals(eduId));
+        touch();
     }
 
     // ── Habilidades (CM-19) ──────────────────────────────────────────────

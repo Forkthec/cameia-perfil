@@ -77,6 +77,39 @@ class ProfileController {
               "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
             }""";
 
+    private static final String EDUCATION_LIMIT_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Máximo de formaciones alcanzado",
+              "status": 409,
+              "detail": "Ya tienes el máximo de 5 formaciones académicas.",
+              "code": "EDUCATION_LIMIT_REACHED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String EDUCATION_NOT_ALLOWED_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "No se puede eliminar la última formación",
+              "status": 409,
+              "detail": "No puedes quedarte sin formación académica con el perfil activo. Agrega otra antes de eliminar esta.",
+              "code": "EDUCATION_NOT_ALLOWED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String EDUCATION_INVALID_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Datos no válidos",
+              "status": 422,
+              "detail": "Revisa los campos marcados.",
+              "code": "VALIDATION_FAILED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+              "errors": [
+                {"field": "institution", "code": "INSTITUTION_REQUIRED", "message": "Ingresa la institución."}
+              ]
+            }""";
+
     private static final String WORK_EXPERIENCE_INVALID_EXAMPLE = """
             {
               "type": "about:blank",
@@ -269,18 +302,32 @@ class ProfileController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Agregar educación al perfil")
+    @Operation(summary = "Agregar formación académica al perfil",
+            description = "Todo lo que se agrega por esta ruta se guarda con procedencia MANUAL; una procedencia o un área de estudio "
+                    + "en el cuerpo se ignoran. El perfil admite hasta 5 formaciones. Se informan a la vez todos los campos inválidos.")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Educación agregada",
+            @ApiResponse(responseCode = "201", description = "Formación académica agregada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: INSTITUTION_REQUIRED, INSTITUTION_TOO_LONG, DEGREE_REQUIRED, DEGREE_TOO_LONG, EDUCATION_LEVEL_REQUIRED, EDUCATION_LEVEL_INVALID_VALUE, START_DATE_REQUIRED, START_DATE_INVALID_FORMAT, END_DATE_INVALID_FORMAT, END_DATE_NOT_ALLOWED, PROVENANCE_REQUIRED, PROVENANCE_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "El perfil ya tiene 5 formaciones (code EDUCATION_LIMIT_REACHED) "
+                    + "o está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se agregó nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Máximo alcanzado", value = EDUCATION_LIMIT_EXAMPLE))),
+            @ApiResponse(responseCode = "415", description = "El cuerpo no es JSON (code MEDIA_TYPE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: INSTITUTION_REQUIRED, "
+                    + "INSTITUTION_TOO_LONG, INSTITUTION_INVALID_CHARACTERS, DEGREE_REQUIRED, DEGREE_TOO_LONG, DEGREE_INVALID_CHARACTERS, "
+                    + "EDUCATION_LEVEL_REQUIRED, EDUCATION_LEVEL_INVALID_VALUE, START_DATE_REQUIRED, START_DATE_INVALID_FORMAT, "
+                    + "START_DATE_IN_THE_FUTURE, END_DATE_INVALID_FORMAT, END_DATE_NOT_ALLOWED, END_DATE_IN_THE_FUTURE, "
+                    + "END_DATE_BEFORE_START_DATE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) "
+                    + "o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Institución vacía", value = EDUCATION_INVALID_EXAMPLE)))
     })
     @PostMapping("/{id}/educations")
     ResponseEntity<ProfileResponse> addEducation(@PathVariable UUID id,
@@ -291,15 +338,20 @@ class ProfileController {
                         r.level(), r.startDate(), r.endDate(), Boolean.TRUE.equals(r.inProgress())))));
     }
 
-    @Operation(summary = "Eliminar educación del perfil")
+    @Operation(summary = "Eliminar formación académica del perfil",
+            description = "Un perfil en Borrador o en revisión puede quedarse sin formaciones; un perfil activo conserva al menos una.")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Educación eliminada, sin cuerpo"),
+            @ApiResponse(responseCode = "204", description = "Formación académica eliminada, sin cuerpo"),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o formación que no es de este perfil (code EDUCATION_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Es la única formación de un perfil activo (code EDUCATION_NOT_ALLOWED) "
+                    + "o el perfil está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se quitó nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Última formación", value = EDUCATION_NOT_ALLOWED_EXAMPLE))),
             @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o EDUCATION_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
