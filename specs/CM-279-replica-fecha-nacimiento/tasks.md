@@ -231,6 +231,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   - `registerIfAbsent_shouldReturnTrueOnce_whenCalledConcurrently`: dos hilos con `CountDownLatch` y `ExecutorService` (2 hilos), cada uno
     con su `TransactionTemplate` → exactamente un `true`, una fila, ninguna excepción.
 
+**Resultado T-P1.3 (9-oct-2026):** rojo sin el adaptador: `ProcessedMessageInboxAdapterIT` 3 errores (`NoSuchBeanDefinitionException` de `ProcessedMessageInbox`). Verde con él: 3/3 (`./mvnw -B -q verify -Dit.test=ProcessedMessageInboxAdapterIT -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false`, EXIT=0, reporte Failsafe tests=3 errors=0 failures=0).
+
 ### T-P1.4 · `ClockConfig`, comandos y `BirthDateReplicaAppService`
 
 - **Crear** `infrastructure/config/ClockConfig.java`: `@Configuration` con `@Bean Clock clock() { return Clock.systemUTC(); }`
