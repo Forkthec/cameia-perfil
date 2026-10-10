@@ -115,10 +115,45 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.addWorkExperience(new AddWorkExperienceCommand(
-                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2022-01", null, "CURRENT", "MANUAL"));
+                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2022-01", null, "CURRENT"));
         assertThat(profile.getWorkExperiences()).hasSize(1);
         assertThat(profile.getWorkExperiences().get(0).getCompany()).isEqualTo("ACME");
         verify(repository).save(profile);
+    }
+
+    @Test
+    @DisplayName("Una experiencia sin empresa, cargo ni estado no se guarda y informa los tres campos")
+    void addWorkExperience_shouldThrowFieldErrors_whenCommandHasNullRequiredFields() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
+
+        assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), SVC_UID, null, null, null, null, null, null)))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactlyInAnyOrder(
+                                tuple("company", ErrorCode.COMPANY_REQUIRED),
+                                tuple("position", ErrorCode.POSITION_REQUIRED),
+                                tuple("employmentStatus", ErrorCode.EMPLOYMENT_STATUS_REQUIRED)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("El mes actual sale del reloj en UTC: el 31 de octubre a las 23:59:59 octubre se acepta y noviembre no")
+    void addWorkExperience_shouldUseUtcClockMonth_whenStartIsCurrentMonth() {
+        var lateOctober = new ProfileAppService(repository, roleRepository,
+                Clock.fixed(Instant.parse("2026-10-31T23:59:59Z"), ZoneOffset.UTC));
+        var profile = freshProfile();
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        lateOctober.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2026-10", null, "CURRENT"));
+
+        assertThat(profile.getWorkExperiences()).hasSize(1);
+        assertThatThrownBy(() -> lateOctober.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2026-11", null, "CURRENT")))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::code).containsExactly(ErrorCode.START_DATE_IN_THE_FUTURE));
+        assertThat(profile.getWorkExperiences()).hasSize(1);
     }
 
     @Test
@@ -126,7 +161,7 @@ class ProfileAppServiceTest {
     void addWorkExperience_shouldThrowStartDateInvalid_whenStartDateIsMalformed() {
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
-                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2020-13", null, "CURRENT", "MANUAL")))
+                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2020-13", null, "CURRENT")))
                 .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
                         .extracting(FieldError::field, FieldError::code)
                         .containsExactly(tuple("startDate", ErrorCode.START_DATE_INVALID_FORMAT)));
@@ -138,7 +173,7 @@ class ProfileAppServiceTest {
     void addWorkExperience_shouldThrowEmploymentStatusInvalid_whenStatusIsUnknown() {
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
-                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2020-01", null, "FREELANCE", "MANUAL")))
+                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2020-01", null, "FREELANCE")))
                 .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
                         .extracting(FieldError::field, FieldError::code)
                         .containsExactly(tuple("employmentStatus", ErrorCode.EMPLOYMENT_STATUS_INVALID_VALUE)));
@@ -150,7 +185,7 @@ class ProfileAppServiceTest {
     void addWorkExperience_shouldThrowEndDateBeforeStart_whenEndIsBeforeStart() {
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
-                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2022-05", "2021-01", "ENDED", "MANUAL")))
+                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2022-05", "2021-01", "ENDED")))
                 .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
                         .extracting(FieldError::field, FieldError::code)
                         .containsExactly(tuple("endDate", ErrorCode.END_DATE_BEFORE_START_DATE)));
@@ -262,10 +297,10 @@ class ProfileAppServiceTest {
     @Test
     void removeWorkExperience_removesFromProfileAndSaves() {
         var profile = freshProfile();
-        profile.addWorkExperience(new co.edu.unicauca.cameia.perfil.domain.model.WorkExperience(
-                UUID.randomUUID(), "ACME", "Dev", null,
-                YearMonth.of(2022, 1), null,
-                EmploymentStatus.CURRENT, DataProvenance.MANUAL));
+        profile.addWorkExperience(co.edu.unicauca.cameia.perfil.domain.model.WorkExperience.rebuild(
+                UUID.randomUUID(), new co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft("ACME", "Dev", null,
+                        YearMonth.of(2022, 1), null, EmploymentStatus.CURRENT),
+                DataProvenance.MANUAL));
         var expId = profile.getWorkExperiences().get(0).getId();
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         service.removeWorkExperience(UUID.randomUUID(), SVC_UID, expId);
@@ -371,7 +406,7 @@ class ProfileAppServiceTest {
         return java.util.stream.Stream.of(
                 use("updateProfileInfo", s -> s.updateProfileInfo(new UpdateProfileInfoCommand(id, SVC_UID, null, null, null, null))),
                 use("addWorkExperience", s -> s.addWorkExperience(new AddWorkExperienceCommand(
-                        id, SVC_UID, "ACME", "Dev", null, "2022-01", null, "CURRENT", "MANUAL"))),
+                        id, SVC_UID, "ACME", "Dev", null, "2022-01", null, "CURRENT"))),
                 use("removeWorkExperience", s -> s.removeWorkExperience(id, SVC_UID, UUID.randomUUID())),
                 use("addEducation", s -> s.addEducation(new AddEducationCommand(id, SVC_UID, "Unicauca", "Ingeniería",
                         null, "UNDERGRADUATE", "2018-01", null, false, "MANUAL"))),

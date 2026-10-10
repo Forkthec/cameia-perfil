@@ -68,6 +68,8 @@ public enum ErrorCode {
     TARGET_ROLE_NOT_FOUND,
     /** La experiencia laboral no existe en el perfil. */
     WORK_EXPERIENCE_NOT_FOUND,
+    /** El perfil ya tiene el máximo de experiencias laborales; no se agregó nada. */
+    WORK_EXPERIENCE_LIMIT_REACHED,
     /** La formación académica no existe en el perfil. */
     EDUCATION_NOT_FOUND,
     /** La habilidad no existe en el perfil. */
@@ -102,6 +104,10 @@ public enum ErrorCode {
     END_DATE_NOT_ALLOWED,
     /** La fecha de fin es anterior a la de inicio. */
     END_DATE_BEFORE_START_DATE,
+    /** La fecha de inicio es posterior al mes actual en UTC. */
+    START_DATE_IN_THE_FUTURE,
+    /** La fecha de fin es posterior al mes actual en UTC. */
+    END_DATE_IN_THE_FUTURE,
     /** La empresa supera su largo máximo. */
     COMPANY_TOO_LONG,
     /** El cargo supera su largo máximo. */

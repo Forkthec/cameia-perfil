@@ -11,6 +11,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedExcepti
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
+import co.edu.unicauca.cameia.perfil.domain.model.DateBounds;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRole;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
@@ -26,6 +27,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.SalaryExpectation;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
+import co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
@@ -74,13 +76,24 @@ public class ProfileAppService {
 
     @Transactional
     public ProfessionalProfile addWorkExperience(AddWorkExperienceCommand cmd) {
-        var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
-        p.addWorkExperience(new WorkExperience(UUID.randomUUID(), cmd.company(), cmd.position(), cmd.description(),
+        var profile = loadForUserForUpdate(cmd.profileId(), cmd.uid());
+        var draft = new WorkExperienceDraft(cmd.company(), cmd.position(), cmd.description(),
                 startDate(cmd.startDate(), false), endDate(cmd.endDate(), false),
-                FieldValues.option(EmploymentStatus.class, cmd.employmentStatus(), EMPLOYMENT_STATUS_INVALID_VALUE,
-                        "employmentStatus"),
-                provenance(cmd.provenance())));
-        repository.save(p); return p;
+                employmentStatus(cmd.employmentStatus()));
+        profile.addWorkExperience(WorkExperience.create(draft, dateBounds()));
+        repository.save(profile);
+        return profile;
+    }
+
+    /** Mes actual en UTC; el mes de nacimiento se suma cuando exista la lectura de la réplica de la fecha de nacimiento. */
+    private DateBounds dateBounds() {
+        return new DateBounds(YearMonth.now(clock), null);
+    }
+
+    /** Estado ausente → {@code null}, que el dominio informa como requerido; un valor desconocido se rechaza aquí con su código. */
+    private static EmploymentStatus employmentStatus(String value) {
+        return value == null ? null
+                : FieldValues.option(EmploymentStatus.class, value, EMPLOYMENT_STATUS_INVALID_VALUE, "employmentStatus");
     }
 
     @Transactional

@@ -9,6 +9,8 @@ import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.Instant;
 import java.time.YearMonth;
 import java.util.List;
@@ -72,14 +74,20 @@ public record ProfileResponse(
         }
     }
 
-    /** CM-21: seniority eliminado de experiencia laboral. */
+    /** Experiencia laboral del perfil, tal como se guardó. */
     public record WorkExperienceItem(
-            UUID id, String company, String position, String description,
-            String startDate, String endDate, String employmentStatus, String provenance) {
+            @Schema(description = "Identificador de la experiencia") UUID id,
+            @Schema(description = "Empresa", example = "Bancolombia") String company,
+            @Schema(description = "Cargo", example = "Desarrolladora Backend") String position,
+            @Schema(description = "Descripción; null si no se escribió", example = "APIs REST con Spring Boot", nullable = true) String description,
+            @Schema(description = "Mes de inicio AAAA-MM; null si no se indicó", example = "2024-06", nullable = true) String startDate,
+            @Schema(description = "Mes de fin AAAA-MM; null mientras la experiencia sigue en curso", example = "2024-12", nullable = true) String endDate,
+            @Schema(description = "Estado de la experiencia", example = "ENDED", allowableValues = {"CURRENT", "ENDED", "UNKNOWN_END"}) String employmentStatus,
+            @Schema(description = "Procedencia del dato", example = "MANUAL") String provenance) {
         static WorkExperienceItem from(WorkExperience e) {
             return new WorkExperienceItem(
                     e.getId(), e.getCompany(), e.getPosition(), e.getDescription(),
-                    formatYearMonth(e.getStartDate()),
+                    e.getStartDate() != null ? formatYearMonth(e.getStartDate()) : null,
                     e.getEndDate() != null ? formatYearMonth(e.getEndDate()) : null,
                     e.getEmploymentStatus().name(), e.getProvenance().name());
         }

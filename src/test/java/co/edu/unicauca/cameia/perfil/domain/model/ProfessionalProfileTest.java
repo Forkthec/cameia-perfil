@@ -426,6 +426,54 @@ class ProfessionalProfileTest {
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
+    // ── Experiencias laborales: máximo de 4 ──────────────────────────────
+
+    @Test
+    @DisplayName("La cuarta experiencia se acepta")
+    void addWorkExperience_shouldAcceptFourth_whenProfileHasThree() {
+        var profile = ProfessionalProfile.create(UID);
+        for (int i = 0; i < 3; i++) {
+            profile.addWorkExperience(experience("Empresa " + i));
+        }
+
+        profile.addWorkExperience(experience("Empresa 3"));
+
+        assertThat(profile.getWorkExperiences()).hasSize(4);
+    }
+
+    @Test
+    @DisplayName("La quinta experiencia se rechaza y la lista sigue con cuatro")
+    void addWorkExperience_shouldRejectFifth_whenProfileHasFour() {
+        var profile = ProfessionalProfile.create(UID);
+        for (int i = 0; i < 4; i++) {
+            profile.addWorkExperience(experience("Empresa " + i));
+        }
+
+        assertThatThrownBy(() -> profile.addWorkExperience(experience("Empresa 4")))
+                .isInstanceOf(co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceLimitReachedException.class)
+                .hasMessage("Ya tienes el máximo de 4 experiencias laborales.");
+        assertThat(profile.getWorkExperiences()).hasSize(4);
+    }
+
+    @Test
+    @DisplayName("Un perfil activo puede quedarse sin su única experiencia y sigue activo")
+    void removeWorkExperience_shouldRemoveOnly_whenCompletedProfileHasOne() {
+        var profile = buildCompleteProfile();
+        var only = experience("ACME");
+        profile.addWorkExperience(only);
+        profile.complete();
+
+        profile.removeWorkExperience(only.getId());
+
+        assertThat(profile.getWorkExperiences()).isEmpty();
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
+    }
+
+    private static WorkExperience experience(String company) {
+        return WorkExperience.create(new WorkExperienceDraft(company, "Dev", null, null, null, EmploymentStatus.CURRENT),
+                new DateBounds(YearMonth.of(2026, 10), null));
+    }
+
     private static TargetRole role(UUID professionalRoleId, String roleTitle) {
         return new TargetRole(UUID.randomUUID(), professionalRoleId, roleTitle, DataProvenance.MANUAL);
     }

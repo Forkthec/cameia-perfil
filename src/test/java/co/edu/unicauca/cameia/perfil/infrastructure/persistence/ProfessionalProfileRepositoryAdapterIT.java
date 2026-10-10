@@ -17,6 +17,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.SalaryExpectation;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
+import co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import jakarta.persistence.EntityManager;
@@ -168,10 +169,10 @@ class ProfessionalProfileRepositoryAdapterIT {
         profile.updateSummary(new ProfessionalSummary("Desarrolladora backend"));
         profile.updateSalaryExpectation(new SalaryExpectation(new BigDecimal("4500000.00")));
         profile.updatePreferredModality(WorkModality.REMOTE);
-        var current = new WorkExperience(UUID.randomUUID(), "ACME", "Dev", "APIs de pagos",
-                YearMonth.of(2022, 1), null, EmploymentStatus.CURRENT, DataProvenance.MANUAL);
-        var ended = new WorkExperience(UUID.randomUUID(), "Globex", "Tester", null,
-                YearMonth.of(2019, 3), YearMonth.of(2021, 6), EmploymentStatus.ENDED, DataProvenance.AI_SUGGESTED);
+        var current = WorkExperience.rebuild(UUID.randomUUID(), new WorkExperienceDraft("ACME", "Dev", "APIs de pagos",
+                YearMonth.of(2022, 1), null, EmploymentStatus.CURRENT), DataProvenance.MANUAL);
+        var ended = WorkExperience.rebuild(UUID.randomUUID(), new WorkExperienceDraft("Globex", "Tester", null,
+                YearMonth.of(2019, 3), YearMonth.of(2021, 6), EmploymentStatus.ENDED), DataProvenance.AI_SUGGESTED);
         var finished = new Education(UUID.randomUUID(), "Unicauca", "Ingeniería", "Sistemas",
                 EducationLevel.UNDERGRADUATE, YearMonth.of(2015, 2), YearMonth.of(2020, 12), false, DataProvenance.MANUAL);
         var ongoing = new Education(UUID.randomUUID(), "Unicauca", "Maestría", "Computación",

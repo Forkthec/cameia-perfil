@@ -11,6 +11,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.ReviewStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.SalaryExpectation;
 import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
+import co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft;
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.EducationEntity;
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.ProfileSkillEntity;
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.ProfessionalProfileEntity;
@@ -73,7 +74,7 @@ final class ProfessionalProfileMapping {
         e.setCompany(d.getCompany());
         e.setPosition(d.getPosition());
         e.setDescription(d.getDescription());
-        e.setStartDate(toFirstDayOfMonth(d.getStartDate()));
+        e.setStartDate(d.getStartDate() != null ? toFirstDayOfMonth(d.getStartDate()) : null);
         e.setEndDate(d.getEndDate() != null ? toFirstDayOfMonth(d.getEndDate()) : null);
         e.setEmploymentStatus(d.getEmploymentStatus());
         e.setProvenance(d.getProvenance());
@@ -149,11 +150,11 @@ final class ProfessionalProfileMapping {
     }
 
     private static WorkExperience toWorkExpDomain(WorkExperienceEntity e) {
-        return new WorkExperience(
-                e.getId(), e.getCompany(), e.getPosition(), e.getDescription(),
-                toYearMonth(e.getStartDate()),
+        var stored = new WorkExperienceDraft(e.getCompany(), e.getPosition(), e.getDescription(),
+                e.getStartDate() != null ? toYearMonth(e.getStartDate()) : null,
                 e.getEndDate() != null ? toYearMonth(e.getEndDate()) : null,
-                e.getEmploymentStatus(), e.getProvenance());
+                e.getEmploymentStatus());
+        return WorkExperience.rebuild(e.getId(), stored, e.getProvenance());
     }
 
     private static Education toEducationDomain(EducationEntity e) {

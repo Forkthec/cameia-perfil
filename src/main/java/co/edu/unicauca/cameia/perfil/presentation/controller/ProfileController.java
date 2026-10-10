@@ -208,7 +208,7 @@ class ProfileController {
             @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addWorkExperience(
                 new AddWorkExperienceCommand(id, uid, r.company(), r.position(), r.description(),
-                        r.startDate(), r.endDate(), r.employmentStatus(), r.provenance()))));
+                        r.startDate(), r.endDate(), r.employmentStatus()))));
     }
 
     @Operation(summary = "Eliminar experiencia laboral del perfil")

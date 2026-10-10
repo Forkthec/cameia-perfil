@@ -224,23 +224,186 @@ class ProfileControllerTest {
         assertThat(result.getResponse().getContentAsString()).doesNotContain("aaaa");
     }
 
-    @Test
-    @DisplayName("Una fecha mal escrita responde 422 en su campo, con su código y el formato esperado")
-    void addWorkExperience_shouldReturnStartDateInvalid_whenStartDateIsMalformed() throws Exception {
-        when(profileAppService.addWorkExperience(any())).thenThrow(InvalidFieldsException.of(
-                "startDate", ErrorCode.START_DATE_INVALID_FORMAT, "Ingresa una fecha válida con el formato mm/aaaa."));
-        var body = """
-                {"company":"ACME","position":"Dev","startDate":"2020-13","employmentStatus":"CURRENT","provenance":"MANUAL"}
-                """;
+    private static final String EXPERIENCE_BASE = "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\"";
 
-        mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + "/work-experiences")
-                        .header("X-User-Id", "uid-ctrl-date")
-                        .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isUnprocessableContent())
+    private org.springframework.test.web.servlet.ResultActions postExperience(String json) throws Exception {
+        return mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + "/work-experiences")
+                .header("X-User-Id", "uid-ctrl-exp").contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    /** Comprueba 422, tipo de contenido con charset y que el cuerpo no filtra detalles internos. */
+    private static org.springframework.test.web.servlet.ResultActions expectFieldError(
+            org.springframework.test.web.servlet.ResultActions result, String field, String code, String message) throws Exception {
+        var response = result.andExpect(status().isUnprocessableContent())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Content-Type", containsString("application/problem+json")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Content-Type", org.hamcrest.Matchers.containsStringIgnoringCase("charset=UTF-8")))
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.errors[0].field").value("startDate"))
-                .andExpect(jsonPath("$.errors[0].code").value("START_DATE_INVALID_FORMAT"))
-                .andExpect(jsonPath("$.errors[0].message").value("Ingresa una fecha válida con el formato mm/aaaa."));
+                .andExpect(jsonPath("$.detail").value("Revisa los campos marcados."))
+                .andExpect(jsonPath("$.errors[0].field").value(field))
+                .andExpect(jsonPath("$.errors[0].code").value(code))
+                .andExpect(jsonPath("$.errors[0].message").value(message));
+        assertThat(response.andReturn().getResponse().getContentAsString())
+                .doesNotContain("\"trace\"").doesNotContain("\"exception\"").doesNotContain("co.edu");
+        return response;
+    }
+
+    @ParameterizedTest(name = "{0}={1}")
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', textBlock = """
+            company  | "\\t\\n"
+            company  | " "
+            position | "\\t\\n"
+            position | " "
+            """)
+    @DisplayName("Una empresa o un cargo con solo espacios, tabuladores o saltos responde que es obligatorio")
+    void addWorkExperience_shouldReturnRequired_whenTextIsMissingOrBlank(String field, String value) throws Exception {
+        var json = "company".equals(field)
+                ? "{\"company\":" + value + ",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\"}"
+                : "{\"company\":\"ACME\",\"position\":" + value + ",\"employmentStatus\":\"CURRENT\"}";
+        var message = "company".equals(field) ? "Ingresa la empresa." : "Ingresa el cargo.";
+
+        expectFieldError(postExperience(json), field, field.toUpperCase() + "_REQUIRED", message);
+    }
+
+    @ParameterizedTest(name = "{0} de {1} caracteres")
+    @MethodSource("tooLongTexts")
+    @DisplayName("Un texto que supera su límite en puntos de código responde 422 con su código y su mensaje")
+    void addWorkExperience_shouldReturnTooLong_whenTextExceedsLimit(String field, String value, int length, String code,
+            String message) throws Exception {
+        var company = "company".equals(field) ? value : "ACME";
+        var position = "position".equals(field) ? value : "Dev";
+        var description = "description".equals(field) ? value : "ok";
+        var json = "{\"company\":\"" + company + "\",\"position\":\"" + position + "\",\"description\":\"" + description
+                + "\",\"employmentStatus\":\"CURRENT\"}";
+
+        expectFieldError(postExperience(json), field, code, message);
+    }
+
+    static Stream<Arguments> tooLongTexts() {
+        var company = "La empresa no puede superar los 100 caracteres.";
+        var position = "El cargo no puede superar los 100 caracteres.";
+        var description = "La descripción no puede superar los 500 caracteres.";
+        return Stream.of(
+                Arguments.of("company", "a".repeat(101), 101, "COMPANY_TOO_LONG", company),
+                Arguments.of("company", "a".repeat(100) + "😀", 101, "COMPANY_TOO_LONG", company),
+                Arguments.of("position", "a".repeat(101), 101, "POSITION_TOO_LONG", position),
+                Arguments.of("description", "a".repeat(501), 501, "DESCRIPTION_TOO_LONG", description),
+                Arguments.of("description", "a".repeat(499) + "😀😀", 501, "DESCRIPTION_TOO_LONG", description));
+    }
+
+    @ParameterizedTest(name = "{0}={1}")
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', textBlock = """
+            startDate | 2020-13
+            startDate | 2020-00
+            startDate | 20-01
+            startDate | 2020/01
+            startDate | abc
+            startDate | 2020-1
+            endDate   | 2020-13
+            endDate   | 2020-01-15
+            endDate   | 2020
+            """)
+    @DisplayName("Una fecha mal escrita responde 422 en su campo con el formato esperado")
+    void addWorkExperience_shouldReturnDateInvalidFormat_whenDateIsMalformed(String field, String value) throws Exception {
+        var code = "startDate".equals(field) ? "START_DATE_INVALID_FORMAT" : "END_DATE_INVALID_FORMAT";
+        var json = EXPERIENCE_BASE + ",\"" + field + "\":\"" + value + "\"}";
+
+        expectFieldError(postExperience(json), field, code, "Ingresa una fecha válida con el formato mm/aaaa.");
+    }
+
+    @ParameterizedTest(name = "estado {0}")
+    @ValueSource(strings = {"FREELANCE", "current", "Current"})
+    @DisplayName("Un estado que no es una opción responde 422 con su código")
+    void addWorkExperience_shouldReturnStatusInvalid_whenStatusIsUnknown(String status) throws Exception {
+        var json = "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"" + status + "\"}";
+
+        expectFieldError(postExperience(json), "employmentStatus", "EMPLOYMENT_STATUS_INVALID_VALUE", "Selecciona una opción.");
+    }
+
+    @Test
+    @DisplayName("Un estado vacío responde que es obligatorio")
+    void addWorkExperience_shouldReturnStatusRequired_whenStatusIsEmpty() throws Exception {
+        var json = "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"\"}";
+
+        expectFieldError(postExperience(json), "employmentStatus", "EMPLOYMENT_STATUS_REQUIRED", "Selecciona una opción.");
+    }
+
+    @Test
+    @DisplayName("Una procedencia en el cuerpo se ignora: la experiencia se guarda MANUAL")
+    void addWorkExperience_shouldSaveManual_whenBodyDeclaresAiProvenance() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-exp"));
+        profile.addWorkExperience(co.edu.unicauca.cameia.perfil.domain.model.WorkExperience.create(
+                new co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft("ACME", "Dev", null, null, null,
+                        co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus.CURRENT),
+                new co.edu.unicauca.cameia.perfil.domain.model.DateBounds(java.time.YearMonth.of(2026, 10), null)));
+        when(profileAppService.addWorkExperience(any())).thenReturn(profile);
+
+        postExperience(EXPERIENCE_BASE + ",\"provenance\":\"AI_SUGGESTED\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.workExperiences[0].provenance").value("MANUAL"));
+
+        var command = ArgumentCaptor.forClass(co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand.class);
+        verify(profileAppService).addWorkExperience(command.capture());
+        assertThat(command.getValue().company()).isEqualTo("ACME");
+    }
+
+    @Test
+    @DisplayName("Varios campos inválidos se informan a la vez, uno por campo")
+    void addWorkExperience_shouldReturnEveryInvalidField_whenSeveralFail() throws Exception {
+        var json = "{\"company\":\"\",\"position\":\"" + "a".repeat(101) + "\",\"startDate\":\"2024-13\",\"employmentStatus\":\"CURRENT\"}";
+
+        postExperience(json).andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors.length()").value(3))
+                .andExpect(jsonPath("$.errors[*].field").value(org.hamcrest.Matchers.containsInAnyOrder(
+                        "company", "position", "startDate")));
+    }
+
+    @Test
+    @DisplayName("Una empresa con un carácter nulo se rechaza con su código")
+    void addWorkExperience_shouldRejectControlCharacter_whenCompanyHasNul() throws Exception {
+        var json = "{\"company\":\"Acme\\u0000\",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\"}";
+
+        expectFieldError(postExperience(json), "company", "COMPANY_INVALID_CHARACTERS", "La empresa tiene caracteres no permitidos.");
+    }
+
+    @Test
+    @DisplayName("Los saltos de línea internos de la descripción se conservan y los de los extremos se recortan")
+    void addWorkExperience_shouldKeepInnerLineBreaks_whenDescriptionHasThem() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-exp"));
+        when(profileAppService.addWorkExperience(any())).thenReturn(profile);
+
+        postExperience(EXPERIENCE_BASE + ",\"description\":\"\\nLínea 1\\nLínea 2\\n\"}").andExpect(status().isCreated());
+
+        var command = ArgumentCaptor.forClass(co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand.class);
+        verify(profileAppService).addWorkExperience(command.capture());
+        assertThat(command.getValue().description()).isEqualTo("Línea 1\nLínea 2");
+    }
+
+    @Test
+    @DisplayName("Un número en lugar del texto de la empresa llega al servicio como texto")
+    void addWorkExperience_shouldTreatNumberAsText_whenCompanyIsNumber() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-exp"));
+        when(profileAppService.addWorkExperience(any())).thenReturn(profile);
+
+        postExperience("{\"company\":123,\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\"}").andExpect(status().isCreated());
+
+        var command = ArgumentCaptor.forClass(co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand.class);
+        verify(profileAppService).addWorkExperience(command.capture());
+        assertThat(command.getValue().company()).isEqualTo("123");
+    }
+
+    @Test
+    @DisplayName("Agregar la quinta experiencia responde 409 con el máximo")
+    void addWorkExperience_shouldReturn409_whenLimitReached() throws Exception {
+        when(profileAppService.addWorkExperience(any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceLimitReachedException());
+
+        postExperience(EXPERIENCE_BASE + "}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORK_EXPERIENCE_LIMIT_REACHED"))
+                .andExpect(jsonPath("$.detail").value("Ya tienes el máximo de 4 experiencias laborales."))
+                .andExpect(jsonPath("$.errors").doesNotExist());
     }
 
     @Test
@@ -370,7 +533,6 @@ class ProfileControllerTest {
                 body.put("position", "\"Dev\"");
                 body.put("startDate", "\"2022-01\"");
                 body.put("employmentStatus", "\"CURRENT\"");
-                body.put("provenance", "\"MANUAL\"");
             }
             case SKILLS -> {
                 body.put("skillName", "\"Java\"");
@@ -401,9 +563,7 @@ class ProfileControllerTest {
         var rows = Stream.of(
                 new Object[]{WORK_EXPERIENCE, "company", true, "COMPANY_REQUIRED", "Ingresa la empresa."},
                 new Object[]{WORK_EXPERIENCE, "position", true, "POSITION_REQUIRED", "Ingresa el cargo."},
-                new Object[]{WORK_EXPERIENCE, "startDate", true, "START_DATE_REQUIRED", "Ingresa la fecha de inicio."},
                 new Object[]{WORK_EXPERIENCE, "employmentStatus", false, "EMPLOYMENT_STATUS_REQUIRED", SELECT_OPTION},
-                new Object[]{WORK_EXPERIENCE, "provenance", false, "PROVENANCE_REQUIRED", SELECT_OPTION},
                 new Object[]{SKILLS, "skillName", true, "SKILL_NAME_REQUIRED", "Ingresa una habilidad."},
                 new Object[]{SKILLS, "level", true, "SKILL_LEVEL_REQUIRED", "Elige un nivel."},
                 new Object[]{SKILLS, "provenance", true, "PROVENANCE_REQUIRED", SELECT_OPTION},

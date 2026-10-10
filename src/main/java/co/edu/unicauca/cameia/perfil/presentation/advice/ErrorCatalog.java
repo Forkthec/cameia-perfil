@@ -83,6 +83,7 @@ final class ErrorCatalog {
             entry(SKILL_ALREADY_EXISTS, CONFLICT, "Habilidad duplicada", null),
             entry(TARGET_ROLE_NOT_FOUND, NOT_FOUND, "Rol objetivo no encontrado", null),
             entry(WORK_EXPERIENCE_NOT_FOUND, NOT_FOUND, "Experiencia no encontrada", null),
+            entry(WORK_EXPERIENCE_LIMIT_REACHED, CONFLICT, "Máximo de experiencias alcanzado", null),
             entry(EDUCATION_NOT_FOUND, NOT_FOUND, "Formación no encontrada", null),
             entry(SKILL_NOT_FOUND, NOT_FOUND, "Habilidad no encontrada", null));
 
@@ -90,9 +91,10 @@ final class ErrorCatalog {
     static final Map<String, ErrorCode> FIELD_CODES = Map.ofEntries(
             Map.entry("AddWorkExperienceRequest.company.NotBlank", COMPANY_REQUIRED),
             Map.entry("AddWorkExperienceRequest.position.NotBlank", POSITION_REQUIRED),
-            Map.entry("AddWorkExperienceRequest.startDate.NotBlank", START_DATE_REQUIRED),
-            Map.entry("AddWorkExperienceRequest.employmentStatus.NotNull", EMPLOYMENT_STATUS_REQUIRED),
-            Map.entry("AddWorkExperienceRequest.provenance.NotNull", PROVENANCE_REQUIRED),
+            Map.entry("AddWorkExperienceRequest.employmentStatus.NotBlank", EMPLOYMENT_STATUS_REQUIRED),
+            Map.entry("AddWorkExperienceRequest.company.CodePointSize", COMPANY_TOO_LONG),
+            Map.entry("AddWorkExperienceRequest.position.CodePointSize", POSITION_TOO_LONG),
+            Map.entry("AddWorkExperienceRequest.description.CodePointSize", DESCRIPTION_TOO_LONG),
             Map.entry("AddSkillRequest.provenance.NotBlank", PROVENANCE_REQUIRED),
             Map.entry("AddSkillRequest.skillName.NotBlank", SKILL_NAME_REQUIRED),
             Map.entry("AddSkillRequest.level.NotBlank", SKILL_LEVEL_REQUIRED),
@@ -108,6 +110,9 @@ final class ErrorCatalog {
     /** Código del campo → mensaje para la persona. */
     static final Map<ErrorCode, String> FIELD_MESSAGES = Map.ofEntries(
             Map.entry(COMPANY_REQUIRED, "Ingresa la empresa."),
+            Map.entry(COMPANY_TOO_LONG, "La empresa no puede superar los 100 caracteres."),
+            Map.entry(POSITION_TOO_LONG, "El cargo no puede superar los 100 caracteres."),
+            Map.entry(DESCRIPTION_TOO_LONG, "La descripción no puede superar los 500 caracteres."),
             Map.entry(POSITION_REQUIRED, "Ingresa el cargo."),
             Map.entry(START_DATE_REQUIRED, "Ingresa la fecha de inicio."),
             Map.entry(EMPLOYMENT_STATUS_REQUIRED, SELECT_OPTION),

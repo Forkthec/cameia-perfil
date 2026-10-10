@@ -11,6 +11,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededExce
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.SkillNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceNotFoundException;
 
 import java.time.Instant;
@@ -33,6 +34,8 @@ import java.util.stream.IntStream;
 public final class ProfessionalProfile {
 
     public static final int MAX_TARGET_ROLES = 5;
+    /** Máximo de experiencias laborales por perfil. */
+    public static final int MAX_WORK_EXPERIENCES = 4;
 
     private final ProfileId id;
     private final FirebaseUid firebaseUid;
@@ -157,7 +160,20 @@ public final class ProfessionalProfile {
     }
 
     // ── Experiencia y educación (CM-18) ──────────────────────────────────
-    public void addWorkExperience(WorkExperience exp) { workExperiences.add(Objects.requireNonNull(exp)); touch(); }
+    /**
+     * Agrega una experiencia laboral.
+     *
+     * @param exp experiencia ya validada
+     * @throws WorkExperienceLimitReachedException si el perfil ya tiene {@value #MAX_WORK_EXPERIENCES}
+     */
+    public void addWorkExperience(WorkExperience exp) {
+        Objects.requireNonNull(exp);
+        if (workExperiences.size() >= MAX_WORK_EXPERIENCES) {
+            throw new WorkExperienceLimitReachedException();
+        }
+        workExperiences.add(exp);
+        touch();
+    }
     public void removeWorkExperience(UUID expId) {
         removeById(workExperiences, e -> e.getId().equals(expId), WorkExperienceNotFoundException::new);
     }
