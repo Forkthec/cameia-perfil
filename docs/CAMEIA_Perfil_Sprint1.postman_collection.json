@@ -168,15 +168,17 @@
           }
         },
         {
-          "name": "ERR POST /profiles — 409 cupo del Plan Free alcanzado",
+          "name": "ERR POST /profiles — 403 cupo del Plan Free alcanzado (CA-2.2.3)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status 409', () => pm.response.to.have.status(409));",
-                  "pm.test('code PROFILE_LIMIT_REACHED', () => pm.expect(pm.response.json().code).to.eql('PROFILE_LIMIT_REACHED'));",
-                  "pm.test('detail del Plan Free', () => pm.expect(pm.response.json().detail).to.eql('Tu Plan Free permite 1 Perfil Profesional.'));"
+                  "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code PLAN_LIMIT', () => pm.expect(pm.response.json().code).to.eql('PLAN_LIMIT'));",
+                  "pm.test('detail del Plan Free', () => pm.expect(pm.response.json().detail).to.eql('Tu Plan Free permite 1 Perfil Profesional.'));",
+                  "pm.test('Content-Type problem+json con charset', () => { const t = pm.response.headers.get('Content-Type').toLowerCase(); pm.expect(t).to.include('application/problem+json'); pm.expect(t).to.include('charset=utf-8'); });",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
                 ]
               }
             }
@@ -199,6 +201,56 @@
                 "v1",
                 "profiles"
               ]
+            }
+          }
+        },
+        {
+          "name": "ERR POST /profiles — 403 con cuerpo que pide otro plan (CA-2.12.15)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code PLAN_LIMIT', () => pm.expect(pm.response.json().code).to.eql('PLAN_LIMIT'));",
+                  "pm.test('detail del Plan Free', () => pm.expect(pm.response.json().detail).to.eql('Tu Plan Free permite 1 Perfil Profesional.'));",
+                  "pm.test('Content-Type problem+json con charset', () => { const t = pm.response.headers.get('Content-Type').toLowerCase(); pm.expect(t).to.include('application/problem+json'); pm.expect(t).to.include('charset=utf-8'); });",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"PREMIUM\",\n  \"status\": \"COMPLETED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         },

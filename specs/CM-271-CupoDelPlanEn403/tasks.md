@@ -19,12 +19,13 @@
 
 # PR único (`CM-271-cupo-del-plan-en-403`, sobre la punta de CM-73)
 
-## [ ] T-271.0 · Copiar la spec — ≤ 5 min
+## [x] T-271.0 · Copiar la spec — ≤ 5 min
 
 Copiar `specs/CM-271-CupoDelPlanEn403/` desde `C:\Users\paanm\Documents\cameia\cameia-worktrees\perfil-specs-v6`. Commit:
 `CM-271 | docs(spec): spec, plan y tarjetas del cupo del plan en 403 PLAN_LIMIT`.
 
-## [ ] T-271.1 · `PLAN_LIMIT` reemplaza a `PROFILE_LIMIT_REACHED` — ≤ 25 min, ≈ 120 líneas
+## [x] T-271.1 · `PLAN_LIMIT` reemplaza a `PROFILE_LIMIT_REACHED` — ≤ 25 min, ≈ 120 líneas
+- **Resultado (10-oct-2026):** rojo antes del cambio: `ProfileControllerTest.postProfiles_shouldReturn403PlanLimit_whenUserAlreadyHasProfile`, `Status expected:<403> but was:<409>` (de 117 pruebas, 1 fallo). Verde después con `ProfileControllerTest`, `ApiExceptionHandlerTest`, `ErrorCatalogTest`, `ErrorCodeTest` y `ErrorCodeDocumentationTest`. Tres pruebas del registro de `ApiExceptionHandlerTest` (líneas 255, 268 y 279) afirmaban el 409 del cupo y pasaron a 403.
 
 - **Prueba que falla primero** `ProfileControllerTest.postProfiles_shouldReturn403PlanLimit_whenUserAlreadyHasProfile` (reemplaza a
   `postProfiles_shouldReturn409WithPlanMessage_whenUserAlreadyHasProfile`): el servicio lanza `new ProfileLimitReachedException()` →
@@ -51,7 +52,8 @@ Copiar `specs/CM-271-CupoDelPlanEn403/` desde `C:\Users\paanm\Documents\cameia\c
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileControllerTest,ApiExceptionHandlerTest,ErrorCatalogTest,ErrorCodeTest,ErrorCodeDocumentationTest" test`.
 - **Commit:** `CM-271 | feat(perfil): el cupo de perfiles del plan responde 403 PLAN_LIMIT`.
 
-## [ ] T-271.2 · OpenAPI y ADR 0003 — ≤ 15 min, ≈ 40 líneas
+## [x] T-271.2 · OpenAPI y ADR 0003 — ≤ 15 min, ≈ 40 líneas
+- **Resultado (10-oct-2026):** el 409 de `POST /profiles` en OpenAPI queda solo para `PROFILE_CREATION_IN_PROGRESS`; el 403 `PLAN_LIMIT` lleva su ejemplo. ADR 0003 actualizado (pasos, consecuencias y alternativa descartada). `OpenApiDocumentIT` 1/1.
 
 - `ProfileController`: renombrar la constante `PROFILE_LIMIT_REACHED_EXAMPLE` a `PLAN_LIMIT_EXAMPLE` con `"title": "Cupo del plan alcanzado"`,
   `"status": 403`, `"code": "PLAN_LIMIT"`; en `@ApiResponses` del `POST`, la respuesta del cupo pasa a
@@ -62,7 +64,8 @@ Copiar `specs/CM-271-CupoDelPlanEn403/` desde `C:\Users\paanm\Documents\cameia\c
 - **Prueba:** `OpenApiDocumentIT` en verde (si compara el documento, que contenga `PLAN_LIMIT` y no `PROFILE_LIMIT_REACHED`).
 - **Commit:** `CM-271 | docs(perfil): OpenAPI y ADR del cupo del plan en 403`.
 
-## [ ] T-271.3 · Integración con base real, Postman y Newman — ≤ 30 min, ≈ 220 líneas
+## [x] T-271.3 · Integración con base real, Postman y Newman — ≤ 30 min, ≈ 220 líneas
+- **Resultado (10-oct-2026):** `PlanLimitIT` 5/5 (la parametrizada cuenta dos). Que puede fallar: con el catálogo en `CONFLICT` fallan 4 de 5 (revertido). Postman: la petición del cupo pasa a 403 y se agrega la de CA-2.12.15. Newman contra la imagen empaquetada con base limpia y el rol `a0000007-…-000000000006` inactivo: 111 peticiones, 0 fallidas, 108 scripts, 361 aserciones (`ejecucion/newman-CM-271.log`).
 
 - **Crear** `infrastructure/persistence/PlanLimitIT.java` con la forma de `ResponseCharsetIT` (servidor en puerto aleatorio, `HttpClient`,
   Testcontainers, `JdbcTemplate` para contar y limpiar `firebase_uid like 'uid-plan-%'`):
@@ -80,7 +83,8 @@ Copiar `specs/CM-271-CupoDelPlanEn403/` desde `C:\Users\paanm\Documents\cameia\c
 - **Newman:** como en CM-70 (paquete, `docker compose up -d --build app`, base limpia, rol inactivo preparado y restaurado). Pega el resumen.
 - **Commit:** `CM-271 | test(perfil): cupo del plan en 403 contra la base real y en Postman`.
 
-## [ ] T-271.4 · Autoverificación y cierre — ≤ 20 min
+## [x] T-271.4 · Autoverificación y cierre — ≤ 20 min
+- **Resultado (10-oct-2026):** `clean verify` BUILD SUCCESS: 510 unitarias + 125 IT, 0 fallos (`ejecucion/verify-CM-271.log`; el primer reporte de JaCoCo salió incompleto y se repitió). Cobertura: `ProfileLimitReachedException` 2/2; `ErrorCatalog` 72/72 y 2/2; `ErrorCode` 73/73; `ProfileCreationAppService` 15/15 y 4/4; `ProfileController` 34/34; global 96,2 % líneas y 93,5 % ramas (igual que en CM-73). `git grep PROFILE_LIMIT_REACHED -- src docs` solo en «Códigos retirados». `src/main` sin `CM-`. Capa de 455 líneas contra la punta de CM-73. `/simplify` y `/code-review high` no se corren desde esta sesión. Cambio de contrato (409 → 403 `PLAN_LIMIT`): el aviso a Frontend está en `comunicaciones/10102026_v1_roles-objetivo-cupo-y-mi-cuenta-para-frontend.md` y debe enviarse antes de desplegar el tramo.
 
 Lista V1 a V9 de la spec §11 con salida real; `./mvnw.cmd -B clean verify`; cobertura de `ProfileLimitReachedException`, `ErrorCatalog`,
 `ProfileCreationAppService` y `ProfileController`; `git diff --shortstat <punta de CM-73>...HEAD` (≤ 800); `/simplify` y `/code-review high`. Escribir en
