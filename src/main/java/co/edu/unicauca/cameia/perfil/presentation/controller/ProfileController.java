@@ -67,13 +67,13 @@ class ProfileController {
               "profileSkills": []
             }""";
 
-    private static final String PROFILE_LIMIT_REACHED_EXAMPLE = """
+    private static final String PLAN_LIMIT_EXAMPLE = """
             {
               "type": "about:blank",
               "title": "Cupo del plan alcanzado",
-              "status": 409,
+              "status": 403,
               "detail": "Tu Plan Free permite 1 Perfil Profesional.",
-              "code": "PROFILE_LIMIT_REACHED",
+              "code": "PLAN_LIMIT",
               "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
             }""";
 
@@ -131,12 +131,12 @@ class ProfileController {
                             examples = @ExampleObject(value = EMPTY_PROFILE_EXAMPLE))),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "El Usuario ya tenía el máximo de perfiles de su plan; el Plan Free permite uno (code PROFILE_LIMIT_REACHED), "
-                    + "o otra creación del mismo Usuario no terminó en 2 s: no se creó nada y se puede reintentar (code PROFILE_CREATION_IN_PROGRESS)",
+            @ApiResponse(responseCode = "403", description = "El Usuario ya tenía el máximo de perfiles de su plan; el Plan Free permite uno (code PLAN_LIMIT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
-                            examples = {
-                                    @ExampleObject(name = "Cupo alcanzado", value = PROFILE_LIMIT_REACHED_EXAMPLE),
-                                    @ExampleObject(name = "Creación en proceso", value = PROFILE_CREATION_IN_PROGRESS_EXAMPLE)})),
+                            examples = @ExampleObject(value = PLAN_LIMIT_EXAMPLE))),
+            @ApiResponse(responseCode = "409", description = "Otra creación del mismo Usuario no terminó en 2 s: no se creó nada y se puede reintentar (code PROFILE_CREATION_IN_PROGRESS)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = PROFILE_CREATION_IN_PROGRESS_EXAMPLE))),
             @ApiResponse(responseCode = "500", description = "Error interno (code INTERNAL_ERROR); el detalle nunca incluye el mensaje de la excepción",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
