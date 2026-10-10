@@ -15,8 +15,11 @@ public enum ErrorCode {
     PROFILE_NOT_FOUND,
     /** El perfil existe pero pertenece a otro usuario. */
     PROFILE_NOT_ALLOWED,
-    /** El usuario alcanzó el cupo de perfiles de su plan. */
-    PROFILE_LIMIT_REACHED,
+    /**
+     * El Usuario ya tiene el máximo de Perfiles Profesionales que permite su plan; no se creó nada.
+     * Es el código común del cupo del plan en todos los servicios, por eso no sigue la forma sujeto y causa.
+     */
+    PLAN_LIMIT,
     /** Otra creación del mismo Usuario sigue en curso; no se creó nada. */
     PROFILE_CREATION_IN_PROGRESS,
     /** Otra escritura retuvo el perfil más que la espera máxima; no cambió nada. */

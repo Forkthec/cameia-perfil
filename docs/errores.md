@@ -26,7 +26,7 @@ Cada rechazo se registra en nivel `WARN` con `code`, `requestId` y `firebaseUid`
 | `IDENTITY_REQUIRED` | 401 | Todo endpoint de `/api/v1/profiles` salvo el catálogo de roles | — | «Tu sesión expiró. Inicia sesión de nuevo.» (RT-02-CA02) | `IdentityRequiredException` (identidad ausente, en blanco o de más de 128 caracteres); `ApiExceptionHandler` (falta `X-User-Id`) | `ProfileControllerTest.postProfiles_shouldReturn401_whenXUserIdHeaderIsMissing`, `ProfileAppServiceTest.getProfile_shouldThrowIdentityRequired_whenUidIsTooLong` |
 | `PROFILE_NOT_FOUND` | 404 | Todo endpoint con `{id}` | — | «No encontramos lo que buscabas.» (RT-03) | `ProfileNotFoundException` | `ApiExceptionHandlerTest.businessException_shouldReturnItsStatusAndCode_whenThrown` |
 | `PROFILE_NOT_ALLOWED` | 403 | Todo endpoint con `{id}` | — | «No encontramos lo que buscabas.» (RT-03: el mismo texto que el perfil inexistente; el código distingue la causa) | `ProfileAccessDeniedException` | `ProfileControllerTest.getProfile_returns403WhenProfileIsOwnedByAnotherUser` |
-| `PROFILE_LIMIT_REACHED` | 409 | `POST /api/v1/profiles` | — | «Tu Plan Free permite 1 Perfil Profesional.» | `ProfileLimitReachedException` (el Usuario ya tenía el máximo de perfiles antes de pedir) | `ProfileAppServiceTest.createProfile_shouldThrowLimitReached_whenUserAlreadyHadOne`, `ProfileControllerTest.postProfiles_shouldReturn409WithPlanMessage_whenUserAlreadyHasProfile` |
+| `PLAN_LIMIT` | 403 | `POST /api/v1/profiles` | — | «Tu Plan Free permite 1 Perfil Profesional.» (CA-2.2.3) | `ProfileLimitReachedException` (el Usuario ya tenía el máximo de perfiles antes de pedir) | `ProfileControllerTest.postProfiles_shouldReturn403PlanLimit_whenUserAlreadyHasProfile`, `PlanLimitIT.createProfile_shouldReturn403_whenFreeUserHasOneProfile` |
 | `PROFILE_CREATION_IN_PROGRESS` | 409 | `POST /api/v1/profiles` | — | «Estamos creando tu perfil. Inténtalo de nuevo en unos segundos.» | `ProfileCreationInProgressException` (otra creación del mismo Usuario no terminó en 2 s y PostgreSQL cortó la espera con el estado `55P03`; no se creó nada) | `ProfileCreationConcurrencyIT.createProfile_shouldFailFast_whenLockIsHeldLongerThanTimeout`, `ProfileControllerTest.postProfiles_shouldReturn409_whenCreationLockTimesOut` |
 | `PROFILE_UPDATE_IN_PROGRESS` | 409 | Todo `PATCH`, `POST` y `DELETE` sobre `/api/v1/profiles/{id}…` | — | «Estamos guardando otro cambio de tu perfil. Inténtalo de nuevo en unos segundos.» | `ProfileUpdateInProgressException` (otra escritura retuvo la fila del perfil más de 2 s y PostgreSQL cortó la espera con el estado `55P03`; no cambió nada) | `ProfileWriteLockIT.write_shouldFailFast_whenProfileRowIsLockedLongerThanTimeout`, `ApiExceptionHandlerTest.profileUpdateInProgress_shouldReturn409_whenThrown` |
 | `BIRTH_DATE_UNAVAILABLE` | 503 | **Pendiente: aún no lo emite ningún endpoint, la validación de fechas que lo lanza llega después.** `POST /api/v1/profiles/{id}/work-experiences` y `/educations` (desde la validación de fechas con la fecha de nacimiento) | — | «Ocurrió un error. Inténtalo de nuevo.» | `BirthDateUnavailableException`: la réplica local aún no tiene la fecha de nacimiento del Usuario (evento `cuenta.creada` sin procesar); no se guarda nada | `ApiExceptionHandlerTest.birthDateUnavailable_shouldReturn503_whenThrown` |
@@ -120,6 +120,7 @@ Un código publicado nunca se renombra ni se reutiliza: cuando una causa cambia,
 | Código | HTTP | Mensaje | Lo reemplaza | Motivo |
 |---|---|---|---|---|
 | `PROFILE_CREATION_TIMEOUT` | 503 | «Estamos creando tu perfil. Inténtalo de nuevo en unos segundos.» | `PROFILE_CREATION_IN_PROGRESS` (409) | Ya no se emite desde esta versión. Una creación que encuentra a otra en curso espera como máximo 2 s (presupuesto de DES-02) y responde 409, igual que toda escritura de un perfil ocupado; no es un fallo del servicio. |
+| `PROFILE_LIMIT_REACHED` | 409 | «Tu Plan Free permite 1 Perfil Profesional.» | `PLAN_LIMIT` (403) | El cupo del plan agotado es un 403 sin permiso con el código común de todos los servicios; el 409 queda solo para la creación en curso. |
 
 ## Estados que difieren del mapa base
 
@@ -127,6 +128,7 @@ Un código publicado nunca se renombra ni se reutiliza: cuando una causa cambia,
 |---|---|---|---|
 | Validación de campos (`VALIDATION_FAILED`) | 422 | 422 | Igual al mapa base y a Cuentas |
 | Cuerpo ilegible (`REQUEST_BODY_INVALID_FORMAT`) | 400 | 422 | Para el Usuario es el mismo problema que un campo inválido: revisar lo enviado. Ver [ADR 0002](adr/0002-validacion-en-422.md) |
+| Cupo del plan (`PLAN_LIMIT`) | 403 sin permiso | 403 | Código común del cupo del plan que reserva el estándar de Backend; lo distingue el `code` del 403 de perfil ajeno |
 
 ## Causas nuevas del vocabulario
 

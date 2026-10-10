@@ -1,10 +1,10 @@
 package co.edu.unicauca.cameia.perfil.domain.exception;
 
-/** El Usuario alcanzó el máximo de Perfiles Profesionales de su plan. */
+/** Se lanza cuando el Usuario ya tenía el máximo de perfiles de su plan antes de pedir otro. */
 public class ProfileLimitReachedException extends BusinessException {
 
     /** Crea la excepción con el mensaje del Plan Free. */
     public ProfileLimitReachedException() {
-        super(ErrorCode.PROFILE_LIMIT_REACHED, "Tu Plan Free permite 1 Perfil Profesional.");
+        super(ErrorCode.PLAN_LIMIT, "Tu Plan Free permite 1 Perfil Profesional.");
     }
 }
