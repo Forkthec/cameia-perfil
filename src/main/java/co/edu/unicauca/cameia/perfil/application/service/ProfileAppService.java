@@ -28,6 +28,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.SalaryExpectation;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
+import co.edu.unicauca.cameia.perfil.domain.model.SingleLineText;
 import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft;
@@ -108,7 +109,7 @@ public class ProfileAppService {
      *         resumen validado; si es inválido, anota el error y devuelve {@code null}
      */
     private static ProfessionalSummary readSummary(String raw, InvalidFieldsException.Collector errors) {
-        if (raw == null || raw.isBlank()) {
+        if (SingleLineText.normalizeOptional(raw) == null) {
             return null;
         }
         return collect(errors, () -> ProfessionalSummary.of(raw));

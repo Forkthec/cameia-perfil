@@ -42,6 +42,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -278,6 +280,20 @@ class ProfileAppServiceTest {
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
 
         service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, "   ", null));
+
+        assertThat(profile.getSummary()).isNull();
+        verify(repository).save(profile);
+    }
+
+    @ParameterizedTest(name = "resumen {0}")
+    @ValueSource(strings = {"\u00A0", "\uFEFF", "\u3000"})
+    @DisplayName("Un resumen de solo espacios que Java no reconoce como en blanco también borra el resumen, sin error")
+    void updateProfileInfo_shouldClearSummary_whenSummaryIsOnlyNoBreakSpace(String blank) {
+        var profile = freshProfile();
+        profile.updateSummary(new ProfessionalSummary("Resumen anterior"));
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        service.updateProfileInfo(new UpdateProfileInfoCommand(UUID.randomUUID(), SVC_UID, null, blank, null));
 
         assertThat(profile.getSummary()).isNull();
         verify(repository).save(profile);
