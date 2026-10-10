@@ -231,6 +231,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   - `registerIfAbsent_shouldReturnTrueOnce_whenCalledConcurrently`: dos hilos con `CountDownLatch` y `ExecutorService` (2 hilos), cada uno
     con su `TransactionTemplate` → exactamente un `true`, una fila, ninguna excepción.
 
+**Resultado T-P1.3 (9-oct-2026):** rojo sin el adaptador: `ProcessedMessageInboxAdapterIT` 3 errores (`NoSuchBeanDefinitionException` de `ProcessedMessageInbox`). Verde con él: 3/3 (`./mvnw -B -q verify -Dit.test=ProcessedMessageInboxAdapterIT -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false`, EXIT=0, reporte Failsafe tests=3 errors=0 failures=0).
+
 ### T-P1.4 · `ClockConfig`, comandos y `BirthDateReplicaAppService`
 
 - **Crear** `infrastructure/config/ClockConfig.java`: `@Configuration` con `@Bean Clock clock() { return Clock.systemUTC(); }`
@@ -337,6 +339,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   - `recordAccountCreated_shouldNotLogBirthDate_whenStored` (`OutputCaptureExtension`): la salida contiene el uid y `MESSAGE_ID` y no
     contiene `2008-03-15`.
 
+**Resultado T-P1.4 (9-oct-2026):** rojo: `BirthDateReplicaAppServiceTest` no compilaba (faltaban los comandos y el servicio). Verde: 25/25 y `ArquitecturaTest` 8/8 (`./mvnw -B test -Dtest=BirthDateReplicaAppServiceTest,ArquitecturaTest`, 33 pruebas, BUILD SUCCESS). No existía ningún bean `Clock` en la rama base: `ClockConfig` se crea aquí.
+
 ### T-P1.5 · Réplica: entidad, repositorio, adaptador y transacción
 
 - **Crear** `infrastructure/persistence/entity/BirthDateReplicaEntity.java` (`@Entity @Table(name = "fecha_nacimiento_usuario")`,
@@ -369,6 +373,8 @@ mensaje se anota en un Inbox (`evento_procesado`) y los rechazos de negocio con 
   `recordAccountCreated_shouldRollBackInbox_whenReplicaFails`: el espía lanza `DataAccessResourceFailureException` en `saveIfAbsent` →
   la excepción sale del servicio; `evento_procesado` y `fecha_nacimiento_usuario` quedan sin filas (el reintento podrá procesar el
   mensaje). Si `@MockitoSpyBean` no envuelve el adaptador package-private, usa `@MockitoBean` del puerto y repórtalo.
+
+**Resultado T-P1.5 (9-oct-2026):** rojo: `BirthDateReplicaRepositoryAdapterIT` 7 errores y `BirthDateReplicaAppServiceIT` 1 error (`NoSuchBeanDefinitionException` de `BirthDateReplica`). Verde: 7/7 y 1/1 (`./mvnw -B -q verify -Dit.test=BirthDateReplicaRepositoryAdapterIT,BirthDateReplicaAppServiceIT -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false`, EXIT=0). `@MockitoSpyBean` envuelve el adaptador package-private sin problema.
 
 ### T-P1.6 · Cierre de P1
 
