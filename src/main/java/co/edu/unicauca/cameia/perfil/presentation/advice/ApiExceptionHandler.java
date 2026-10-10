@@ -61,7 +61,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         var problem = problem(ex.getCode(), ex.getMessage());
         if (ex instanceof IncompleteProfileException incomplete) {
             // La finalización incompleta lista, además, los requisitos que faltan.
-            problem.setProperty("missingRequirements", incomplete.getMissingRequirements());
+            // El cliente lista los requisitos que faltan desde errors[].field; missingRequirements conserva los códigos que nombran los criterios.
+            problem.setProperty("missingRequirements", incomplete.getMissingRequirements().stream().map(Enum::name).toList());
+            problem.setProperty("errors", incomplete.getMissingRequirements().stream()
+                    .map(ErrorCatalog.COMPLETION_REQUIREMENTS::get)
+                    .map(item -> new FieldProblem(item.field(), item.code(), item.message())).toList());
         }
         if (ex instanceof InvalidFieldsException invalid) {
             // El dominio rechazó campos: responde igual que Bean Validation, un elemento por campo.

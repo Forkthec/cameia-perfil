@@ -1,6 +1,6 @@
 # Tareas — CM-67 (cameia-perfil)
 
-Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Tres PR: finalización (T-0 a T-6), tabla de salida (T-7 a T-9) y evento (T-10 a T-12). Una tarjeta a la vez, con la salida real antes de marcar `[x]`.
+Estado: PR 1 (T-0 a T-6, código y pruebas) hecho y verificado en local; spec y plan aprobados por Paula el 9-oct-2026. Tres PR: finalización (T-0 a T-6), tabla de salida (T-7 a T-9) y evento (T-10 a T-12). Una tarjeta a la vez, con la salida real antes de marcar `[x]`.
 
 ## Reglas para todas las tarjetas
 
@@ -16,13 +16,13 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Tres PR: f
 
 ---
 
-## [ ] T-0 · Base y reproducción — ≤ 15 min
+## [x] T-0 · Base y reproducción — ≤ 15 min
 
 - Comprobar en `origin/develop`: `findByIdForUpdate` (CM-274 PR 1), `ProfessionalSummary.MAX_LENGTH` público y constructor canónico sin validar (CM-54 PR 1), `SKILL_NOT_ALLOWED` 409 en `removeSkill` y `V8__alinear_habilidad_perfil.sql` (CM-66). Si falta alguno, detente y reporta cuál.
 - **Línea base:** corre la sección 20 de la spec (`./mvnw.cmd -B clean verify` y Newman de la colección completa) y pega la salida antes de editar.
 - Reproducir con `docker compose up -d --build`: (a) perfil recién creado → `POST …/completion` → anotar que no hay `errors`; (b) `docker compose exec db psql -U cameia_perfil -d cameia_perfil -c "update perfil_profesional set resumen = repeat('a', 2001) where id = '<id>'"` y `POST …/completion` → anotar el 422 `VALIDATION_FAILED`; (c) `POST …/completion` con cuerpo `{"x":` (V1) → anotar el resultado. Pegar en `specs/CM-67-finalizacion-perfil-v4/evidencia-antes.md`.
 
-## [ ] T-1 · `CompletionRequirement` y requisitos del dominio — ≤ 25 min, ≈ 90 líneas
+## [x] T-1 · `CompletionRequirement` y requisitos del dominio — ≤ 25 min, ≈ 90 líneas
 
 - **Crear** `domain/model/CompletionRequirement.java`:
   ```java
@@ -54,7 +54,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Tres PR: f
   - `complete_shouldRejectAlreadyCompleted_beforeCheckingRequirements` (perfil `COMPLETED` sin habilidades → `ProfileAlreadyCompletedException`, no `IncompleteProfileException`).
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfessionalProfileTest" test`.
 
-## [ ] T-2 · `errors[]` del 422 — ≤ 25 min, ≈ 90 líneas
+## [x] T-2 · `errors[]` del 422 — ≤ 25 min, ≈ 90 líneas
 
 - **Modificar** `ErrorCode`: `COMPLETION_NAME_REQUIRED`, `COMPLETION_SUMMARY_REQUIRED`, `COMPLETION_EDUCATION_REQUIRED`, `COMPLETION_SKILLS_REQUIRED`, `COMPLETION_TARGET_ROLES_REQUIRED` (Javadoc: «El perfil no puede pasar a Activo: falta {el requisito}.»). (Códigos propios: decisión de Paula del 9-oct-2026.)
 - **Modificar** `ErrorCatalog`:
@@ -77,7 +77,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Tres PR: f
   - `postCompletion_shouldIgnoreBody_whenBodyIsSent` (V1): con `{"status":"COMPLETED"}` y con `{"x":` → el resultado depende solo del perfil.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=ProfileControllerTest,ErrorCatalogTest,ApiExceptionHandlerTest" test`.
 
-## [ ] T-3 · Integración: éxito, faltantes, 2001 guardado y falla real — ≤ 30 min, ≈ 180 líneas
+## [x] T-3 · Integración: éxito, faltantes, 2001 guardado y falla real — ≤ 30 min, ≈ 180 líneas
 
 - **Crear** `presentation/CompletionEndToEndIT.java` (`@SpringBootTest(webEnvironment = RANDOM_PORT)`, `@Testcontainers`, `postgres:16-alpine` con `@ServiceConnection`, `TestRestTemplate`, `JdbcTemplate`, Usuario `uid-e2e-<UUID>`; un ayudante privado arma un perfil completo por la API: nombre, resumen de 300, una formación, una habilidad, un rol del catálogo).
   - `completeProfile_shouldReturn200AndCompleted_whenAllRequirementsAreMet`: 200 y `GET` con `status` `COMPLETED`.
@@ -97,7 +97,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Tres PR: f
 - **Comandos:** `./mvnw.cmd -B "-Dit.test=CompletionEndToEndIT" verify`.
 - **Detente si** el 500 trae `forced failure` o el SQL en el cuerpo, o si el perfil queda `COMPLETED`.
 
-## [ ] T-4 · Carreras de CA-2.5.22 — ≤ 25 min, ≈ 110 líneas
+## [x] T-4 · Carreras de CA-2.5.22 — ≤ 25 min, ≈ 110 líneas
 
 - **Agregar** a `infrastructure/persistence/ProfileWriteLockIT.java` (perfil completo con una sola habilidad S1):
   - `completeAndRemoveSkill_shouldRejectRemoval_whenCompletionWinsTheLock`: hilo A en `TransactionTemplate` llama `completeProfile` y espera un latch antes de confirmar; hilo B llama `removeSkill(S1)`; soltar A → A termina, B lanza la excepción de `SKILL_NOT_ALLOWED` (CM-66); la base: `COMPLETED` con S1.
@@ -105,11 +105,11 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Tres PR: f
   - `completeProfile_shouldActivateOnce_whenTwoTabsCompleteTogether`: dos finalizaciones → una bien, la otra `ProfileAlreadyCompletedException`.
 - **Comandos:** `./mvnw.cmd -B "-Dit.test=ProfileWriteLockIT" verify`.
 
-## [ ] T-5 · `review-requests` — ≤ 20 min
+## [x] T-5 · `review-requests` — ≤ 20 min
 
 - Borrar `ProfileController.requestReview` y su `@PostMapping("/{id}/review-requests")`, `ProfileAppService.requestReview`, `ProfessionalProfile.requestReview`, y `markAsReviewed`/`returnForRevision` si quedan sin llamadas (`git grep`); borrar sus pruebas. **No** borrar el valor `IN_REVIEW` del estado ni la regla que permite finalizar desde `IN_REVIEW` (HU-2.8 lo usará); agregar `ProfessionalProfileTest.complete_shouldSucceed_whenProfileIsInReview` armando el perfil con el constructor de reconstrucción; `docs/errores.md` deja de citar `review-requests`; prueba `ProfileControllerTest.postReviewRequests_shouldReturn404_whenRouteDoesNotExist` (404 `ROUTE_NOT_FOUND`). Reportar las líneas borradas.
 
-## [ ] T-6 · OpenAPI, catálogo, Postman y cierre — ≤ 30 min, ≈ 280 líneas
+## [x] T-6 · OpenAPI, catálogo, Postman y cierre — ≤ 30 min, ≈ 280 líneas
 
 - `ProfileController.completeProfile`: `@Operation` con los cinco requisitos en orden; `@ApiResponse` 200, 401, 403, 404, 409, 422 (ejemplo completo de la spec §5), 500, 409 `PROFILE_UPDATE_IN_PROGRESS`. `ApiErrorResponse`: `missingRequirements` opcional con `@Schema(allowableValues = {"NAME","SUMMARY","EDUCATION","SKILLS","TARGET_ROLES"})`.
 - `docs/errores.md`: fila de `PROFILE_INCOMPLETE` con `errors[]`; filas de los cinco `COMPLETION_*_REQUIRED` (endpoint `POST …/completion`, campo, rótulo, origen `ErrorCatalog.COMPLETION_REQUIREMENTS`, prueba).
@@ -202,3 +202,18 @@ Reglas 1 a 9 de arriba, con dos cambios: esta parte **sí** lleva una migración
 - **Crear** `ProfileEventsEndToEndIT` (Testcontainers `postgres:16-alpine` y `rabbitmq:3.13-management-alpine` con `@ServiceConnection`; cola de prueba ligada a `perfil.events` con la clave `perfil.profesional-actualizado`): finalizar → un mensaje con la carga del esquema; editar un perfil `COMPLETED` → otro mensaje con `actualizadoEn` mayor; editar un borrador → ninguno; finalización revertida por el disparador de T-3 → ninguno; broker detenido durante la escritura → 200 y la fila pendiente; broker de nuevo arriba y `relayPending()` → un mensaje con el mismo `message_id`.
 - Postman: sin peticiones nuevas (el evento no se ve por HTTP); `docs/errores.md` sin códigos nuevos.
 - **Cierre:** `./mvnw.cmd -B clean verify`; cobertura ≥ 90 % de las clases del PR; diff ≤ 1000.
+
+## Resultados del PR 1 (10-oct-2026)
+
+**T-0.** Línea base: la capa anterior (CM-66) tiene `clean verify` en verde (776 unitarias + 235 IT) y Newman de la colección completa sin fallos (574 peticiones). Las piezas citadas existen: `findByIdForUpdate`, `ProfessionalSummary.MAX_LENGTH`, `SKILL_NOT_ALLOWED` y `V8__alinear_habilidad_perfil.sql`. Reproducción en `evidencia-antes.md`: el punto (b) de la tarjeta no es posible porque la columna `resumen` es `VARCHAR(2000)` (Desvío 38 de la cola); el IT que la tarjeta pedía para 2001 guardado se reemplazó por uno con 2000 (`completeProfile_shouldActivate_whenStoredSummaryHasTheMaximumLength`) y el caso de 2001 queda en la prueba de dominio con un perfil reconstruido.
+
+**T-1 y T-2.** `CompletionRequirement`, `IncompleteProfileException` con la lista tipada, `ProfessionalProfile.getMissingRequirements()` con el resumen vacío o de más de 2000 puntos de código como faltante, los cinco `COMPLETION_*_REQUIRED`, `ErrorCatalog.COMPLETION_REQUIREMENTS` y `errors[]` en el 422 en el orden de los criterios. Rojo: no capturado (código antes que las pruebas; Desvío 34). Verde: `ProfessionalProfileTest` (+ 9 pruebas de `complete_…`), `ProfileControllerTest.postCompletion_…` (5 pruebas), `ErrorCatalogTest.completionRequirements_shouldCoverEveryRequirement_whenCatalogLoaded` y `ApiExceptionHandlerTest`.
+
+**T-3.** `CompletionEndToEndIT` 8 pruebas: 200 con los cinco requisitos, sin experiencia, resumen y habilidades faltantes, perfil nuevo con los cinco, resumen de 2000 guardado, 500 genérico con rollback ante un disparador que falla (sin `forced failure` en el cuerpo), 403 y veinte repeticiones (un 200 y diecinueve 409).
+
+**T-4.** `ProfileWriteLockIT` (+3): gana la finalización y la baja de la única habilidad se rechaza con `SKILL_NOT_ALLOWED`; gana la baja y la finalización se rechaza con `[SKILLS]`; dos finalizaciones simultáneas activan una vez.
+
+**T-5.** Se borraron `requestReview` (controlador, servicio y agregado), `markAsReviewed` y `returnForRevision` (sin llamadores) y sus siete pruebas (`ProfileControllerTest` 2, `ProfileAppServiceTest` 2, `ProfessionalProfileTest` 2 y la fila del caso de bloqueo de `writeUseCases`); `IN_REVIEW` y la finalización desde él se conservan (`complete_shouldSucceed_whenProfileIsInReview`). `postReviewRequests_shouldReturn404_whenRouteDoesNotExist` fija el 404 `ROUTE_NOT_FOUND`.
+
+**T-6 (código).** OpenAPI de `POST …/completion` con los cinco requisitos, los estados 200, 401, 403, 404, 409, 422 (con ejemplo) y 500, y `missingRequirements` con sus valores permitidos (`OpenApiDocumentIT.completion_shouldDocumentRequirements_whenApiDocsAreGenerated`); `docs/errores.md` con `PROFILE_INCOMPLETE` y la tabla de los cinco códigos. Cierre: `clean verify` BUILD SUCCESS, 795 unitarias + 247 de integración, 0 fallos (`ejecucion/verify-CM-67-1.log`). Cobertura: `ProfessionalProfile` 131/131 y 66/66; `CompletionRequirement` 6/6; `IncompleteProfileException` 4/4; `ErrorCatalog` 93/93 y 2/2; `ApiExceptionHandler` 69/69 y 29/30 (previa); `ProfileAppService` 99/100 y 40/40; global 97,3 % líneas y 98,6 % ramas. La carpeta de Postman y DES-02 van en el PR siguiente (`CM-67-postman-finalizacion`, regla de 800 líneas).
+

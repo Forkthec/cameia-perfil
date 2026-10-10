@@ -511,24 +511,6 @@ class ProfileAppServiceTest {
     }
 
     @Test
-    void requestReview_throwsIncompleteWhenProfileLacksRequiredFields() {
-        var profile = freshProfile();
-        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
-        assertThatThrownBy(() -> service.requestReview(UUID.randomUUID(), SVC_UID))
-                .isInstanceOf(IncompleteProfileException.class);
-        verify(repository, never()).save(any());
-    }
-
-    @Test
-    void requestReview_changesStatusToInReview() {
-        var profile = completeProfile();
-        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
-        service.requestReview(UUID.randomUUID(), COMPLETE_UID);
-        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_REVIEW);
-        verify(repository).save(profile);
-    }
-
-    @Test
     void addTargetRole_addsRoleAndSaves() {
         var profile = freshProfile();
         var roleId = UUID.randomUUID();
@@ -572,7 +554,7 @@ class ProfileAppServiceTest {
 
     // ── bloqueo del perfil en toda escritura ───────────────────────────────
 
-    /** Los 13 casos de uso que modifican un perfil, cada uno con una llamada que no necesita datos válidos. */
+    /** Los 12 casos de uso que modifican un perfil, cada uno con una llamada que no necesita datos válidos. */
     static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> writeUseCases() {
         var id = UUID.randomUUID();
         return java.util.stream.Stream.of(
@@ -587,7 +569,6 @@ class ProfileAppServiceTest {
                         new UpdateSalaryExpectationCommand(id, SVC_UID, new BigDecimal("3500000")))),
                 use("addSkill", s -> s.addSkill(new AddSkillCommand(id, SVC_UID, "Java", "ADVANCED"))),
                 use("removeSkill", s -> s.removeSkill(id, SVC_UID, UUID.randomUUID())),
-                use("requestReview", s -> s.requestReview(id, SVC_UID)),
                 use("addTargetRole", s -> s.addTargetRole(new AddTargetRoleCommand(id, SVC_UID, UUID.randomUUID()))),
                 use("updateTargetRole", s -> s.updateTargetRole(
                         new UpdateTargetRoleCommand(id, SVC_UID, UUID.randomUUID(), UUID.randomUUID()))),

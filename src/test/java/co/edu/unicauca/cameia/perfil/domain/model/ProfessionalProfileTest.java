@@ -16,8 +16,12 @@ import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundExceptio
 import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
@@ -384,25 +388,6 @@ class ProfessionalProfileTest {
         assertThat(profile.getProfileSkills()).hasSize(1);
     }
 
-    // ── requestReview() ───────────────────────────────────────────────────
-
-    @Test
-    void requestReview_throwsIncompleteWhenProfileIsNotComplete() {
-        var profile = ProfessionalProfile.create(UID);
-
-        assertThatThrownBy(profile::requestReview)
-                .isInstanceOf(IncompleteProfileException.class);
-    }
-
-    @Test
-    void requestReview_changesStatusToInReviewWhenComplete() {
-        var profile = buildCompleteProfile();
-
-        profile.requestReview();
-
-        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_REVIEW);
-    }
-
     // ── updateTargetRole() ───────────────────────────────────────────────
 
     @Test
@@ -514,11 +499,101 @@ class ProfessionalProfileTest {
         assertThat(profile.getSummary()).isNotNull();
     }
 
+    // ── complete() y getMissingRequirements() ─────────────────────────────
+
     @Test
-    @DisplayName("Los requisitos faltantes usan los códigos del backlog, en orden fijo")
-    void getMissingRequirements_shouldUseBacklogCodes_whenProfileIsEmpty() {
-        assertThat(ProfessionalProfile.create(UID).getMissingRequirements())
-                .containsExactly("NAME", "SUMMARY", "EDUCATION", "SKILLS", "TARGET_ROLES");
+    @DisplayName("Un perfil nuevo lista los cinco requisitos en el orden de los criterios")
+    void complete_shouldListFiveInOrder_whenProfileIsNew() {
+        var profile = ProfessionalProfile.create(UID);
+
+        assertThatThrownBy(profile::complete)
+                .isInstanceOfSatisfying(IncompleteProfileException.class, e -> assertThat(e.getMissingRequirements())
+                        .containsExactly(CompletionRequirement.NAME, CompletionRequirement.SUMMARY,
+                                CompletionRequirement.EDUCATION, CompletionRequirement.SKILLS, CompletionRequirement.TARGET_ROLES));
+    }
+
+    @Test
+    @DisplayName("Sin resumen ni habilidades se listan solo esos dos y el perfil sigue en Borrador")
+    void complete_shouldListSummaryAndSkills_whenBothAreMissing() {
+        var profile = reconstituted("Ana", null, ProfileStatus.IN_PROGRESS, true, false, true);
+
+        assertThatThrownBy(profile::complete)
+                .isInstanceOfSatisfying(IncompleteProfileException.class, e -> assertThat(e.getMissingRequirements())
+                        .containsExactly(CompletionRequirement.SUMMARY, CompletionRequirement.SKILLS));
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_PROGRESS);
+    }
+
+    @ParameterizedTest(name = "formación={0} habilidad={1} rol={2}")
+    @CsvSource({"true,true,true", "true,true,false", "true,false,true", "true,false,false",
+            "false,true,true", "false,true,false", "false,false,true", "false,false,false"})
+    @DisplayName("Solo se listan las colecciones vacías, en el orden de los criterios")
+    void complete_shouldListOnlyMissing_whenSomeCollectionsAreEmpty(boolean education, boolean skill, boolean role) {
+        var profile = reconstituted("Ana", "Resumen válido.", ProfileStatus.IN_PROGRESS, education, skill, role);
+        var expected = new ArrayList<CompletionRequirement>();
+        if (!education) expected.add(CompletionRequirement.EDUCATION);
+        if (!skill) expected.add(CompletionRequirement.SKILLS);
+        if (!role) expected.add(CompletionRequirement.TARGET_ROLES);
+
+        assertThat(profile.getMissingRequirements()).containsExactlyElementsOf(expected);
+    }
+
+    @ParameterizedTest(name = "resumen de 2000 puntos de código: {0}")
+    @ValueSource(strings = {"a", "😀"})
+    @DisplayName("Un resumen de exactamente 2000 puntos de código permite finalizar")
+    void complete_shouldSucceed_whenSummaryHasExactly2000CodePoints(String unit) {
+        var profile = reconstituted("Ana", unit.repeat(2000), ProfileStatus.IN_PROGRESS, true, true, true);
+
+        profile.complete();
+
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("Un resumen guardado con 2001 puntos de código se lista como faltante")
+    void complete_shouldListSummary_whenStoredSummaryHas2001CodePoints() {
+        var profile = reconstituted("Ana", "a".repeat(2001), ProfileStatus.IN_PROGRESS, true, true, true);
+
+        assertThat(profile.getMissingRequirements()).containsExactly(CompletionRequirement.SUMMARY);
+        assertThatThrownBy(profile::complete).isInstanceOf(IncompleteProfileException.class);
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_PROGRESS);
+    }
+
+    @ParameterizedTest(name = "[{0}]")
+    @ValueSource(strings = {"", "   "})
+    @DisplayName("Un nombre o un resumen guardados en blanco se listan como faltantes")
+    void complete_shouldListNameAndSummary_whenStoredTextsAreBlank(String blank) {
+        var profile = reconstituted(blank, blank, ProfileStatus.IN_PROGRESS, true, true, true);
+
+        assertThat(profile.getMissingRequirements()).containsExactly(CompletionRequirement.NAME, CompletionRequirement.SUMMARY);
+    }
+
+    @Test
+    @DisplayName("Sin experiencia laboral el perfil se puede finalizar")
+    void complete_shouldSucceed_whenProfileHasNoWorkExperience() {
+        var profile = reconstituted("Ana", "Resumen válido.", ProfileStatus.IN_PROGRESS, true, true, true);
+
+        profile.complete();
+
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
+        assertThat(profile.getWorkExperiences()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Un perfil en revisión se puede finalizar")
+    void complete_shouldSucceed_whenProfileIsInReview() {
+        var profile = reconstituted("Ana", "Resumen válido.", ProfileStatus.IN_REVIEW, true, true, true);
+
+        profile.complete();
+
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("Un perfil ya activo responde que ya está activo antes que cualquier requisito faltante")
+    void complete_shouldRejectAlreadyCompleted_beforeCheckingRequirements() {
+        var profile = reconstituted("Ana", "Resumen válido.", ProfileStatus.COMPLETED, true, false, true);
+
+        assertThatThrownBy(profile::complete).isInstanceOf(ProfileAlreadyCompletedException.class);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
@@ -611,8 +686,7 @@ class ProfessionalProfileTest {
     @Test
     @DisplayName("Un perfil en revisión puede quedarse sin su última formación")
     void removeEducation_shouldRemoveLast_whenProfileIsInReview() {
-        var profile = buildCompleteProfile();
-        profile.requestReview();
+        var profile = reconstituted("Ana", "Resumen válido.", ProfileStatus.IN_REVIEW, true, true, true);
         var only = profile.getEducations().get(0);
 
         profile.removeEducation(only.getId());
@@ -690,6 +764,19 @@ class ProfessionalProfileTest {
 
         assertThat(rebuilt.getCreatedAt()).isEqualTo(created);
         assertThat(rebuilt.getUpdatedAt()).isEqualTo(updated);
+    }
+
+    /** Perfil reconstruido con los textos dados (sin validarlos) y, si se pide, una formación, una habilidad y un rol. */
+    private static ProfessionalProfile reconstituted(String name, String summary, ProfileStatus status,
+            boolean education, boolean skill, boolean role) {
+        var now = Instant.parse("2026-10-10T00:00:00Z");
+        return ProfessionalProfile.reconstitute(ProfileId.generate(), UID,
+                name == null ? null : new ProfileName(name), summary == null ? null : new ProfessionalSummary(summary),
+                null, null, DataProvenance.MANUAL, status, ReviewStatus.PENDING_REVIEW, now, now,
+                role ? List.of(role(UUID.randomUUID(), "Backend Dev")) : List.of(), List.of(),
+                education ? List.of(edu()) : List.of(),
+                skill ? List.of(new ProfileSkill(UUID.randomUUID(), SkillName.of("Java"), SkillLevel.ADVANCED, DataProvenance.MANUAL))
+                        : List.of());
     }
 
     private static ProfileSkill skill(String name) {

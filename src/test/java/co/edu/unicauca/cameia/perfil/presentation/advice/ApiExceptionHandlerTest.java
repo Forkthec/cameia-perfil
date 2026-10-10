@@ -11,6 +11,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
+import co.edu.unicauca.cameia.perfil.domain.model.CompletionRequirement;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
@@ -173,13 +174,17 @@ class ApiExceptionHandlerTest {
     @Test
     @DisplayName("El perfil incompleto responde la forma común con los requisitos que faltan")
     void incompleteProfile_shouldReturnCommonShapeWithMissingRequirements_whenThrown() throws Exception {
-        toThrow = () -> new IncompleteProfileException(List.of("resumen", "habilidades"));
+        toThrow = () -> new IncompleteProfileException(List.of(CompletionRequirement.SUMMARY, CompletionRequirement.SKILLS));
 
         mockMvc.perform(get("/boom"))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("PROFILE_INCOMPLETE"))
                 .andExpect(jsonPath("$.detail").value("Todavía no cumples estos requisitos:"))
                 .andExpect(jsonPath("$.missingRequirements.length()").value(2))
+                .andExpect(jsonPath("$.missingRequirements[0]").value("SUMMARY"))
+                .andExpect(jsonPath("$.errors.length()").value(2))
+                .andExpect(jsonPath("$.errors[0].field").value("summary"))
+                .andExpect(jsonPath("$.errors[1].field").value("skills"))
                 .andExpect(jsonPath("$.requestId").isNotEmpty())
                 .andExpect(header().exists("X-Request-Id"));
     }

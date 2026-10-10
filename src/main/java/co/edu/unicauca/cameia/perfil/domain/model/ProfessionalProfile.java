@@ -272,32 +272,40 @@ public final class ProfessionalProfile {
 
     // ── Transiciones de estado ───────────────────────────────────────────
 
-    /** Flujo futuro (IA + revisión humana). Conservado en CM-04/BE-04. */
-    public void requestReview() {
-        if (!isComplete()) throw new IncompleteProfileException(getMissingRequirements());
-        this.status = ProfileStatus.IN_REVIEW;
-        touch();
-    }
-
-    /** Flujo manual MVP (CM-22): IN_PROGRESS → COMPLETED en una sola transacción. */
+    /**
+     * Finaliza el perfil: de {@code IN_PROGRESS} (o {@code IN_REVIEW}) a {@code COMPLETED} en una sola transacción.
+     *
+     * <p>Un perfil que ya está activo responde antes que cualquier requisito faltante.</p>
+     *
+     * @throws ProfileAlreadyCompletedException si el perfil ya está activo
+     * @throws IncompleteProfileException       con los requisitos que faltan, en el orden de los criterios
+     */
     public void complete() {
         if (this.status == ProfileStatus.COMPLETED) throw new ProfileAlreadyCompletedException();
-        List<String> missing = getMissingRequirements();
+        List<CompletionRequirement> missing = getMissingRequirements();
         if (!missing.isEmpty()) throw new IncompleteProfileException(missing);
         this.status = ProfileStatus.COMPLETED;
         touch();
     }
 
-    public void markAsReviewed() { this.status = ProfileStatus.COMPLETED; this.reviewStatus = ReviewStatus.REVIEWED; touch(); }
-    public void returnForRevision() { this.status = ProfileStatus.IN_PROGRESS; touch(); }
-
-    public List<String> getMissingRequirements() {
-        List<String> missing = new ArrayList<>();
-        if (name == null || name.value().isBlank()) missing.add("NAME");
-        if (summary == null) missing.add("SUMMARY");
-        if (educations.isEmpty()) missing.add("EDUCATION");
-        if (profileSkills.isEmpty()) missing.add("SKILLS");
-        if (targetRoles.isEmpty()) missing.add("TARGET_ROLES");
+    /**
+     * Requisitos de finalización que el perfil no cumple, en el orden de los criterios de aceptación.
+     *
+     * <p>Un resumen guardado con más de {@link ProfessionalSummary#MAX_LENGTH} puntos de código (de antes de que
+     * existiera el límite) cuenta como faltante: leerlo no lo valida, finalizar sí.</p>
+     *
+     * @return los requisitos que faltan; vacío si el perfil puede finalizarse
+     */
+    public List<CompletionRequirement> getMissingRequirements() {
+        List<CompletionRequirement> missing = new ArrayList<>();
+        if (name == null || name.value().isBlank()) missing.add(CompletionRequirement.NAME);
+        if (summary == null || summary.value().isBlank()
+                || SingleLineText.length(summary.value()) > ProfessionalSummary.MAX_LENGTH) {
+            missing.add(CompletionRequirement.SUMMARY);
+        }
+        if (educations.isEmpty()) missing.add(CompletionRequirement.EDUCATION);
+        if (profileSkills.isEmpty()) missing.add(CompletionRequirement.SKILLS);
+        if (targetRoles.isEmpty()) missing.add(CompletionRequirement.TARGET_ROLES);
         return missing;
     }
 

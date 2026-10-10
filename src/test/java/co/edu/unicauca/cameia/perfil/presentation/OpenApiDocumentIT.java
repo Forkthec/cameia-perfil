@@ -190,4 +190,19 @@ class OpenApiDocumentIT {
         assertThat(response.body()).contains("SKILL_LIMIT_REACHED", "SKILL_NOT_ALLOWED", "SKILL_ALREADY_EXISTS",
                 "SKILL_NAME_INVALID_CHARACTERS");
     }
+
+    @Test
+    @DisplayName("El OpenAPI de la finalización publica los cinco requisitos, sus códigos y no publica review-requests")
+    void completion_shouldDocumentRequirements_whenApiDocsAreGenerated() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+
+        var schemas = JsonMapper.builder().build().readTree(response.body()).get("components").get("schemas");
+        var missing = schemas.get("ApiError").get("properties").get("missingRequirements").get("items");
+        assertThat(missing.get("enum").valueStream().map(v -> v.asString()).toList())
+                .containsExactly("NAME", "SUMMARY", "EDUCATION", "SKILLS", "TARGET_ROLES");
+        assertThat(response.body()).contains("PROFILE_INCOMPLETE", "COMPLETION_TARGET_ROLES_REQUIRED", "PROFILE_ALREADY_COMPLETED")
+                .doesNotContain("review-requests");
+    }
 }

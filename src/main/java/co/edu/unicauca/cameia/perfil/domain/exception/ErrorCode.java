@@ -166,6 +166,16 @@ public enum ErrorCode {
     SUMMARY_INVALID_CHARACTERS,
     /** El nombre de la habilidad tiene un carácter de control. */
     SKILL_NAME_INVALID_CHARACTERS,
+    /** El perfil no puede pasar a Activo: falta el nombre. */
+    COMPLETION_NAME_REQUIRED,
+    /** El perfil no puede pasar a Activo: falta el resumen profesional. */
+    COMPLETION_SUMMARY_REQUIRED,
+    /** El perfil no puede pasar a Activo: falta la formación académica. */
+    COMPLETION_EDUCATION_REQUIRED,
+    /** El perfil no puede pasar a Activo: faltan las habilidades. */
+    COMPLETION_SKILLS_REQUIRED,
+    /** El perfil no puede pasar a Activo: faltan los roles objetivo. */
+    COMPLETION_TARGET_ROLES_REQUIRED,
     /** El perfil ya tiene el máximo de habilidades; no se agregó ninguna. */
     SKILL_LIMIT_REACHED,
     /** Un perfil activo no puede quedarse sin habilidades; no se eliminó nada. */
