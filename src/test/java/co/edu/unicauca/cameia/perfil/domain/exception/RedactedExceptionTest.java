@@ -1,4 +1,4 @@
-package co.edu.unicauca.cameia.perfil.presentation.advice;
+package co.edu.unicauca.cameia.perfil.domain.exception;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

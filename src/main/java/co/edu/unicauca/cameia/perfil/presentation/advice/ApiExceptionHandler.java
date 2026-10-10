@@ -2,6 +2,7 @@ package co.edu.unicauca.cameia.perfil.presentation.advice;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.BusinessException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
+import co.edu.unicauca.cameia.perfil.domain.exception.RedactedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import jakarta.validation.ConstraintViolation;
