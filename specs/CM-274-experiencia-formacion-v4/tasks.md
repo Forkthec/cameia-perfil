@@ -36,7 +36,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 - **Resultado (9-oct-2026):** los siete defectos se reprodujeron; las respuestas reales están en `evidencia-antes.md`. Entorno: jar de la cadena en el puerto 18082 y PostgreSQL desechable en el 55432 (el 5432 no se tocó). Las altas de formación y habilidad de preparación usan `level` `UNDERGRADUATE` y `skillName`, los nombres reales de los campos.
 
-## [ ] T-A1 · `SingleLineText` — ≤ 30 min, ≈ 120 líneas
+## [x] T-A1 · `SingleLineText` — ≤ 30 min, ≈ 120 líneas
 
 - **Crear** `domain/model/SingleLineText.java`:
   ```java
@@ -92,7 +92,9 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 - **Trampa:** las pruebas con caracteres invisibles se escriben con escapes `\uXXXX` en el código fuente, nunca con el carácter pegado (la herramienta de edición los convierte: verifica con `git diff` que el archivo contiene la barra y la `u`).
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=SingleLineTextTest" test` → 0 fallos.
 
-## [ ] T-A2 · Acumulador de errores en `InvalidFieldsException` — ≤ 20 min, ≈ 80 líneas
+- **Resultado (9-oct-2026):** rojo: `SingleLineTextTest` no compilaba (faltaba la clase). Verde: 24/24 (`./mvnw -B test -Dtest=SingleLineTextTest`). `hasControlCharacter` se escribió aquí porque las mismas pruebas la cubren; T-A3 ya no la crea. Los invisibles de la prueba están con escapes `\uXXXX` (la herramienta de edición los convertía en el carácter real).
+
+## [x] T-A2 · Acumulador de errores en `InvalidFieldsException` — ≤ 20 min, ≈ 80 líneas
 
 - **Modificar** `domain/exception/InvalidFieldsException.java`: agregar la clase anidada
   ```java
@@ -123,7 +125,9 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 - **Pruebas** `domain/exception/InvalidFieldsExceptionTest.java`: `throwIfAny_shouldDoNothing_whenNoErrors`; `throwIfAny_shouldThrowEveryField_whenTwoFieldsFail` (`company`/`COMPANY_TOO_LONG`, `position`/`POSITION_TOO_LONG` → dos errores en ese orden); `add_shouldKeepFirstError_whenFieldFailsTwice` (`endDate` con `END_DATE_NOT_ALLOWED` y luego `END_DATE_IN_THE_FUTURE` → solo el primero); `constructor_shouldRejectEmptyList_whenNoErrors` (`IllegalArgumentException`); `getErrors_shouldBeUnmodifiable_whenReturned`.
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=InvalidFieldsExceptionTest" test`.
 
-## [ ] T-A3 · Restricciones de borde: largo y reglas del dominio — ≤ 30 min, ≈ 240 líneas
+- **Resultado (9-oct-2026):** rojo: `InvalidFieldsExceptionTest` no compilaba (faltaba `Collector`). Verde: 8/8 (`./mvnw -B test -Dtest=InvalidFieldsExceptionTest`). Se agregaron también `of(FieldError)` y `Collector.add(FieldError)`, que pide T-A3. La prueba del campo repetido usa `END_DATE_NOT_ALLOWED` y `END_DATE_BEFORE_START_DATE` porque `END_DATE_IN_THE_FUTURE` aún no existe.
+
+## [x] T-A3 · Restricciones de borde: largo y reglas del dominio — ≤ 30 min, ≈ 240 líneas
 
 - **Por qué así:** cada regla de forma se escribe una sola vez. `@NotBlank` y `@CodePointSize` informan la ausencia y el largo (código y mensaje desde `ErrorCatalog`, como hoy). Los caracteres de control, el formato de mes y las opciones de los enumerados los decide el dominio (o `CommandValues`, que ya lanza `InvalidFieldsException` con su código y su mensaje); `@DomainRule` ejecuta esa misma regla en el borde y toma de la excepción el código y el mensaje. Así todos los errores de forma salen a la vez sin copiar ninguna regla en un validador. Es el patrón vigente en `cameia-cuentas` (`presentation/dto/DomainRule.java`); aquí se escribe completo porque los servicios no comparten código.
 - **Modificar** `domain/model/SingleLineText.java` (de T-A1): agregar
@@ -285,6 +289,8 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
   - `CommandValuesTest`: sin cambios (debe seguir en verde).
 - **Comandos:** `./mvnw.cmd -q -B "-Dtest=*ValidatorTest,SingleLineTextTest,CommandValuesTest,ErrorCatalogTest" test`.
 - **Detente si** `HibernateConstraintValidatorContext` no está en el classpath (`git grep hibernate-validator pom.xml` y `./mvnw.cmd dependency:tree`): llega con `spring-boot-starter-validation`; si falta, reporta antes de agregar nada.
+
+- **Resultado (9-oct-2026):** rojo: `DomainRuleValidatorTest` y `CodePointSizeValidatorTest` no compilaban (faltaban las restricciones). Verde: `DomainRuleValidatorTest` 32/32, `CodePointSizeValidatorTest` 5/5, `ErrorCatalogTest` 6/6 con la nueva `constraintNames`, `CommandValuesTest` 21/21, `ApiExceptionHandlerTest` 48/48, `ArquitecturaTest` 8/8 (152 pruebas, BUILD SUCCESS). `hasControlCharacter` y `InvalidFieldsException.of(FieldError)` ya existían por T-A1 y T-A2. Se agregó `ApiExceptionHandlerDomainRuleTest` (2 pruebas) porque la tarjeta no probaba el cambio de `fieldProblems` por la ruta HTTP real. Los 5 códigos `*_INVALID_CHARACTERS` se documentan en `docs/errores.md` en T-A7. hibernate-validator llega con `spring-boot-starter-validation` (verificado en `pom.xml`).
 
 ## [ ] T-A4 · Reloj UTC — ≤ 15 min, ≈ 30 líneas
 

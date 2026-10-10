@@ -4,6 +4,8 @@ import co.edu.unicauca.cameia.perfil.domain.exception.BusinessException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+import jakarta.validation.ConstraintViolation;
+import org.hibernate.validator.engine.HibernateConstraintViolation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
@@ -13,6 +15,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -196,11 +199,22 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         var owner = target != null ? target.getClass().getSimpleName() : ex.getBindingResult().getObjectName();
         var firstPerField = new LinkedHashMap<String, FieldProblem>();
         ex.getBindingResult().getFieldErrors().forEach(fe -> {
-            var code = ErrorCatalog.fieldCode(owner + "." + fe.getField() + "." + fe.getCode());
-            var message = ErrorCatalog.fieldMessage(code);
+            // Una regla del dominio ejecutada en el borde trae su propio código y mensaje; las demás salen del catálogo.
+            var domainCode = domainRuleCode(fe);
+            var code = domainCode != null ? domainCode : ErrorCatalog.fieldCode(owner + "." + fe.getField() + "." + fe.getCode());
+            var message = domainCode != null ? fe.getDefaultMessage() : ErrorCatalog.fieldMessage(code);
             firstPerField.putIfAbsent(fe.getField(), new FieldProblem(fe.getField(), code, message));
         });
         return List.copyOf(firstPerField.values());
+    }
+
+    /** @return el código que una regla del dominio adjuntó a la violación, o {@code null} para cualquier otra restricción */
+    private static ErrorCode domainRuleCode(FieldError fe) {
+        if (fe.contains(ConstraintViolation.class)
+                && fe.unwrap(ConstraintViolation.class) instanceof HibernateConstraintViolation<?> violation) {
+            return violation.getDynamicPayload(ErrorCode.class);
+        }
+        return null;
     }
 
 }

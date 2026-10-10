@@ -2,6 +2,7 @@ package co.edu.unicauca.cameia.perfil.domain.model;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException.FieldError;
 
 import java.time.YearMonth;
 import java.util.Objects;
@@ -15,6 +16,13 @@ import java.util.UUID;
  * anterior a {@code startDate}.
  */
 public final class Education {
+
+    /** Rechazo de una institución con un carácter de control. */
+    public static final FieldError INSTITUTION_CHARACTERS =
+            new FieldError("institution", ErrorCode.INSTITUTION_INVALID_CHARACTERS, "La institución tiene caracteres no permitidos.");
+    /** Rechazo de un título obtenido con un carácter de control. */
+    public static final FieldError DEGREE_CHARACTERS =
+            new FieldError("degree", ErrorCode.DEGREE_INVALID_CHARACTERS, "El título obtenido tiene caracteres no permitidos.");
 
     private static final int MAX_TEXT_LENGTH = 500;
 

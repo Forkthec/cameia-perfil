@@ -109,6 +109,16 @@ public enum ErrorCode {
     DESCRIPTION_TOO_LONG,
     /** El área de estudio de la formación supera su largo máximo. */
     FIELD_OF_STUDY_TOO_LONG,
+    /** La empresa tiene un carácter de control que el campo no admite. */
+    COMPANY_INVALID_CHARACTERS,
+    /** El cargo tiene un carácter de control que el campo no admite. */
+    POSITION_INVALID_CHARACTERS,
+    /** La descripción tiene un carácter de control que el campo no admite. */
+    DESCRIPTION_INVALID_CHARACTERS,
+    /** La institución tiene un carácter de control que el campo no admite. */
+    INSTITUTION_INVALID_CHARACTERS,
+    /** El título obtenido tiene un carácter de control que el campo no admite. */
+    DEGREE_INVALID_CHARACTERS,
     /** Falta la empresa de la experiencia laboral. */
     COMPANY_REQUIRED,
     /** Falta el cargo de la experiencia laboral. */
