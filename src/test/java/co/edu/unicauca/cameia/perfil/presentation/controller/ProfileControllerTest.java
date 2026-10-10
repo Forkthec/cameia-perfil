@@ -393,6 +393,77 @@ class ProfileControllerTest {
     }
 
     @Test
+    @DisplayName("Empresa y cargo de 100 y descripción de 500 se aceptan en el borde: el límite exacto no se rechaza")
+    void addWorkExperience_shouldAccept_whenTextIsAtLimit() throws Exception {
+        when(profileAppService.addWorkExperience(any())).thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-exp")));
+        var json = "{\"company\":\"" + "a".repeat(100) + "\",\"position\":\"" + "b".repeat(100) + "\",\"description\":\""
+                + "c".repeat(500) + "\",\"employmentStatus\":\"CURRENT\"}";
+
+        postExperience(json).andExpect(status().isCreated());
+
+        var command = ArgumentCaptor.forClass(co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand.class);
+        verify(profileAppService).addWorkExperience(command.capture());
+        assertThat(command.getValue().company()).hasSize(100);
+        assertThat(command.getValue().description()).hasSize(500);
+    }
+
+    @Test
+    @DisplayName("Institución y título de 150 se aceptan en el borde: el límite exacto no se rechaza")
+    void addEducation_shouldAccept_whenTextIsAtLimit() throws Exception {
+        when(profileAppService.addEducation(any())).thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-edu")));
+        var json = "{\"institution\":\"" + "a".repeat(150) + "\",\"degree\":\"" + "b".repeat(150)
+                + "\",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}";
+
+        postEducation(json).andExpect(status().isCreated());
+
+        var command = ArgumentCaptor.forClass(co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand.class);
+        verify(profileAppService).addEducation(command.capture());
+        assertThat(command.getValue().institution()).hasSize(150);
+        assertThat(command.getValue().degree()).hasSize(150);
+    }
+
+    @Test
+    @DisplayName("Una experiencia terminada sin fecha de fin responde 422 con el texto del criterio en endDate")
+    void addWorkExperience_shouldReturnEndDateRequired_whenEndedWithoutEndDate() throws Exception {
+        when(profileAppService.addWorkExperience(any())).thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException(
+                java.util.List.of(new co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException.FieldError(
+                        "endDate", co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.END_DATE_REQUIRED, "Ingresa la fecha de fin."))));
+
+        expectFieldError(postExperience("{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"ENDED\",\"startDate\":\"2024-01\"}"),
+                "endDate", "END_DATE_REQUIRED", "Ingresa la fecha de fin.");
+    }
+
+    @ParameterizedTest(name = "{0} {1}")
+    @org.junit.jupiter.params.provider.CsvSource({
+            "POST, /work-experiences",
+            "DELETE, /work-experiences/{child}",
+            "POST, /educations",
+            "DELETE, /educations/{child}"})
+    @DisplayName("Un perfil de otro Usuario responde 403 con el texto del criterio en las cuatro rutas de experiencia y formación")
+    void workHistory_shouldReturn403_whenProfileBelongsToAnotherUser(String method, String route) throws Exception {
+        var denied = new ProfileAccessDeniedException();
+        switch (method + " " + route) {
+            case "POST /work-experiences" -> when(profileAppService.addWorkExperience(any())).thenThrow(denied);
+            case "POST /educations" -> when(profileAppService.addEducation(any())).thenThrow(denied);
+            case "DELETE /work-experiences/{child}" -> when(profileAppService.removeWorkExperience(any(), any(), any())).thenThrow(denied);
+            default -> when(profileAppService.removeEducation(any(), any(), any())).thenThrow(denied);
+        }
+        var path = "/api/v1/profiles/" + UUID.randomUUID() + route.replace("{child}", UUID.randomUUID().toString());
+        var request = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request(
+                org.springframework.http.HttpMethod.valueOf(method), path).header("X-User-Id", "uid-other");
+        if (method.equals("POST")) {
+            request.contentType(MediaType.APPLICATION_JSON).content(route.contains("educations")
+                    ? "{\"institution\":\"U\",\"degree\":\"T\",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}"
+                    : EXPERIENCE_BASE + "}");
+        }
+
+        mockMvc.perform(request)
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PROFILE_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.detail").value("No encontramos lo que buscabas."));
+    }
+
+    @Test
     @DisplayName("Agregar la quinta experiencia responde 409 con el máximo")
     void addWorkExperience_shouldReturn409_whenLimitReached() throws Exception {
         when(profileAppService.addWorkExperience(any()))

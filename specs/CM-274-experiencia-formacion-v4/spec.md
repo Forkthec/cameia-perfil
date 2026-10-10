@@ -76,7 +76,7 @@ Clases de prueba (todas nuevas o existentes en `src/test/java/co/edu/unicauca/ca
 | 2.4.21 | 422 en `startDate` «La experiencia laboral no puede iniciar antes del mes en que cumpliste 15 años.» | REQ-EF-60 | `WorkExperienceTest.create_shouldRejectStart_whenBeforeFifteenthBirthday` | `422 inicio antes de los 15 años (CA-2.4.21)` (PR 6) |
 | 2.4.22 | 201 sin inicio, fin en el mes de los 15 años | REQ-EF-61 | `WorkExperienceTest.create_shouldAcceptEnd_whenNoStartAndEndIsMonthOfFifteenthBirthday` | `201 sin inicio, fin a los 15 años (CA-2.4.22)` (PR 6) |
 | 2.4.23 | 422 en `endDate` «La fecha de fin no puede ser anterior al mes en que cumpliste 15 años.» | REQ-EF-61 | `WorkExperienceTest.create_shouldRejectEnd_whenNoStartAndEndIsBeforeFifteenthBirthday` | `422 sin inicio, fin antes de los 15 años (CA-2.4.23)` (PR 6) |
-| 2.4.24 | 201 inicio en el mes actual | REQ-EF-26 | `WorkExperienceTest.create_shouldAccept_whenStartIsCurrentMonth` · `WorkHistoryEndToEndIT.addWorkExperience_shouldAcceptNovember_whenUtcIsAlreadyNovember` (RT-07-CA04) | `201 inicio en el mes actual (CA-2.4.24)` |
+| 2.4.24 | 201 inicio en el mes actual | REQ-EF-26 | `WorkExperienceTest.create_shouldAccept_whenStartIsCurrentMonth` · `WorkHistoryNovemberUtcIT.addWorkExperience_shouldAcceptNovember_whenUtcIsAlreadyNovember` (RT-07-CA04) | `201 inicio en el mes actual (CA-2.4.24)` |
 | 2.4.25 | 422 en `startDate` «La fecha no puede ser posterior al mes actual.» | REQ-EF-26 | `WorkExperienceTest.create_shouldRejectStartInTheFuture_whenStartIsNextMonth` | `422 inicio en el mes siguiente (CA-2.4.25)` |
 | 2.4.26 | 422 en `endDate` «La fecha no puede ser posterior al mes actual.» | REQ-EF-26 | `WorkExperienceTest.create_shouldRejectEndInTheFuture_whenEndIsNextMonth` | `422 fin en el mes siguiente (CA-2.4.26)` |
 | 2.4.27 | 201 institución y título de 150 | REQ-EF-31 | `ProfileControllerTest.addEducation_shouldAccept_whenTextIsAtLimit` | `201 institución y título de 150 (CA-2.4.27)` |
@@ -116,7 +116,7 @@ Clases de prueba (todas nuevas o existentes en `src/test/java/co/edu/unicauca/ca
 | RT-01-CA04 | Varios campos inválidos a la vez | REQ-EF-10 | `ProfileControllerTest.addWorkExperience_shouldReturnEveryInvalidField_whenSeveralFail` · `WorkExperienceTest.create_shouldReportEveryField_whenSeveralRulesFail` | `422 tres campos a la vez` |
 | RT-01-CA06 | Campos no esperados ignorados | REQ-EF-15 | `WorkHistoryEndToEndIT.addWorkExperience_shouldIgnoreUnexpectedFields_whenBodyHasThem` | `201 ignora id, profileId, status y firebaseUid` |
 | RT-01-CA08 | `<script>` se guarda y se devuelve literal | REQ-EF-16 | `WorkHistoryEndToEndIT.addWorkExperience_shouldReturnTextLiterally_whenTextHasMarkup` | `201 descripción con <script>` |
-| RT-07-CA04 | Mes actual en UTC | REQ-EF-26 | `WorkHistoryEndToEndIT.addWorkExperience_shouldAcceptNovember_whenUtcIsAlreadyNovember` | — (reloj fijo; Newman usa el mes real) |
+| RT-07-CA04 | Mes actual en UTC | REQ-EF-26 | `WorkHistoryNovemberUtcIT.addWorkExperience_shouldAcceptNovember_whenUtcIsAlreadyNovember` | — (reloj fijo; Newman usa el mes real) |
 
 ## 5. Requisitos (EARS)
 
