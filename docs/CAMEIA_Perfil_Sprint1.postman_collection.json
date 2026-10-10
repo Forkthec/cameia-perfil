@@ -4873,6 +4873,49 @@
           }
         },
         {
+          "name": "ERR DELETE /target-roles/%27%20OR%201=1 — 422 identificador hostil",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Content-Type problem+json con charset', () => { const t = pm.response.headers.get('Content-Type').toLowerCase(); pm.expect(t).to.include('application/problem+json'); pm.expect(t).to.include('charset=utf-8'); });",
+                  "pm.test('code TARGET_ROLE_ID_INVALID_FORMAT', () => pm.expect(pm.response.json().code).to.eql('TARGET_ROLE_ID_INVALID_FORMAT'));",
+                  "pm.test('detail del identificador', () => pm.expect(pm.response.json().detail).to.eql(\"El identificador del rol objetivo no es válido.\"));",
+                  "pm.test('Sin eco del valor hostil', () => pm.expect(pm.response.text()).to.not.match(/OR 1=1|OR%201/));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_d}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_d}}/target-roles/%27%20OR%201=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_d}}",
+                "target-roles",
+                "%27%20OR%201=1"
+              ]
+            }
+          }
+        },
+        {
           "name": "OK DELETE /target-roles/{roleId} — 204 último rol en Borrador (CA-2.11.9)",
           "event": [
             {
