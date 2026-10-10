@@ -27,7 +27,7 @@ Cada rechazo se registra en nivel `WARN` con `code`, `requestId` y `firebaseUid`
 | `PROFILE_NOT_FOUND` | 404 | Todo endpoint con `{id}` | — | «No encontramos lo que buscabas.» (RT-03) | `ProfileNotFoundException` | `ApiExceptionHandlerTest.businessException_shouldReturnItsStatusAndCode_whenThrown` |
 | `PROFILE_NOT_ALLOWED` | 403 | Todo endpoint con `{id}` | — | «No encontramos lo que buscabas.» (RT-03: el mismo texto que el perfil inexistente; el código distingue la causa) | `ProfileAccessDeniedException` | `ProfileControllerTest.getProfile_returns403WhenProfileIsOwnedByAnotherUser` |
 | `PROFILE_LIMIT_REACHED` | 409 | `POST /api/v1/profiles` | — | «Tu Plan Free permite 1 Perfil Profesional.» | `ProfileLimitReachedException` (el Usuario ya tenía el máximo de perfiles antes de pedir) | `ProfileAppServiceTest.createProfile_shouldThrowLimitReached_whenUserAlreadyHadOne`, `ProfileControllerTest.postProfiles_shouldReturn409WithPlanMessage_whenUserAlreadyHasProfile` |
-| `PROFILE_CREATION_TIMEOUT` | 503 | `POST /api/v1/profiles` | — | «Estamos creando tu perfil. Inténtalo de nuevo en unos segundos.» | `ProfileCreationTimeoutException` (otra creación del mismo Usuario no terminó en 5 s y PostgreSQL cortó la espera con el estado `55P03`; no se creó nada) | `ProfileCreationConcurrencyIT.createProfile_shouldFailFast_whenLockIsHeldLongerThanTimeout`, `ProfileControllerTest.postProfiles_shouldReturn503_whenCreationLockTimesOut` |
+| `PROFILE_CREATION_IN_PROGRESS` | 409 | `POST /api/v1/profiles` | — | «Estamos creando tu perfil. Inténtalo de nuevo en unos segundos.» | `ProfileCreationInProgressException` (otra creación del mismo Usuario no terminó en 2 s y PostgreSQL cortó la espera con el estado `55P03`; no se creó nada) | `ProfileCreationConcurrencyIT.createProfile_shouldFailFast_whenLockIsHeldLongerThanTimeout`, `ProfileControllerTest.postProfiles_shouldReturn409_whenCreationLockTimesOut` |
 | `PROFILE_UPDATE_IN_PROGRESS` | 409 | Todo `PATCH`, `POST` y `DELETE` sobre `/api/v1/profiles/{id}…` | — | «Estamos guardando otro cambio de tu perfil. Inténtalo de nuevo en unos segundos.» | `ProfileUpdateInProgressException` (otra escritura retuvo la fila del perfil más de 2 s y PostgreSQL cortó la espera con el estado `55P03`; no cambió nada) | `ProfileWriteLockIT.write_shouldFailFast_whenProfileRowIsLockedLongerThanTimeout`, `ApiExceptionHandlerTest.profileUpdateInProgress_shouldReturn409_whenThrown` |
 | `BIRTH_DATE_UNAVAILABLE` | 503 | `POST /api/v1/profiles/{id}/work-experiences` y `/educations` (desde la validación de fechas con la fecha de nacimiento) | — | «Ocurrió un error. Inténtalo de nuevo.» | `BirthDateUnavailableException`: la réplica local aún no tiene la fecha de nacimiento del Usuario (evento `cuenta.creada` sin procesar); no se guarda nada | `ApiExceptionHandlerTest.birthDateUnavailable_shouldReturn503_whenThrown` |
 | `PROFILE_ALREADY_COMPLETED` | 409 | `POST …/completion` | — | «Este perfil ya está activo.» (CA-2.5.11) | `ProfileAlreadyCompletedException` | `ApiExceptionHandlerTest.businessException_shouldReturnItsStatusAndCode_whenThrown` |
@@ -111,6 +111,14 @@ La clave es `ClaseDelDto.campo.Restricción`, porque `level` y `provenance` se r
 | `PROFESSIONAL_ROLE_ID_REQUIRED` | 422 | `POST …/target-roles`, `PATCH …/target-roles/{roleId}` | `professionalRoleId` | «Selecciona una opción.» | `AddTargetRoleRequest.professionalRoleId.NotNull`, `UpdateTargetRoleRequest.professionalRoleId.NotNull` | La misma y `ProfileControllerTest.updateTargetRole_shouldReturnRoleIdRequired_whenBodyIsEmpty` |
 
 Una restricción de Bean Validation sin fila en esta tabla responde `VALIDATION_FAILED` con «Revisa este campo.»; la prueba `ErrorCatalogTest.everyFieldConstraint_shouldHaveCode_whenDtosAreScanned` hace fallar el build hasta que se agregue.
+
+## Códigos retirados
+
+Un código publicado nunca se renombra ni se reutiliza: cuando una causa cambia, el código viejo se retira y se agrega uno nuevo. Los de esta tabla ya no los emite ninguna ruta; `ErrorCodeDocumentationTest` no los cruza con el enumerado.
+
+| Código | HTTP | Mensaje | Lo reemplaza | Motivo |
+|---|---|---|---|---|
+| `PROFILE_CREATION_TIMEOUT` | 503 | «Estamos creando tu perfil. Inténtalo de nuevo en unos segundos.» | `PROFILE_CREATION_IN_PROGRESS` (409) | Ya no se emite desde esta versión. Una creación que encuentra a otra en curso espera como máximo 2 s (presupuesto de DES-02) y responde 409, igual que toda escritura de un perfil ocupado; no es un fallo del servicio. |
 
 ## Estados que difieren del mapa base
 

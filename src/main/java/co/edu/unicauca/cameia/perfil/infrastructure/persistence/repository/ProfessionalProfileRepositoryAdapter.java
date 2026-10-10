@@ -1,6 +1,6 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence.repository;
 
-import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationTimeoutException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileUpdateInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
@@ -28,7 +28,7 @@ import java.util.Optional;
 class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileRepository {
 
     /** Espera máxima por el bloqueo de creación de un Usuario; es una constante, nunca un dato recibido. */
-    static final String CREATION_LOCK_TIMEOUT = "5s";
+    static final String CREATION_LOCK_TIMEOUT = "2s";
 
     /** Espera máxima por otra escritura sobre el mismo perfil; es una constante, nunca un dato recibido. */
     static final String UPDATE_LOCK_TIMEOUT = "2s";
@@ -97,15 +97,15 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public void lockCreationFor(FirebaseUid firebaseUid) {
-        // Una creación atascada no retiene la conexión de las que esperan: a los 5 s PostgreSQL corta
-        // la espera (55P03) y la petición responde 503 con su código. Rige solo mientras espera el bloqueo.
+        // Una creación atascada no retiene la conexión de las que esperan: a los 2 s PostgreSQL corta
+        // la espera (55P03) y la petición responde 409 con su código. Rige solo mientras espera el bloqueo.
         em.createNativeQuery("set local lock_timeout = '" + CREATION_LOCK_TIMEOUT + "'").executeUpdate();
         try {
             em.createNativeQuery("select pg_advisory_xact_lock(hashtextextended(:uid, 0))")
                     .setParameter("uid", firebaseUid.value())
                     .getSingleResult();
         } catch (PersistenceException e) {
-            throw isLockNotAvailable(e) ? new ProfileCreationTimeoutException() : e;
+            throw isLockNotAvailable(e) ? new ProfileCreationInProgressException() : e;
         }
         // El límite era para esperar el bloqueo: las demás sentencias de la transacción no lo heredan.
         em.createNativeQuery("set local lock_timeout to default").executeUpdate();

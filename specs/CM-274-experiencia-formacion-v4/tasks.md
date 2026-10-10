@@ -396,7 +396,7 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 
 - **Resultado (10-oct-2026):** `CommandValues` pasó a `domain/model/FieldValues` y su prueba a `FieldValuesTest` (movidos con `git mv`; referencias en `ProfileAppService`, `DomainRule` y `docs/errores.md`). Nueva regla `ArquitecturaTest.applicationDoesNotParseRawValues`. Verde: `ArquitecturaTest, FieldValuesTest, DomainRuleValidatorTest, ProfileAppServiceTest` → 104 pruebas, 0 fallos. La regla muerde: con un `EmploymentStatus.valueOf("X")` temporal en `ProfileAppService.loadProfile` falló con `Method <ProfileAppService.loadProfile(java.util.UUID)> calls method <EmploymentStatus.valueOf(java.lang.String)> in (ProfileAppService.java:178)`; el temporal se retiró (el archivo ya no contiene `valueOf("X")`).
 
-## [ ] T-A10 · Creación del perfil alineada: 2 s y 409 — ≤ 20 min, ≈ 80 líneas
+## [x] T-A10 · Creación del perfil alineada: 2 s y 409 — ≤ 20 min, ≈ 80 líneas
 
 - **Por qué:** decisión de Paula del 9-oct-2026: la escritura que encuentra el perfil ocupado espera como máximo 2 s (presupuesto de DES-02) y responde 409; la creación del perfil hace lo mismo para no tener dos comportamientos.
 - **Modificar** `ProfessionalProfileRepositoryAdapter.CREATION_LOCK_TIMEOUT` de `"5s"` a `"2s"` y su comentario.
@@ -404,6 +404,8 @@ Estado: sin ejecutar; spec y plan pendientes de aprobación de Paula. Seis PR (b
 - **Modificar** `ProfileController` (ejemplo y `@ApiResponse` del `POST /api/v1/profiles`: 409 en lugar de 503), `docs/errores.md` (fila nueva de `PROFILE_CREATION_IN_PROGRESS` 409; la de `PROFILE_CREATION_TIMEOUT` pasa a la sección «Códigos retirados» con «Ya no se emite desde esta versión; lo reemplaza `PROFILE_CREATION_IN_PROGRESS` (409).») y `docs/adr/0003-bloqueo-de-creacion-de-perfil.md` (2 s y 409, con la razón: DES-02 y que no es un fallo del servicio). `ErrorCodeDocumentationTest` (T-A7) solo exige los valores vivos del `enum`; la sección de retirados no se cruza.
 - **Pruebas:** actualizar `ProfileCreationConcurrencyIT` y las pruebas que nombran el código o la excepción (`git grep -n "PROFILE_CREATION_TIMEOUT\|ProfileCreationTimeoutException" -- src docs`); la prueba de la espera agotada pasa a esperar el 409 entre 1,5 s y 3,5 s. Postman: la petición de la creación concurrente, si existe, espera 409.
 - **Comandos:** `./mvnw.cmd -B "-Dit.test=ProfileCreationConcurrencyIT" verify` y `./mvnw.cmd -q -B "-Dtest=ErrorCatalogTest,ErrorCodeTest" test`.
+
+- **Resultado (10-oct-2026):** `PROFILE_CREATION_TIMEOUT` (503) se retiró y se agregó `PROFILE_CREATION_IN_PROGRESS` (409) con `ProfileCreationInProgressException`; la espera de la creación pasó de 5 s a 2 s; OpenAPI del `POST /api/v1/profiles` agrupa los dos 409 en una sola respuesta con dos ejemplos (una respuesta no puede repetir su estado); `docs/errores.md` gana la sección «Códigos retirados». Nota de ejecución: el código y sus pruebas se cambiaron en el mismo paso (es un retiro y un reemplazo), así que no se capturó una corrida en rojo; las pruebas que fijaban 503 y 5 s son las que ahora esperan 409 y 1,5 a 3,5 s. Verde: `ErrorCatalogTest, ErrorCodeTest, ErrorCodeDocumentationTest, ProfileControllerTest, ArquitecturaTest` → 132 pruebas, 0 fallos; `ProfileCreationConcurrencyIT` (8) y `OpenApiDocumentIT` (1) en verde. La colección de Postman no tenía la petición de creación concurrente, así que no cambia.
 
 ## [ ] T-A8 · ADR y cierre del PR 1 — ≤ 30 min
 

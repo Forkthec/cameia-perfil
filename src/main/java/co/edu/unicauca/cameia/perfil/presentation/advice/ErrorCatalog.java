@@ -70,7 +70,7 @@ final class ErrorCatalog {
             entry(PROFILE_NOT_FOUND, NOT_FOUND, "Perfil no encontrado", null),
             entry(PROFILE_NOT_ALLOWED, FORBIDDEN, "Acceso denegado", null),
             entry(PROFILE_LIMIT_REACHED, CONFLICT, "Cupo del plan alcanzado", null),
-            entry(PROFILE_CREATION_TIMEOUT, SERVICE_UNAVAILABLE, "Creación en proceso", null),
+            entry(PROFILE_CREATION_IN_PROGRESS, CONFLICT, "Creación en proceso", null),
             entry(PROFILE_UPDATE_IN_PROGRESS, CONFLICT, "Perfil ocupado", null),
             entry(BIRTH_DATE_UNAVAILABLE, SERVICE_UNAVAILABLE, "Servicio no disponible", null),
             entry(PROFILE_ALREADY_COMPLETED, CONFLICT, "Perfil ya completado", null),

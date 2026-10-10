@@ -3,7 +3,7 @@ package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileLimitReachedException;
-import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationTimeoutException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
@@ -172,7 +172,7 @@ class ProfileCreationConcurrencyIT {
     }
 
     @Test
-    @DisplayName("Si la creación en proceso no termina, la que espera se corta a los 5 s sin crear nada")
+    @DisplayName("Si la creación en proceso no termina, la que espera se corta a los 2 s con 409 y sin crear nada")
     void createProfile_shouldFailFast_whenLockIsHeldLongerThanTimeout() throws Exception {
         var uid = "uid-it-" + UUID.randomUUID();
         var locked = new CountDownLatch(1);
@@ -189,8 +189,8 @@ class ProfileCreationConcurrencyIT {
         var started = System.nanoTime();
         var waiting = executor.submit(() -> profileCreationAppService.createProfile(new CreateProfileCommand(uid)));
 
-        assertThat(outcomeOf(waiting)).isInstanceOf(ProfileCreationTimeoutException.class);
-        assertThat(TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - started)).isBetween(4L, 15L);
+        assertThat(outcomeOf(waiting)).isInstanceOf(ProfileCreationInProgressException.class);
+        assertThat(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)).isBetween(1_500L, 3_500L);
         release.countDown();
         assertThat(holder).succeedsWithin(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         assertThat(countProfiles(uid)).isZero();
