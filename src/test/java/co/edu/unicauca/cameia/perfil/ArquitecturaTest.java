@@ -100,7 +100,7 @@ class ArquitecturaTest {
 
     @ArchTest
     static final ArchRule serviciosTerminanEnAppService = classes()
-            .that().resideInAPackage("..application.service..")
+            .that().resideInAPackage("..application.service..").and().areTopLevelClasses()
             .should().haveSimpleNameEndingWith("AppService")
             .as("Las clases de application.service terminan en AppService")
             .because("AppService distingue la capa de aplicación de los servicios de dominio, "

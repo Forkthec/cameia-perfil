@@ -36,6 +36,11 @@ spring:
       enabled: true
 
   rabbitmq:
+    # El editor espera la confirmación del broker (correlated) y recibe el mensaje devuelto si ninguna cola lo recibe.
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    # Tope del saludo y de la conexión: una petición no puede esperar un broker que no responde (DES-02).
+    connection-timeout: 2s
     listener:
       simple:
         # El ack se envía cuando el consumidor termina, es decir, después del commit de la base de datos.
