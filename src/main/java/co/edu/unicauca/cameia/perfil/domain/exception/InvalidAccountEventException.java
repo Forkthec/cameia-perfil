@@ -7,7 +7,9 @@ package co.edu.unicauca.cameia.perfil.domain.exception;
 public class InvalidAccountEventException extends RuntimeException {
 
     /** Razones estables, que se registran junto con el identificador del mensaje. */
-    public enum Reason { MESSAGE_ID_INVALID, USER_ID_INVALID, BIRTH_DATE_REQUIRED, BIRTH_DATE_IN_THE_FUTURE }
+    public enum Reason {
+        MESSAGE_ID_INVALID, USER_ID_INVALID, BIRTH_DATE_REQUIRED, BIRTH_DATE_IN_THE_FUTURE, BIRTH_DATE_OUT_OF_RANGE
+    }
 
     private final Reason reason;
 

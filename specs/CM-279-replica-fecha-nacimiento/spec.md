@@ -143,7 +143,7 @@ clave `cuenta.eliminada`, con las mismas propiedades AMQP. Perfil lee solo `mess
   total con esperas de 1 s y 2 s y, si sigue fallando, enviarlo a la cola de fallidos.
 - **REQ-RF-12.** Cada mensaje enviado a fallidos se registra una vez en `WARN` (inválido) o `ERROR` (técnico, con traza) con
   `messageId`, la cola y el código de la causa (`MESSAGE_ID_INVALID`, `USER_ID_INVALID`, `BIRTH_DATE_REQUIRED`,
-  `BIRTH_DATE_IN_THE_FUTURE`, `PAYLOAD_INVALID_FORMAT` o la clase simple del fallo técnico), nunca con la carga.
+  `BIRTH_DATE_IN_THE_FUTURE`, `BIRTH_DATE_OUT_OF_RANGE`, `PAYLOAD_INVALID_FORMAT` o la clase simple del fallo técnico), nunca con la carga.
 - **REQ-RF-13.** El servicio nunca devuelve un mensaje a su propia cola (`default-requeue-rejected=false`): un mensaje venenoso no puede
   bloquearla.
 - **REQ-RF-17.** Un mensaje que incumple el contrato (REQ-RF-10) debe ir a la cola de fallidos al primer intento, sin reintentos y con un
@@ -251,8 +251,10 @@ CREATE TABLE evento_procesado (
 | `fechaNacimiento` | formato | `"15/03/2008"`, `"2008-3-15"`, `"2008-03-15T00:00:00Z"` | fallidos | `PAYLOAD_INVALID_FORMAT` | tabla parametrizada en `BirthDateReplicationIT` |
 | `fechaNacimiento` | calendario inválido | `"2008-02-30"`, `"2007-02-29"` | fallidos | `PAYLOAD_INVALID_FORMAT` | ídem |
 | `fechaNacimiento` | bisiesto | `"2008-02-29"` | fila creada | — | `accountCreated_shouldStoreLeapDay_whenBornOnFebruary29` |
-| `fechaNacimiento` | hoy (reloj fijo 2026-10-09) | `"2026-10-09"` | fila creada (la edad no es regla de Perfil) | — | `recordAccountCreated_shouldAccept_whenBirthDateIsToday` |
+| `fechaNacimiento` | hoy (reloj fijo 2026-10-09) | `"2026-10-09"` | fila creada (Perfil no exige mayoría de edad: eso lo valida Cuentas) | — | `recordAccountCreated_shouldAccept_whenBirthDateIsToday` |
 | `fechaNacimiento` | mañana | `"2026-10-10"` | fallidos | `BIRTH_DATE_IN_THE_FUTURE` | `recordAccountCreated_shouldReject_whenBirthDateIsTomorrow` |
+| `fechaNacimiento` | más de 110 años cumplidos (reloj fijo 2026-10-09; misma regla que Cuentas) | `"1915-10-09"`, `"1900-01-01"`, `"0001-01-01"`, `"-9999-01-01"` | fallidos | `BIRTH_DATE_OUT_OF_RANGE` | `recordAccountCreated_shouldReject_whenBirthDateImpliesMoreThan110Years` |
+| `fechaNacimiento` | 110 años cumplidos o menos | `"1915-10-10"`, `"1916-10-09"` | fila creada | — | `recordAccountCreated_shouldStore_whenBirthDateImpliesUpTo110Years` |
 | `fechaNacimiento` | tipo número | `20080315` | fallidos | `PAYLOAD_INVALID_FORMAT` | `..._whenBirthDateIsNumber` |
 | `cuenta.eliminada` `usuarioId` | mismos casos de presencia y longitud | | fallidos | `USER_ID_INVALID` | `accountDeleted_shouldGoToDeadLetterQueue_whenUserIdIsBlank` |
 | `cuenta.eliminada` `message_id` | ausente o no UUID | | fallidos | `MESSAGE_ID_INVALID` | `recordAccountDeleted_shouldReject_whenMessageIdIsNotUuid` |
