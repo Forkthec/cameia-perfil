@@ -10,6 +10,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import tools.jackson.databind.json.JsonMapper;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -104,5 +106,24 @@ class OpenApiDocumentIT {
         }
         assertThat(JsonPath.<java.util.List<String>>read(body, "$.components.schemas.TargetRoleItem.properties.provenance.enum"))
                 .containsExactly("MANUAL", "AI_SUGGESTED", "AI_EDITED");
+    }
+
+    @Test
+    @DisplayName("El OpenAPI de la experiencia publica los límites de 100, 100 y 500, el formato de las fechas y las opciones del estado")
+    void addWorkExperienceRequest_shouldDocumentLimits_whenApiDocsAreGenerated() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+
+        var schema = JsonMapper.builder().build().readTree(response.body())
+                .get("components").get("schemas").get("AddWorkExperienceRequest").get("properties");
+        assertThat(schema.get("company").get("maxLength").asInt()).isEqualTo(100);
+        assertThat(schema.get("position").get("maxLength").asInt()).isEqualTo(100);
+        assertThat(schema.get("description").get("maxLength").asInt()).isEqualTo(500);
+        assertThat(schema.get("startDate").get("pattern").asString()).isEqualTo("^\\d{4}-(0[1-9]|1[0-2])$");
+        assertThat(schema.get("endDate").get("pattern").asString()).isEqualTo("^\\d{4}-(0[1-9]|1[0-2])$");
+        assertThat(schema.get("employmentStatus").get("enum").valueStream().map(v -> v.asString()).toList())
+                .containsExactlyInAnyOrder("CURRENT", "ENDED", "UNKNOWN_END");
+        assertThat(schema.has("provenance")).isFalse();
     }
 }

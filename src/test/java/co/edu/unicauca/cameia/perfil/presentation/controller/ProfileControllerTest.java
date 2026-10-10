@@ -8,7 +8,6 @@ import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppServi
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
-import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;

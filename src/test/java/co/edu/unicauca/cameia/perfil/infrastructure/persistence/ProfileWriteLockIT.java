@@ -1,10 +1,12 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
+import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
 import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileUpdateInProgressException;
+import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -180,5 +182,41 @@ class ProfileWriteLockIT {
         });
 
         assertThat(lockTimeout).isEqualTo("0");
+    }
+
+    @Test
+    @DisplayName("Dos experiencias simultáneas sobre un perfil con tres dejan cuatro: la segunda recibe el máximo")
+    void addWorkExperience_shouldKeepFour_whenTwoRequestsArriveWithThree() throws Exception {
+        for (int i = 0; i < 3; i++) {
+            profileAppService.addWorkExperience(command("Empresa " + i));
+        }
+        var locked = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var first = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+            profileAppService.addWorkExperience(command("Empresa A"));
+            locked.countDown();
+            try {
+                release.await(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
+            return null;
+        }));
+        assertThat(locked.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+        var second = executor.submit(() -> profileAppService.addWorkExperience(command("Empresa B")));
+        assertThatThrownBy(() -> second.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+        release.countDown();
+
+        assertThat(first).succeedsWithin(10, TimeUnit.SECONDS);
+        assertThatThrownBy(() -> second.get(10, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(WorkExperienceLimitReachedException.class);
+        assertThat(jdbcTemplate.queryForObject("select count(*) from experiencia_laboral where perfil_id = ?", Integer.class,
+                profileId)).isEqualTo(4);
+    }
+
+    private AddWorkExperienceCommand command(String company) {
+        return new AddWorkExperienceCommand(profileId, uid, company, "Dev", null, "2024-06", null, "CURRENT");
     }
 }
