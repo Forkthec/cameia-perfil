@@ -129,7 +129,7 @@ class ApiExceptionHandlerTest {
                 new Object[]{new ProfileNotFoundException(), 404, "PROFILE_NOT_FOUND"},
                 new Object[]{new BirthDateUnavailableException(), 503, "BIRTH_DATE_UNAVAILABLE"},
                 new Object[]{new ProfileAccessDeniedException(), 403, "PROFILE_NOT_ALLOWED"},
-                new Object[]{new ProfileLimitReachedException(), 409, "PROFILE_LIMIT_REACHED"},
+                new Object[]{new ProfileLimitReachedException(), 403, "PLAN_LIMIT"},
                 new Object[]{new ProfileAlreadyCompletedException(), 409, "PROFILE_ALREADY_COMPLETED"},
                 new Object[]{new ProfessionalRoleNotFoundException(), 404, "PROFESSIONAL_ROLE_NOT_FOUND"},
                 new Object[]{new MaxTargetRolesExceededException(5), 409, "TARGET_ROLE_LIMIT_REACHED"},
@@ -252,10 +252,10 @@ class ApiExceptionHandlerTest {
         toThrow = ProfileLimitReachedException::new;
 
         mockMvc.perform(get("/boom").header("X-User-Id", "uid-ana-001").header("X-Request-Id", "req-log-1"))
-                .andExpect(status().isConflict());
+                .andExpect(status().isForbidden());
 
         assertThat(logs.list).anySatisfy(event -> assertThat(event.getFormattedMessage())
-                .contains("code=PROFILE_LIMIT_REACHED").contains("requestId=req-log-1")
+                .contains("code=PLAN_LIMIT").contains("requestId=req-log-1")
                 .contains("firebaseUid=uid-ana-001"));
     }
 
@@ -265,7 +265,7 @@ class ApiExceptionHandlerTest {
     void rejection_shouldLogDashUid_whenIdentityIsNotLoggable(String uid) throws Exception {
         toThrow = ProfileLimitReachedException::new;
 
-        mockMvc.perform(get("/boom").header("X-User-Id", uid)).andExpect(status().isConflict());
+        mockMvc.perform(get("/boom").header("X-User-Id", uid)).andExpect(status().isForbidden());
 
         assertThat(logs.list).anySatisfy(event ->
                 assertThat(event.getFormattedMessage()).endsWith("firebaseUid=-"));
@@ -276,7 +276,7 @@ class ApiExceptionHandlerTest {
     void rejection_shouldLogDashUid_whenIdentityMissing() throws Exception {
         toThrow = ProfileLimitReachedException::new;
 
-        mockMvc.perform(get("/boom")).andExpect(status().isConflict());
+        mockMvc.perform(get("/boom")).andExpect(status().isForbidden());
 
         assertThat(logs.list).anySatisfy(event ->
                 assertThat(event.getFormattedMessage()).contains("firebaseUid=-"));

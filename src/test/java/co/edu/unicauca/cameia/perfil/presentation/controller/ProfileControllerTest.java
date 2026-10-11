@@ -88,13 +88,13 @@ class ProfileControllerTest {
     }
 
     @Test
-    @DisplayName("Un Usuario que ya tiene su perfil recibe 409 con el mensaje del Plan Free y sin datos internos")
-    void postProfiles_shouldReturn409WithPlanMessage_whenUserAlreadyHasProfile() throws Exception {
+    @DisplayName("Un Usuario que ya tiene su perfil recibe 403 PLAN_LIMIT con el mensaje del Plan Free y sin datos internos")
+    void postProfiles_shouldReturn403PlanLimit_whenUserAlreadyHasProfile() throws Exception {
         when(profileCreationAppService.createProfile(any())).thenThrow(new ProfileLimitReachedException());
 
         var result = mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-ana-001"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("PROFILE_LIMIT_REACHED"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PLAN_LIMIT"))
                 .andExpect(jsonPath("$.title").value("Cupo del plan alcanzado"))
                 .andExpect(jsonPath("$.detail").value("Tu Plan Free permite 1 Perfil Profesional."))
                 .andReturn();

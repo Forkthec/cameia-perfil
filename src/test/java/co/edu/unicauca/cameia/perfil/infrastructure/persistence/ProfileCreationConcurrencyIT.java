@@ -82,7 +82,7 @@ class ProfileCreationConcurrencyIT {
 
         var profileId = jdbcTemplate.queryForObject(
                 "select id from perfil_profesional where firebase_uid = ?", UUID.class, uid);
-        // Una petición que llega cuando la creación ya terminó recibe el cupo alcanzado (409), nunca otro perfil.
+        // Una petición que llega cuando la creación ya terminó recibe el cupo alcanzado (403 PLAN_LIMIT), nunca otro perfil.
         assertThat(outcomes).allSatisfy(outcome -> {
             if (outcome instanceof ProfessionalProfile profile) {
                 assertThat(profile.getId().value()).isEqualTo(profileId);
@@ -94,7 +94,7 @@ class ProfileCreationConcurrencyIT {
     }
 
     @Test
-    @DisplayName("Las peticiones que llegan mientras otra crea el perfil reciben ese mismo perfil, sin 409")
+    @DisplayName("Las peticiones que llegan mientras otra crea el perfil reciben ese mismo perfil, sin 403")
     void createProfile_shouldReturnSameProfile_whenRequestsArriveWhileCreating() throws Exception {
         var uid = "uid-it-" + UUID.randomUUID();
         var locked = new CountDownLatch(1);

@@ -19,7 +19,7 @@ El Plan Free permite un Perfil Profesional por Usuario. La comprobación «¿ya 
 3. Vuelve a contar (`después`), y ve lo que confirmó la creación anterior.
 4. Si `después` es menor que el cupo (1 en el Plan Free), crea el perfil vacío y responde 201.
 5. Si no, y `antes` era menor que el cupo, la petición llegó mientras otra creaba el perfil: responde 201 con ese mismo perfil.
-6. Si no, el Usuario ya tenía el máximo antes de pedir: responde 409 `PROFILE_LIMIT_REACHED`.
+6. Si no, el Usuario ya tenía el máximo antes de pedir: responde 403 `PLAN_LIMIT`.
 
 El bloqueo se libera solo al terminar la transacción y solo afecta a las creaciones del mismo Usuario.
 
@@ -27,7 +27,7 @@ El bloqueo se libera solo al terminar la transacción y solo afecta a las creaci
 
 - Nunca se crea más de un perfil por Usuario en el Plan Free. En 30 rondas de 8 peticiones simultáneas contra la app real, cada ronda terminó con un solo perfil.
 - Las peticiones que llegan mientras la creación está en proceso reciben 201 con el mismo perfil.
-- Una petición que llega cuando la creación anterior ya terminó, aunque sea pocos milisegundos después, cuenta ese perfil en el paso 1 y recibe 409. En la misma prueba, 9 de 30 rondas tuvieron entre 1 y 3 respuestas 409 de ese tipo. Como la creación tarda pocos milisegundos, el segundo clic de una persona suele llegar así; para que no vea el mensaje de cupo, `cameia-web` deshabilita el botón de creación mientras la petición está en curso.
+- Una petición que llega cuando la creación anterior ya terminó, aunque sea pocos milisegundos después, cuenta ese perfil en el paso 1 y recibe 403 `PLAN_LIMIT`. En la misma prueba, 9 de 30 rondas tuvieron entre 1 y 3 respuestas 403 `PLAN_LIMIT` de ese tipo. Como la creación tarda pocos milisegundos, el segundo clic de una persona suele llegar así; para que no vea el mensaje de cupo, `cameia-web` deshabilita el botón de creación mientras la petición está en curso.
 - Premium cambia solo el cupo con el que se compara; la regla no cambia.
 - Si la creación en proceso falla y se deshace, la que esperaba crea el perfil normalmente.
 - La espera tiene un límite de 2 s (`lock_timeout`, solo en esa transacción): si la creación en proceso se atasca, las que esperan se cortan con 409 `PROFILE_CREATION_IN_PROGRESS` en lugar de retener cada una una conexión del pool. Son 2 s porque es el presupuesto de DES-02 (p95 de 2 s en operaciones JSON propias) y porque una creación ocupada no es un fallo del servicio: es la misma respuesta que da toda escritura sobre un perfil ocupado. El bloqueo exige una transacción abierta (`Propagation.MANDATORY`); sin ella se soltaría al terminar la sentencia.
@@ -37,6 +37,6 @@ El bloqueo se libera solo al terminar la transacción y solo afecta a las creaci
 
 - **Restricción `UNIQUE` sobre `firebase_uid`.** Impide los duplicados, pero choca con Premium, que admitirá varios perfiles, y convierte la segunda petición en un error.
 - **Aislamiento `SERIALIZABLE`.** Obliga a reintentar las transacciones que fallan por conflicto y afecta a todas las escrituras de la transacción, no solo a la creación.
-- **409 a toda petición repetida.** Mostraría el mensaje de cupo, y más adelante el Paywall, a quien solo hizo doble clic.
+- **403 `PLAN_LIMIT` a toda petición repetida.** Mostraría el mensaje de cupo, y más adelante el Paywall, a quien solo hizo doble clic.
 - **Ventana de tiempo.** Tratar como repetida una petición que llega N segundos después exige fijar un valor arbitrario.
 - **Encabezado `Idempotency-Key`.** Es la solución general, pero exige cambiar `cameia-web`.
