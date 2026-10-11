@@ -63,8 +63,8 @@ public @interface DomainRule {
                 Set.of(EMPLOYMENT_STATUS_INVALID_VALUE)),
         EDUCATION_LEVEL(text -> FieldValues.option(EducationLevel.class, text, EDUCATION_LEVEL_INVALID_VALUE, "level"),
                 Set.of(EDUCATION_LEVEL_INVALID_VALUE)),
-        START_DATE(text -> FieldValues.yearMonth(text, false, START_DATE_INVALID_FORMAT, "startDate"), Set.of(START_DATE_INVALID_FORMAT)),
-        END_DATE(text -> FieldValues.yearMonth(text, false, END_DATE_INVALID_FORMAT, "endDate"), Set.of(END_DATE_INVALID_FORMAT));
+        START_DATE(text -> FieldValues.yearMonth(text, START_DATE_INVALID_FORMAT, "startDate"), Set.of(START_DATE_INVALID_FORMAT)),
+        END_DATE(text -> FieldValues.yearMonth(text, END_DATE_INVALID_FORMAT, "endDate"), Set.of(END_DATE_INVALID_FORMAT));
 
         private final Consumer<String> validation;
         private final Set<ErrorCode> reportedCodes;

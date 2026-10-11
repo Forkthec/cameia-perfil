@@ -20,7 +20,6 @@ public final class FieldValues {
 
     /** Año de cuatro dígitos desde 0001 y mes de dos: lo que la base de datos guarda como fecha. */
     private static final Pattern YEAR_MONTH = Pattern.compile("(?!0000)\\d{4}-\\d{2}");
-    private static final Pattern YEAR = Pattern.compile("(?!0000)\\d{4}");
 
     private FieldValues() { }
 
@@ -42,25 +41,23 @@ public final class FieldValues {
     }
 
     /**
-     * Acepta {@code AAAA-MM} y, si {@code yearOnly} lo permite, {@code AAAA} (se lee como enero).
+     * Acepta solo {@code AAAA-MM}: un año suelto como {@code 2024} no es una fecha válida.
      *
-     * @param value    fecha recibida, o {@code null}
-     * @param yearOnly si se acepta solo el año
-     * @param code     código del error si la fecha no es válida
-     * @param field    nombre del campo en el cuerpo de la petición
+     * @param value fecha recibida, o {@code null}
+     * @param code  código del error si la fecha no es válida
+     * @param field nombre del campo en el cuerpo de la petición
      * @return la fecha, o {@code null} si no llegó
      * @throws InvalidFieldsException si la fecha no tiene el formato o no existe, como {@code 2020-13}
      */
-    public static YearMonth yearMonth(String value, boolean yearOnly, ErrorCode code, String field) {
+    public static YearMonth yearMonth(String value, ErrorCode code, String field) {
         if (value == null) {
             return null;
         }
-        var normalized = yearOnly && YEAR.matcher(value).matches() ? value + "-01" : value;
-        if (!YEAR_MONTH.matcher(normalized).matches()) {
+        if (!YEAR_MONTH.matcher(value).matches()) {
             throw InvalidFieldsException.of(field, code, INVALID_DATE);
         }
         try {
-            return YearMonth.parse(normalized);
+            return YearMonth.parse(value);
         } catch (DateTimeException e) {
             throw InvalidFieldsException.of(field, code, INVALID_DATE);
         }

@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ProfileValueRulesTest {
 
     private static final YearMonth START = YearMonth.of(2020, 1);
+    private static final DateBounds BOUNDS = new DateBounds(YearMonth.of(2026, 10), null);
 
     static Stream<Arguments> violations() {
         return Stream.of(
@@ -48,31 +49,26 @@ class ProfileValueRulesTest {
                         "skillName", ErrorCode.SKILL_NAME_TOO_LONG, "La habilidad no puede superar los 255 caracteres."),
                 Arguments.of("empresa en blanco", (Executable) () -> experience(" ", "Dev"),
                         "company", ErrorCode.COMPANY_REQUIRED, "Ingresa la empresa."),
-                Arguments.of("empresa de 501", (Executable) () -> experience("a".repeat(501), "Dev"),
-                        "company", ErrorCode.COMPANY_TOO_LONG, "La empresa no puede superar los 500 caracteres."),
-                Arguments.of("descripción de 2001",
-                        (Executable) () -> new WorkExperience(UUID.randomUUID(), "ACME", "Dev", "a".repeat(2001), START,
-                                null, EmploymentStatus.CURRENT, DataProvenance.MANUAL),
+                Arguments.of("empresa de 101", (Executable) () -> experience("a".repeat(101), "Dev"),
+                        "company", ErrorCode.COMPANY_TOO_LONG, "La empresa no puede superar los 100 caracteres."),
+                Arguments.of("descripción de 501",
+                        (Executable) () -> WorkExperience.create(new WorkExperienceDraft("ACME", "Dev", "a".repeat(501),
+                                START, null, EmploymentStatus.CURRENT), BOUNDS),
                         "description", ErrorCode.DESCRIPTION_TOO_LONG,
-                        "La descripción no puede superar los 2000 caracteres."),
+                        "La descripción no puede superar los 500 caracteres."),
                 Arguments.of("cargo en blanco", (Executable) () -> experience("ACME", ""),
                         "position", ErrorCode.POSITION_REQUIRED, "Ingresa el cargo."),
-                Arguments.of("cargo de 501", (Executable) () -> experience("ACME", "a".repeat(501)),
-                        "position", ErrorCode.POSITION_TOO_LONG, "El cargo no puede superar los 500 caracteres."),
+                Arguments.of("cargo de 101", (Executable) () -> experience("ACME", "a".repeat(101)),
+                        "position", ErrorCode.POSITION_TOO_LONG, "El cargo no puede superar los 100 caracteres."),
                 Arguments.of("institución en blanco", (Executable) () -> education(" ", "Ing", null, false),
                         "institution", ErrorCode.INSTITUTION_REQUIRED, "Ingresa la institución."),
-                Arguments.of("institución de 501", (Executable) () -> education("a".repeat(501), "Ing", null, false),
+                Arguments.of("institución de 151", (Executable) () -> education("a".repeat(151), "Ing", null, false),
                         "institution", ErrorCode.INSTITUTION_TOO_LONG,
-                        "La institución no puede superar los 500 caracteres."),
+                        "La institución no puede superar los 150 caracteres."),
                 Arguments.of("título en blanco", (Executable) () -> education("Unicauca", " ", null, false),
                         "degree", ErrorCode.DEGREE_REQUIRED, "Ingresa el título obtenido."),
-                Arguments.of("título de 501", (Executable) () -> education("Unicauca", "a".repeat(501), null, false),
-                        "degree", ErrorCode.DEGREE_TOO_LONG, "El título obtenido no puede superar los 500 caracteres."),
-                Arguments.of("área de estudio de 501",
-                        (Executable) () -> new Education(UUID.randomUUID(), "Unicauca", "Ing", "a".repeat(501),
-                                EducationLevel.UNDERGRADUATE, START, null, false, DataProvenance.MANUAL),
-                        "fieldOfStudy", ErrorCode.FIELD_OF_STUDY_TOO_LONG,
-                        "El área de estudio no puede superar los 500 caracteres."),
+                Arguments.of("título de 151", (Executable) () -> education("Unicauca", "a".repeat(151), null, false),
+                        "degree", ErrorCode.DEGREE_TOO_LONG, "El título obtenido no puede superar los 150 caracteres."),
                 Arguments.of("formación terminada antes de empezar",
                         (Executable) () -> education("Unicauca", "Ing", START.minusMonths(1), false),
                         "endDate", ErrorCode.END_DATE_BEFORE_START_DATE,
@@ -104,12 +100,11 @@ class ProfileValueRulesTest {
             new SalaryExpectation(new BigDecimal("9999999999999.99"));
             new SalaryExpectation(new BigDecimal("1E+12"));
             skill("a".repeat(255));
-            experience("a".repeat(500), "a".repeat(500));
-            new WorkExperience(UUID.randomUUID(), "ACME", "Dev", "a".repeat(2000), START, null,
-                    EmploymentStatus.CURRENT, DataProvenance.MANUAL);
-            new Education(UUID.randomUUID(), "Unicauca", "Ing", "a".repeat(500), EducationLevel.UNDERGRADUATE,
-                    START, START, false, DataProvenance.MANUAL);
-            education("a".repeat(500), "a".repeat(500), START.plusYears(1), false);
+            experience("a".repeat(100), "a".repeat(100));
+            WorkExperience.create(new WorkExperienceDraft("ACME", "Dev", "a".repeat(500), START, null,
+                    EmploymentStatus.CURRENT), BOUNDS);
+            education("Unicauca", "Ing", START, false);
+            education("a".repeat(150), "a".repeat(150), START.plusYears(1), false);
             education("Unicauca", "Ing", null, true);
         }).doesNotThrowAnyException();
     }
@@ -126,12 +121,12 @@ class ProfileValueRulesTest {
     }
 
     private static WorkExperience experience(String company, String position) {
-        return new WorkExperience(UUID.randomUUID(), company, position, null, START, null,
-                EmploymentStatus.CURRENT, DataProvenance.MANUAL);
+        return WorkExperience.create(new WorkExperienceDraft(company, position, null, START, null,
+                EmploymentStatus.CURRENT), BOUNDS);
     }
 
     private static Education education(String institution, String degree, YearMonth end, boolean inProgress) {
-        return new Education(UUID.randomUUID(), institution, degree, null, EducationLevel.UNDERGRADUATE,
-                START, end, inProgress, DataProvenance.MANUAL);
+        return Education.create(new EducationDraft(institution, degree, EducationLevel.UNDERGRADUATE,
+                START, end, inProgress), BOUNDS);
     }
 }

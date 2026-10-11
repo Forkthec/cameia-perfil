@@ -10,6 +10,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import tools.jackson.databind.json.JsonMapper;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -45,6 +47,9 @@ class OpenApiDocumentIT {
                 .contains("\"ApiError\"", "\"ApiFieldError\"", "\"requestId\"", "\"missingRequirements\"")
                 .contains("IDENTITY_REQUIRED", "PROFILE_ID_INVALID_FORMAT", "PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE")
                 .contains("WORK_EXPERIENCE_NOT_FOUND", "TARGET_ROLE_NOT_FOUND", "END_DATE_BEFORE_START_DATE")
+                // Fecha de nacimiento: el 503 y las reglas de los 15 años y del nacimiento están en el contrato.
+                .contains("BIRTH_DATE_UNAVAILABLE", "START_DATE_BEFORE_MINIMUM_AGE", "END_DATE_BEFORE_MINIMUM_AGE",
+                        "START_DATE_BEFORE_BIRTH")
                 // Sin HU en el MVP (hallazgo I-024): no se publica para que Frontend no lo integre.
                 .doesNotContain("/review-requests", "/salary-expectation");
     }
@@ -104,5 +109,45 @@ class OpenApiDocumentIT {
         }
         assertThat(JsonPath.<java.util.List<String>>read(body, "$.components.schemas.TargetRoleItem.properties.provenance.enum"))
                 .containsExactly("MANUAL", "AI_SUGGESTED", "AI_EDITED");
+    }
+
+    @Test
+    @DisplayName("El OpenAPI de la experiencia publica los límites de 100, 100 y 500, el formato de las fechas y las opciones del estado")
+    void addWorkExperienceRequest_shouldDocumentLimits_whenApiDocsAreGenerated() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+
+        var schema = JsonMapper.builder().build().readTree(response.body())
+                .get("components").get("schemas").get("AddWorkExperienceRequest").get("properties");
+        assertThat(schema.get("company").get("maxLength").asInt()).isEqualTo(100);
+        assertThat(schema.get("position").get("maxLength").asInt()).isEqualTo(100);
+        assertThat(schema.get("description").get("maxLength").asInt()).isEqualTo(500);
+        assertThat(schema.get("startDate").get("pattern").asString()).isEqualTo("^\\d{4}-(0[1-9]|1[0-2])$");
+        assertThat(schema.get("endDate").get("pattern").asString()).isEqualTo("^\\d{4}-(0[1-9]|1[0-2])$");
+        assertThat(schema.get("employmentStatus").get("enum").valueStream().map(v -> v.asString()).toList())
+                .containsExactlyInAnyOrder("CURRENT", "ENDED", "UNKNOWN_END");
+        assertThat(schema.has("provenance")).isFalse();
+    }
+
+    @Test
+    @DisplayName("El OpenAPI de la formación publica los límites de 150, el formato de las fechas, los niveles y sin área de estudio")
+    void addEducationRequest_shouldDocumentLimits_whenApiDocsAreGenerated() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+
+        var schemas = JsonMapper.builder().build().readTree(response.body()).get("components").get("schemas");
+        var schema = schemas.get("AddEducationRequest").get("properties");
+        assertThat(schema.get("institution").get("maxLength").asInt()).isEqualTo(150);
+        assertThat(schema.get("degree").get("maxLength").asInt()).isEqualTo(150);
+        assertThat(schema.get("level").get("enum").valueStream().map(v -> v.asString()).toList())
+                .containsExactlyInAnyOrder("TECHNICAL", "UNDERGRADUATE", "POSTGRADUATE");
+        assertThat(schema.get("startDate").get("pattern").asString()).isEqualTo("^\\d{4}-(0[1-9]|1[0-2])$");
+        assertThat(schema.get("endDate").get("pattern").asString()).isEqualTo("^\\d{4}-(0[1-9]|1[0-2])$");
+        assertThat(schema.has("provenance")).isFalse();
+        assertThat(schema.has("fieldOfStudy")).isFalse();
+        assertThat(schemas.get("EducationItem").get("properties").has("fieldOfStudy")).isFalse();
+        assertThat(response.body()).contains("EDUCATION_LIMIT_REACHED", "EDUCATION_NOT_ALLOWED");
     }
 }

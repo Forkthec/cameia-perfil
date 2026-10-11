@@ -68,8 +68,14 @@ public enum ErrorCode {
     TARGET_ROLE_NOT_FOUND,
     /** La experiencia laboral no existe en el perfil. */
     WORK_EXPERIENCE_NOT_FOUND,
+    /** El perfil ya tiene el máximo de experiencias laborales; no se agregó nada. */
+    WORK_EXPERIENCE_LIMIT_REACHED,
     /** La formación académica no existe en el perfil. */
     EDUCATION_NOT_FOUND,
+    /** El perfil ya tiene el máximo de formaciones académicas; no se agregó nada. */
+    EDUCATION_LIMIT_REACHED,
+    /** Un perfil activo no puede quedarse sin formación académica; no se eliminó nada. */
+    EDUCATION_NOT_ALLOWED,
     /** La habilidad no existe en el perfil. */
     SKILL_NOT_FOUND,
     /** Falta el nombre del perfil o está en blanco. */
@@ -102,6 +108,16 @@ public enum ErrorCode {
     END_DATE_NOT_ALLOWED,
     /** La fecha de fin es anterior a la de inicio. */
     END_DATE_BEFORE_START_DATE,
+    /** La fecha de inicio es posterior al mes actual en UTC. */
+    START_DATE_IN_THE_FUTURE,
+    /** La fecha de fin es posterior al mes actual en UTC. */
+    END_DATE_IN_THE_FUTURE,
+    /** La experiencia empieza antes del mes en que el Usuario cumplió 15 años. */
+    START_DATE_BEFORE_MINIMUM_AGE,
+    /** La experiencia sin inicio termina antes del mes en que el Usuario cumplió 15 años. */
+    END_DATE_BEFORE_MINIMUM_AGE,
+    /** La formación empieza antes del mes de nacimiento del Usuario. */
+    START_DATE_BEFORE_BIRTH,
     /** La empresa supera su largo máximo. */
     COMPANY_TOO_LONG,
     /** El cargo supera su largo máximo. */
@@ -114,8 +130,6 @@ public enum ErrorCode {
     SKILL_NAME_TOO_LONG,
     /** La descripción de la experiencia supera su largo máximo. */
     DESCRIPTION_TOO_LONG,
-    /** El área de estudio de la formación supera su largo máximo. */
-    FIELD_OF_STUDY_TOO_LONG,
     /** La empresa tiene un carácter de control que el campo no admite. */
     COMPANY_INVALID_CHARACTERS,
     /** El cargo tiene un carácter de control que el campo no admite. */

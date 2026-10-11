@@ -27,14 +27,11 @@ public class EducationEntity {
     @JoinColumn(name = "perfil_id", nullable = false)
     private ProfessionalProfileEntity profile;
 
-    @Column(name = "institucion", nullable = false, length = 500)
+    @Column(name = "institucion", nullable = false, length = 150)
     private String institution;
 
-    @Column(name = "titulo", nullable = false, length = 500)
+    @Column(name = "titulo", nullable = false, length = 150)
     private String degree;
-
-    @Column(name = "area_estudio", length = 500)
-    private String fieldOfStudy;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "nivel", nullable = false, length = 20)
@@ -59,7 +56,6 @@ public class EducationEntity {
     public ProfessionalProfileEntity getProfile() { return profile; }
     public String getInstitution() { return institution; }
     public String getDegree() { return degree; }
-    public String getFieldOfStudy() { return fieldOfStudy; }
     public EducationLevel getLevel() { return level; }
     public LocalDate getStartDate() { return startDate; }
     public LocalDate getEndDate() { return endDate; }
@@ -70,7 +66,6 @@ public class EducationEntity {
     public void setProfile(ProfessionalProfileEntity profile) { this.profile = profile; }
     public void setInstitution(String institution) { this.institution = institution; }
     public void setDegree(String degree) { this.degree = degree; }
-    public void setFieldOfStudy(String fieldOfStudy) { this.fieldOfStudy = fieldOfStudy; }
     public void setLevel(EducationLevel level) { this.level = level; }
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }

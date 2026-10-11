@@ -3,7 +3,10 @@ package co.edu.unicauca.cameia.perfil.application.command;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Intención de agregar una experiencia laboral al perfil (CM-18). Seniority eliminado en CM-21. */
+/**
+ * Intención de agregar una experiencia laboral al perfil. Los textos y las fechas llegan tal cual; las reglas
+ * las aplica el dominio. No lleva procedencia: lo que se agrega por esta ruta es siempre MANUAL.
+ */
 public record AddWorkExperienceCommand(
         UUID profileId,
         String uid,
@@ -12,15 +15,10 @@ public record AddWorkExperienceCommand(
         String description,
         String startDate,
         String endDate,
-        String employmentStatus,
-        String provenance) {
+        String employmentStatus) {
 
+    /** @throws NullPointerException si falta el perfil */
     public AddWorkExperienceCommand {
-        Objects.requireNonNull(profileId, "profileId es obligatorio");
-        if (company == null || company.isBlank()) throw new IllegalArgumentException("company es obligatorio");
-        if (position == null || position.isBlank()) throw new IllegalArgumentException("position es obligatorio");
-        if (startDate == null || startDate.isBlank()) throw new IllegalArgumentException("startDate es obligatorio");
-        Objects.requireNonNull(employmentStatus, "employmentStatus es obligatorio");
-        Objects.requireNonNull(provenance, "provenance es obligatorio");
+        Objects.requireNonNull(profileId, "profileId");
     }
 }

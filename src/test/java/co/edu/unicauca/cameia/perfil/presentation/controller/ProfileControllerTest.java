@@ -8,7 +8,6 @@ import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppServi
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
-import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
@@ -224,23 +223,272 @@ class ProfileControllerTest {
         assertThat(result.getResponse().getContentAsString()).doesNotContain("aaaa");
     }
 
-    @Test
-    @DisplayName("Una fecha mal escrita responde 422 en su campo, con su código y el formato esperado")
-    void addWorkExperience_shouldReturnStartDateInvalid_whenStartDateIsMalformed() throws Exception {
-        when(profileAppService.addWorkExperience(any())).thenThrow(InvalidFieldsException.of(
-                "startDate", ErrorCode.START_DATE_INVALID_FORMAT, "Ingresa una fecha válida con el formato mm/aaaa."));
-        var body = """
-                {"company":"ACME","position":"Dev","startDate":"2020-13","employmentStatus":"CURRENT","provenance":"MANUAL"}
-                """;
+    private static final String EXPERIENCE_BASE = "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\"";
 
-        mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + "/work-experiences")
-                        .header("X-User-Id", "uid-ctrl-date")
-                        .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isUnprocessableContent())
+    private org.springframework.test.web.servlet.ResultActions postExperience(String json) throws Exception {
+        return mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + "/work-experiences")
+                .header("X-User-Id", "uid-ctrl-exp").contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    /** Comprueba 422, tipo de contenido con charset y que el cuerpo no filtra detalles internos. */
+    private static org.springframework.test.web.servlet.ResultActions expectFieldError(
+            org.springframework.test.web.servlet.ResultActions result, String field, String code, String message) throws Exception {
+        var response = result.andExpect(status().isUnprocessableContent())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Content-Type", containsString("application/problem+json")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Content-Type", org.hamcrest.Matchers.containsStringIgnoringCase("charset=UTF-8")))
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.errors[0].field").value("startDate"))
-                .andExpect(jsonPath("$.errors[0].code").value("START_DATE_INVALID_FORMAT"))
-                .andExpect(jsonPath("$.errors[0].message").value("Ingresa una fecha válida con el formato mm/aaaa."));
+                .andExpect(jsonPath("$.detail").value("Revisa los campos marcados."))
+                .andExpect(jsonPath("$.errors[0].field").value(field))
+                .andExpect(jsonPath("$.errors[0].code").value(code))
+                .andExpect(jsonPath("$.errors[0].message").value(message));
+        assertThat(response.andReturn().getResponse().getContentAsString())
+                .doesNotContain("\"trace\"").doesNotContain("\"exception\"").doesNotContain("co.edu");
+        return response;
+    }
+
+    @ParameterizedTest(name = "{0}={1}")
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', textBlock = """
+            company  | "\\t\\n"
+            company  | " "
+            position | "\\t\\n"
+            position | " "
+            """)
+    @DisplayName("Una empresa o un cargo con solo espacios, tabuladores o saltos responde que es obligatorio")
+    void addWorkExperience_shouldReturnRequired_whenTextIsMissingOrBlank(String field, String value) throws Exception {
+        var json = "company".equals(field)
+                ? "{\"company\":" + value + ",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\"}"
+                : "{\"company\":\"ACME\",\"position\":" + value + ",\"employmentStatus\":\"CURRENT\"}";
+        var message = "company".equals(field) ? "Ingresa la empresa." : "Ingresa el cargo.";
+
+        expectFieldError(postExperience(json), field, field.toUpperCase() + "_REQUIRED", message);
+    }
+
+    @ParameterizedTest(name = "{0} de {1} caracteres")
+    @MethodSource("tooLongTexts")
+    @DisplayName("Un texto que supera su límite en puntos de código responde 422 con su código y su mensaje")
+    void addWorkExperience_shouldReturnTooLong_whenTextExceedsLimit(String field, String value, int length, String code,
+            String message) throws Exception {
+        var company = "company".equals(field) ? value : "ACME";
+        var position = "position".equals(field) ? value : "Dev";
+        var description = "description".equals(field) ? value : "ok";
+        var json = "{\"company\":\"" + company + "\",\"position\":\"" + position + "\",\"description\":\"" + description
+                + "\",\"employmentStatus\":\"CURRENT\"}";
+
+        expectFieldError(postExperience(json), field, code, message);
+    }
+
+    static Stream<Arguments> tooLongTexts() {
+        var company = "La empresa no puede superar los 100 caracteres.";
+        var position = "El cargo no puede superar los 100 caracteres.";
+        var description = "La descripción no puede superar los 500 caracteres.";
+        return Stream.of(
+                Arguments.of("company", "a".repeat(101), 101, "COMPANY_TOO_LONG", company),
+                Arguments.of("company", "a".repeat(100) + "😀", 101, "COMPANY_TOO_LONG", company),
+                Arguments.of("position", "a".repeat(101), 101, "POSITION_TOO_LONG", position),
+                Arguments.of("description", "a".repeat(501), 501, "DESCRIPTION_TOO_LONG", description),
+                Arguments.of("description", "a".repeat(499) + "😀😀", 501, "DESCRIPTION_TOO_LONG", description));
+    }
+
+    @ParameterizedTest(name = "{0}={1}")
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', textBlock = """
+            startDate | 2020-13
+            startDate | 2020-00
+            startDate | 20-01
+            startDate | 2020/01
+            startDate | abc
+            startDate | 2020-1
+            endDate   | 2020-13
+            endDate   | 2020-01-15
+            endDate   | 2020
+            """)
+    @DisplayName("Una fecha mal escrita responde 422 en su campo con el formato esperado")
+    void addWorkExperience_shouldReturnDateInvalidFormat_whenDateIsMalformed(String field, String value) throws Exception {
+        var code = "startDate".equals(field) ? "START_DATE_INVALID_FORMAT" : "END_DATE_INVALID_FORMAT";
+        var json = EXPERIENCE_BASE + ",\"" + field + "\":\"" + value + "\"}";
+
+        expectFieldError(postExperience(json), field, code, "Ingresa una fecha válida con el formato mm/aaaa.");
+    }
+
+    @ParameterizedTest(name = "estado {0}")
+    @ValueSource(strings = {"FREELANCE", "current", "Current"})
+    @DisplayName("Un estado que no es una opción responde 422 con su código")
+    void addWorkExperience_shouldReturnStatusInvalid_whenStatusIsUnknown(String status) throws Exception {
+        var json = "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"" + status + "\"}";
+
+        expectFieldError(postExperience(json), "employmentStatus", "EMPLOYMENT_STATUS_INVALID_VALUE", "Selecciona una opción.");
+    }
+
+    @Test
+    @DisplayName("Un estado vacío responde que es obligatorio")
+    void addWorkExperience_shouldReturnStatusRequired_whenStatusIsEmpty() throws Exception {
+        var json = "{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"\"}";
+
+        expectFieldError(postExperience(json), "employmentStatus", "EMPLOYMENT_STATUS_REQUIRED", "Selecciona una opción.");
+    }
+
+    @Test
+    @DisplayName("Una procedencia en el cuerpo se ignora: la experiencia se guarda MANUAL")
+    void addWorkExperience_shouldSaveManual_whenBodyDeclaresAiProvenance() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-exp"));
+        profile.addWorkExperience(co.edu.unicauca.cameia.perfil.domain.model.WorkExperience.create(
+                new co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft("ACME", "Dev", null, null, null,
+                        co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus.CURRENT),
+                new co.edu.unicauca.cameia.perfil.domain.model.DateBounds(java.time.YearMonth.of(2026, 10), null)));
+        when(profileAppService.addWorkExperience(any())).thenReturn(profile);
+
+        postExperience(EXPERIENCE_BASE + ",\"provenance\":\"AI_SUGGESTED\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.workExperiences[0].provenance").value("MANUAL"));
+
+        var command = ArgumentCaptor.forClass(co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand.class);
+        verify(profileAppService).addWorkExperience(command.capture());
+        assertThat(command.getValue().company()).isEqualTo("ACME");
+    }
+
+    @Test
+    @DisplayName("Varios campos inválidos se informan a la vez, uno por campo")
+    void addWorkExperience_shouldReturnEveryInvalidField_whenSeveralFail() throws Exception {
+        var json = "{\"company\":\"\",\"position\":\"" + "a".repeat(101) + "\",\"startDate\":\"2024-13\",\"employmentStatus\":\"CURRENT\"}";
+
+        postExperience(json).andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors.length()").value(3))
+                .andExpect(jsonPath("$.errors[*].field").value(org.hamcrest.Matchers.containsInAnyOrder(
+                        "company", "position", "startDate")));
+    }
+
+    @Test
+    @DisplayName("Una empresa con un carácter nulo se rechaza con su código")
+    void addWorkExperience_shouldRejectControlCharacter_whenCompanyHasNul() throws Exception {
+        var json = "{\"company\":\"Acme\\u0000\",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\"}";
+
+        expectFieldError(postExperience(json), "company", "COMPANY_INVALID_CHARACTERS", "La empresa tiene caracteres no permitidos.");
+    }
+
+    @Test
+    @DisplayName("Los saltos de línea internos de la descripción se conservan y los de los extremos se recortan")
+    void addWorkExperience_shouldKeepInnerLineBreaks_whenDescriptionHasThem() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-exp"));
+        when(profileAppService.addWorkExperience(any())).thenReturn(profile);
+
+        postExperience(EXPERIENCE_BASE + ",\"description\":\"\\nLínea 1\\nLínea 2\\n\"}").andExpect(status().isCreated());
+
+        var command = ArgumentCaptor.forClass(co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand.class);
+        verify(profileAppService).addWorkExperience(command.capture());
+        assertThat(command.getValue().description()).isEqualTo("Línea 1\nLínea 2");
+    }
+
+    @Test
+    @DisplayName("Un número en lugar del texto de la empresa llega al servicio como texto")
+    void addWorkExperience_shouldTreatNumberAsText_whenCompanyIsNumber() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-exp"));
+        when(profileAppService.addWorkExperience(any())).thenReturn(profile);
+
+        postExperience("{\"company\":123,\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\"}").andExpect(status().isCreated());
+
+        var command = ArgumentCaptor.forClass(co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand.class);
+        verify(profileAppService).addWorkExperience(command.capture());
+        assertThat(command.getValue().company()).isEqualTo("123");
+    }
+
+    @Test
+    @DisplayName("Empresa y cargo de 100 y descripción de 500 se aceptan en el borde: el límite exacto no se rechaza")
+    void addWorkExperience_shouldAccept_whenTextIsAtLimit() throws Exception {
+        when(profileAppService.addWorkExperience(any())).thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-exp")));
+        var json = "{\"company\":\"" + "a".repeat(100) + "\",\"position\":\"" + "b".repeat(100) + "\",\"description\":\""
+                + "c".repeat(500) + "\",\"employmentStatus\":\"CURRENT\"}";
+
+        postExperience(json).andExpect(status().isCreated());
+
+        var command = ArgumentCaptor.forClass(co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand.class);
+        verify(profileAppService).addWorkExperience(command.capture());
+        assertThat(command.getValue().company()).hasSize(100);
+        assertThat(command.getValue().description()).hasSize(500);
+    }
+
+    @Test
+    @DisplayName("Institución y título de 150 se aceptan en el borde: el límite exacto no se rechaza")
+    void addEducation_shouldAccept_whenTextIsAtLimit() throws Exception {
+        when(profileAppService.addEducation(any())).thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-edu")));
+        var json = "{\"institution\":\"" + "a".repeat(150) + "\",\"degree\":\"" + "b".repeat(150)
+                + "\",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}";
+
+        postEducation(json).andExpect(status().isCreated());
+
+        var command = ArgumentCaptor.forClass(co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand.class);
+        verify(profileAppService).addEducation(command.capture());
+        assertThat(command.getValue().institution()).hasSize(150);
+        assertThat(command.getValue().degree()).hasSize(150);
+    }
+
+    @Test
+    @DisplayName("Una experiencia terminada sin fecha de fin responde 422 con el texto del criterio en endDate")
+    void addWorkExperience_shouldReturnEndDateRequired_whenEndedWithoutEndDate() throws Exception {
+        when(profileAppService.addWorkExperience(any())).thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException(
+                java.util.List.of(new co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException.FieldError(
+                        "endDate", co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.END_DATE_REQUIRED, "Ingresa la fecha de fin."))));
+
+        expectFieldError(postExperience("{\"company\":\"ACME\",\"position\":\"Dev\",\"employmentStatus\":\"ENDED\",\"startDate\":\"2024-01\"}"),
+                "endDate", "END_DATE_REQUIRED", "Ingresa la fecha de fin.");
+    }
+
+    @ParameterizedTest(name = "{0} {1}")
+    @org.junit.jupiter.params.provider.CsvSource({
+            "POST, /work-experiences",
+            "DELETE, /work-experiences/{child}",
+            "POST, /educations",
+            "DELETE, /educations/{child}"})
+    @DisplayName("Un perfil de otro Usuario responde 403 con el texto del criterio en las cuatro rutas de experiencia y formación")
+    void workHistory_shouldReturn403_whenProfileBelongsToAnotherUser(String method, String route) throws Exception {
+        var denied = new ProfileAccessDeniedException();
+        switch (method + " " + route) {
+            case "POST /work-experiences" -> when(profileAppService.addWorkExperience(any())).thenThrow(denied);
+            case "POST /educations" -> when(profileAppService.addEducation(any())).thenThrow(denied);
+            case "DELETE /work-experiences/{child}" -> when(profileAppService.removeWorkExperience(any(), any(), any())).thenThrow(denied);
+            default -> when(profileAppService.removeEducation(any(), any(), any())).thenThrow(denied);
+        }
+        var path = "/api/v1/profiles/" + UUID.randomUUID() + route.replace("{child}", UUID.randomUUID().toString());
+        var request = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request(
+                org.springframework.http.HttpMethod.valueOf(method), path).header("X-User-Id", "uid-other");
+        if (method.equals("POST")) {
+            request.contentType(MediaType.APPLICATION_JSON).content(route.contains("educations")
+                    ? "{\"institution\":\"U\",\"degree\":\"T\",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}"
+                    : EXPERIENCE_BASE + "}");
+        }
+
+        mockMvc.perform(request)
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PROFILE_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.detail").value("No encontramos lo que buscabas."));
+    }
+
+    @Test
+    @DisplayName("Agregar la quinta experiencia responde 409 con el máximo")
+    void addWorkExperience_shouldReturn409_whenLimitReached() throws Exception {
+        when(profileAppService.addWorkExperience(any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceLimitReachedException());
+
+        postExperience(EXPERIENCE_BASE + "}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORK_EXPERIENCE_LIMIT_REACHED"))
+                .andExpect(jsonPath("$.detail").value("Ya tienes el máximo de 4 experiencias laborales."))
+                .andExpect(jsonPath("$.errors").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Agregar una experiencia sin fecha de nacimiento replicada responde 503 con el texto del criterio")
+    void addWorkExperience_shouldReturn503_whenBirthDateIsUnavailable() throws Exception {
+        when(profileAppService.addWorkExperience(any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.BirthDateUnavailableException());
+
+        postExperience(EXPERIENCE_BASE + "}")
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.code").value("BIRTH_DATE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.detail").value("Ocurrió un error. Inténtalo de nuevo."))
+                .andExpect(jsonPath("$.requestId").isNotEmpty())
+                .andExpect(jsonPath("$.errors").doesNotExist());
     }
 
     @Test
@@ -275,7 +523,7 @@ class ProfileControllerTest {
         when(profileAppService.addEducation(any()))
                 .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-edu")));
         var body = """
-                {"institution":"Unicauca","degree":"Sistemas","level":"UNDERGRADUATE","startDate":"2018-01","provenance":"MANUAL"}
+                {"institution":"Unicauca","degree":"Sistemas","level":"UNDERGRADUATE","startDate":"2018-01"}
                 """;
 
         mockMvc.perform(post("/api/v1/profiles/{id}/educations", UUID.randomUUID())
@@ -286,6 +534,188 @@ class ProfileControllerTest {
         var command = ArgumentCaptor.forClass(AddEducationCommand.class);
         verify(profileAppService).addEducation(command.capture());
         assertThat(command.getValue().inProgress()).isFalse();
+    }
+
+    private static final String EDUCATION_BASE =
+            "{\"institution\":\"Unicauca\",\"degree\":\"Sistemas\",\"level\":\"UNDERGRADUATE\",\"startDate\":\"2018-01\"";
+
+    private org.springframework.test.web.servlet.ResultActions postEducation(String json) throws Exception {
+        return mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + "/educations")
+                .header("X-User-Id", "uid-ctrl-edu").contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    @Test
+    @DisplayName("Una formación con el cuerpo vacío informa los cuatro campos obligatorios a la vez")
+    void addEducation_shouldReturnAllRequiredFields_whenAllAreMissing() throws Exception {
+        postEducation("{}").andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.detail").value("Revisa los campos marcados."))
+                .andExpect(jsonPath("$.errors.length()").value(4))
+                .andExpect(jsonPath("$.errors[?(@.field=='institution')].message").value("Ingresa la institución."))
+                .andExpect(jsonPath("$.errors[?(@.field=='degree')].message").value("Ingresa el título obtenido."))
+                .andExpect(jsonPath("$.errors[?(@.field=='level')].message").value("Elige un nivel educativo."))
+                .andExpect(jsonPath("$.errors[?(@.field=='startDate')].message").value("Ingresa la fecha de inicio."));
+    }
+
+    @ParameterizedTest(name = "{0}={1}")
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', textBlock = """
+            institution | "\\t\\n"
+            institution | " "
+            institution | ""
+            institution | null
+            degree      | "\\t\\n"
+            degree      | " "
+            degree      | ""
+            degree      | null
+            """)
+    @DisplayName("Una institución o un título ausente, nulo, vacío o en blanco responde que es obligatorio")
+    void addEducation_shouldReturnRequired_whenTextIsMissingOrBlank(String field, String value) throws Exception {
+        var json = "institution".equals(field)
+                ? "{\"institution\":" + value + ",\"degree\":\"Ing\",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}"
+                : "{\"institution\":\"Unicauca\",\"degree\":" + value + ",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}";
+        var message = "institution".equals(field) ? "Ingresa la institución." : "Ingresa el título obtenido.";
+
+        expectFieldError(postEducation(json), field, field.equals("institution") ? "INSTITUTION_REQUIRED" : "DEGREE_REQUIRED", message);
+    }
+
+    @ParameterizedTest(name = "{0} de {1} puntos de código")
+    @org.junit.jupiter.params.provider.CsvSource({"institution,151", "degree,151"})
+    @DisplayName("Un texto de 151 puntos de código responde 422 con su código y su mensaje")
+    void addEducation_shouldReturnTooLong_whenTextExceedsLimit(String field, int length) throws Exception {
+        var institution = "institution".equals(field) ? "a".repeat(length) : "Unicauca";
+        var degree = "degree".equals(field) ? "a".repeat(length) : "Sistemas";
+        var json = "{\"institution\":\"" + institution + "\",\"degree\":\"" + degree
+                + "\",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}";
+        var code = "institution".equals(field) ? "INSTITUTION_TOO_LONG" : "DEGREE_TOO_LONG";
+        var message = "institution".equals(field) ? "La institución no puede superar los 150 caracteres."
+                : "El título obtenido no puede superar los 150 caracteres.";
+
+        expectFieldError(postEducation(json), field, code, message);
+    }
+
+    @Test
+    @DisplayName("Un emoji que lleva el texto a 151 puntos de código se rechaza y 150 se acepta")
+    void addEducation_shouldCountCodePoints_whenTextEndsWithEmoji() throws Exception {
+        when(profileAppService.addEducation(any())).thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-edu")));
+        var atLimit = "{\"institution\":\"" + "a".repeat(149) + "😀\",\"degree\":\"" + "b".repeat(150)
+                + "\",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}";
+        var overLimit = "{\"institution\":\"" + "a".repeat(149) + "😀😀\",\"degree\":\"Sistemas\",\"level\":\"TECHNICAL\",\"startDate\":\"2018-01\"}";
+
+        postEducation(atLimit).andExpect(status().isCreated());
+        expectFieldError(postEducation(overLimit), "institution", "INSTITUTION_TOO_LONG",
+                "La institución no puede superar los 150 caracteres.");
+    }
+
+    @ParameterizedTest(name = "nivel {0}")
+    @ValueSource(strings = {"DOCTORATE", "undergraduate"})
+    @DisplayName("Un nivel que no es una opción responde 422 con su código")
+    void addEducation_shouldReturnLevelInvalid_whenLevelIsUnknown(String level) throws Exception {
+        var json = "{\"institution\":\"Unicauca\",\"degree\":\"Sistemas\",\"level\":\"" + level + "\",\"startDate\":\"2018-01\"}";
+
+        expectFieldError(postEducation(json), "level", "EDUCATION_LEVEL_INVALID_VALUE", SELECT_OPTION);
+    }
+
+    @ParameterizedTest(name = "{0}={1}")
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', textBlock = """
+            startDate | 2024
+            startDate | 2020-13
+            startDate | 20-01
+            startDate | 2020/01
+            endDate   | 2024
+            endDate   | 2020-13
+            endDate   | 2020-01-15
+            """)
+    @DisplayName("Una fecha mal escrita, incluido un año suelto, responde 422 en su campo con el formato esperado")
+    void addEducation_shouldReturnDateInvalidFormat_whenDateIsMalformed(String field, String value) throws Exception {
+        var code = "startDate".equals(field) ? "START_DATE_INVALID_FORMAT" : "END_DATE_INVALID_FORMAT";
+        var base = "startDate".equals(field)
+                ? "{\"institution\":\"Unicauca\",\"degree\":\"Sistemas\",\"level\":\"TECHNICAL\",\"endDate\":\"2021-01\",\"startDate\":\"" + value + "\"}"
+                : EDUCATION_BASE + ",\"endDate\":\"" + value + "\"}";
+
+        expectFieldError(postEducation(base), field, code, "Ingresa una fecha válida con el formato mm/aaaa.");
+    }
+
+    @Test
+    @DisplayName("Un inProgress que es texto no booleano responde 422 de cuerpo ilegible")
+    void addEducation_shouldRejectInProgressThatIsNotBoolean_whenValueIsText() throws Exception {
+        postEducation(EDUCATION_BASE + ",\"inProgress\":\"abc\"}").andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("REQUEST_BODY_INVALID_FORMAT"));
+    }
+
+    /**
+     * Fija lo que Jackson hace hoy: convierte {@code 1}, {@code 0} y {@code "true"} a booleano, igual que convierte
+     * {@code 123} a texto en la empresa. Si se quisiera rechazarlos habría que desactivar la conversión de escalares
+     * para todos los cuerpos, no solo para este campo.
+     */
+    @ParameterizedTest(name = "inProgress={0} llega como {1}")
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', textBlock = """
+            1        | true
+            0        | false
+            "true"   | true
+            "false"  | false
+            """)
+    @DisplayName("Un inProgress numérico o booleano entre comillas se convierte a booleano, como en el resto de los cuerpos")
+    void addEducation_shouldRecordJacksonBehaviour_whenInProgressIsNumberOrQuotedBoolean(String value, boolean expected)
+            throws Exception {
+        when(profileAppService.addEducation(any()))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-edu")));
+
+        postEducation(EDUCATION_BASE + ",\"inProgress\":" + value + "}").andExpect(status().isCreated());
+
+        var command = ArgumentCaptor.forClass(AddEducationCommand.class);
+        verify(profileAppService).addEducation(command.capture());
+        assertThat(command.getValue().inProgress()).isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("Una procedencia y un área de estudio en el cuerpo se ignoran")
+    void addEducation_shouldIgnoreProvenanceAndFieldOfStudy_whenSent() throws Exception {
+        when(profileAppService.addEducation(any())).thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-edu")));
+
+        postEducation(EDUCATION_BASE + ",\"provenance\":\"AI_SUGGESTED\",\"fieldOfStudy\":\"Sistemas\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.educations").isEmpty());
+        verify(profileAppService).addEducation(any());
+    }
+
+    @Test
+    @DisplayName("Agregar la sexta formación responde 409 con el máximo y sin errors")
+    void addEducation_shouldReturn409_whenLimitReached() throws Exception {
+        when(profileAppService.addEducation(any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.EducationLimitReachedException());
+
+        postEducation(EDUCATION_BASE + "}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EDUCATION_LIMIT_REACHED"))
+                .andExpect(jsonPath("$.detail").value("Ya tienes el máximo de 5 formaciones académicas."))
+                .andExpect(jsonPath("$.errors").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Eliminar la última formación de un perfil activo responde 409 con su código")
+    void removeEducation_shouldReturn409_whenLastEducationOfActiveProfile() throws Exception {
+        when(profileAppService.removeEducation(any(), any(), any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.EducationNotAllowedException());
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/educations/{eduId}", UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-edu"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EDUCATION_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.detail").value(
+                        "No puedes quedarte sin formación académica con el perfil activo. Agrega otra antes de eliminar esta."))
+                .andExpect(jsonPath("$.errors").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Eliminar una formación que no es del perfil responde 404 con su código")
+    void removeEducation_shouldReturn404_whenEducationIsNotInProfile() throws Exception {
+        when(profileAppService.removeEducation(any(), any(), any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException());
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/educations/{eduId}", UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-edu"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("EDUCATION_NOT_FOUND"));
     }
 
     @Test
@@ -370,7 +800,6 @@ class ProfileControllerTest {
                 body.put("position", "\"Dev\"");
                 body.put("startDate", "\"2022-01\"");
                 body.put("employmentStatus", "\"CURRENT\"");
-                body.put("provenance", "\"MANUAL\"");
             }
             case SKILLS -> {
                 body.put("skillName", "\"Java\"");
@@ -383,7 +812,6 @@ class ProfileControllerTest {
                 body.put("level", "\"UNDERGRADUATE\"");
                 body.put("startDate", "\"2018-01\"");
                 body.put("inProgress", "false");
-                body.put("provenance", "\"MANUAL\"");
             }
             default -> {
                 body.put("professionalRoleId", "\"" + UUID.randomUUID() + "\"");
@@ -401,9 +829,7 @@ class ProfileControllerTest {
         var rows = Stream.of(
                 new Object[]{WORK_EXPERIENCE, "company", true, "COMPANY_REQUIRED", "Ingresa la empresa."},
                 new Object[]{WORK_EXPERIENCE, "position", true, "POSITION_REQUIRED", "Ingresa el cargo."},
-                new Object[]{WORK_EXPERIENCE, "startDate", true, "START_DATE_REQUIRED", "Ingresa la fecha de inicio."},
                 new Object[]{WORK_EXPERIENCE, "employmentStatus", false, "EMPLOYMENT_STATUS_REQUIRED", SELECT_OPTION},
-                new Object[]{WORK_EXPERIENCE, "provenance", false, "PROVENANCE_REQUIRED", SELECT_OPTION},
                 new Object[]{SKILLS, "skillName", true, "SKILL_NAME_REQUIRED", "Ingresa una habilidad."},
                 new Object[]{SKILLS, "level", true, "SKILL_LEVEL_REQUIRED", "Elige un nivel."},
                 new Object[]{SKILLS, "provenance", true, "PROVENANCE_REQUIRED", SELECT_OPTION},
@@ -411,8 +837,7 @@ class ProfileControllerTest {
                 new Object[]{EDUCATIONS, "institution", true, "INSTITUTION_REQUIRED", "Ingresa la institución."},
                 new Object[]{EDUCATIONS, "degree", true, "DEGREE_REQUIRED", "Ingresa el título obtenido."},
                 new Object[]{EDUCATIONS, "level", true, "EDUCATION_LEVEL_REQUIRED", "Elige un nivel educativo."},
-                new Object[]{EDUCATIONS, "startDate", true, "START_DATE_REQUIRED", "Ingresa la fecha de inicio."},
-                new Object[]{EDUCATIONS, "provenance", true, "PROVENANCE_REQUIRED", SELECT_OPTION});
+                new Object[]{EDUCATIONS, "startDate", true, "START_DATE_REQUIRED", "Ingresa la fecha de inicio."});
         return rows.flatMap(row -> {
             // null significa que el campo no se envía; el resto son valores JSON literales.
             var values = (boolean) row[2]
