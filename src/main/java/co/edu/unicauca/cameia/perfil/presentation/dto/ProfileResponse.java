@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.presentation.dto;
 
+import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileSkill;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
@@ -27,6 +28,9 @@ public record ProfileResponse(
         String provenance,
         String name,
         String summary,
+        @Schema(description = "Procedencia del resumen; MANUAL en el MVP, null sin resumen", example = "MANUAL",
+                allowableValues = {"MANUAL"}, nullable = true)
+        String summaryProvenance,
         BigDecimal salaryExpectation,
         String preferredModality,
         Instant createdAt,
@@ -45,6 +49,8 @@ public record ProfileResponse(
                 p.getProvenance().name(),
                 p.getName() != null ? p.getName().value() : null,
                 p.getSummary() != null ? p.getSummary().value() : null,
+                // Derivada mientras no haya resúmenes escritos por la IA; entonces saldrá de una columna.
+                p.getSummary() != null ? DataProvenance.MANUAL.name() : null,
                 p.getSalaryExpectation() != null ? p.getSalaryExpectation().amount() : null,
                 p.getPreferredModality() != null ? p.getPreferredModality().name() : null,
                 p.getCreatedAt(),

@@ -163,5 +163,9 @@ public enum ErrorCode {
     /** Falta el nivel de la formación académica. */
     EDUCATION_LEVEL_REQUIRED,
     /** Falta el monto de la expectativa salarial. */
-    SALARY_EXPECTATION_REQUIRED
+    SALARY_EXPECTATION_REQUIRED,
+    /** El nombre del perfil tiene un carácter de control. */
+    PROFILE_NAME_INVALID_CHARACTERS,
+    /** El resumen profesional tiene un carácter de control distinto de tabulador, salto de línea y retorno. */
+    SUMMARY_INVALID_CHARACTERS
 }

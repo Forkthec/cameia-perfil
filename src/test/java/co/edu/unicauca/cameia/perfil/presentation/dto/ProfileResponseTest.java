@@ -2,6 +2,7 @@ package co.edu.unicauca.cameia.perfil.presentation.dto;
 
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.SalaryExpectation;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
@@ -23,6 +24,7 @@ class ProfileResponseTest {
         assertThat(response.status()).isEqualTo("IN_PROGRESS");
         assertThat(response.name()).isNull();
         assertThat(response.summary()).isNull();
+        assertThat(response.summaryProvenance()).isNull();
         assertThat(response.salaryExpectation()).isNull();
         assertThat(response.preferredModality()).isNull();
         assertThat(response.workExperiences()).isEmpty();
@@ -34,12 +36,14 @@ class ProfileResponseTest {
     void from_shouldReturnValues_whenOptionalFieldsArePresent() {
         var profile = ProfessionalProfile.create(new FirebaseUid("uid-resp-lleno"));
         profile.updateName(new ProfileName("Ana Sofía"));
+        profile.updateSummary(new ProfessionalSummary("Desarrolladora backend."));
         profile.updateSalaryExpectation(new SalaryExpectation(new BigDecimal("4500000")));
         profile.updatePreferredModality(WorkModality.HYBRID);
 
         var response = ProfileResponse.from(profile);
 
         assertThat(response.name()).isEqualTo("Ana Sofía");
+        assertThat(response.summaryProvenance()).isEqualTo("MANUAL");
         assertThat(response.salaryExpectation()).isEqualByComparingTo("4500000");
         assertThat(response.preferredModality()).isEqualTo("HYBRID");
     }

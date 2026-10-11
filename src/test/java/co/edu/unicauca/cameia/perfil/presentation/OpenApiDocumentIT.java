@@ -131,6 +131,28 @@ class OpenApiDocumentIT {
     }
 
     @Test
+    @DisplayName("El OpenAPI de la información general publica los límites de 255 y 2000, la modalidad, sin procedencia y con la procedencia del resumen")
+    void updateProfileInfoRequest_shouldDocumentLimits_whenApiDocsAreGenerated() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+
+        var schemas = JsonMapper.builder().build().readTree(response.body()).get("components").get("schemas");
+        var schema = schemas.get("UpdateProfileInfoRequest").get("properties");
+        assertThat(schema.get("name").get("maxLength").asInt()).isEqualTo(255);
+        assertThat(schema.get("name").get("minLength").asInt()).isEqualTo(1);
+        assertThat(schema.get("summary").get("maxLength").asInt()).isEqualTo(2000);
+        assertThat(schema.get("preferredModality").get("enum").valueStream().map(v -> v.asString()).toList())
+                .containsExactlyInAnyOrder("REMOTE", "HYBRID", "ON_SITE");
+        assertThat(schema.get("preferredModality").get("example").asString()).isEqualTo("HYBRID");
+        assertThat(schema.has("provenance")).isFalse();
+        var summaryProvenance = schemas.get("ProfileResponse").get("properties").get("summaryProvenance");
+        assertThat(summaryProvenance.get("enum").valueStream().map(v -> v.asString()).toList()).containsExactly("MANUAL");
+        assertThat(response.body()).contains("PROFILE_NAME_REQUIRED", "PROFILE_NAME_INVALID_CHARACTERS",
+                "SUMMARY_NOT_ALLOWED", "SUMMARY_INVALID_CHARACTERS", "PREFERRED_MODALITY_INVALID_VALUE");
+    }
+
+    @Test
     @DisplayName("El OpenAPI de la formación publica los límites de 150, el formato de las fechas, los niveles y sin área de estudio")
     void addEducationRequest_shouldDocumentLimits_whenApiDocsAreGenerated() throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();

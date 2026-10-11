@@ -19,6 +19,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundExceptio
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.presentation.advice.ApiExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -34,6 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -45,8 +48,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -364,6 +369,15 @@ class ProfileControllerTest {
         var json = "{\"company\":\"Acme\\u0000\",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\"}";
 
         expectFieldError(postExperience(json), "company", "COMPANY_INVALID_CHARACTERS", "La empresa tiene caracteres no permitidos.");
+    }
+
+    @Test
+    @DisplayName("Una empresa con carácter de control y demasiado larga informa los caracteres no permitidos, un solo elemento")
+    void addWorkExperience_shouldReportInvalidCharacters_whenCompanyHasControlAndIsTooLong() throws Exception {
+        var json = "{\"company\":\"A\\u0000" + "a".repeat(101) + "\",\"position\":\"Dev\",\"employmentStatus\":\"CURRENT\"}";
+
+        expectFieldError(postExperience(json), "company", "COMPANY_INVALID_CHARACTERS", "La empresa tiene caracteres no permitidos.")
+                .andExpect(jsonPath("$.errors.length()").value(1));
     }
 
     @Test
@@ -1291,5 +1305,213 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.detail").value("Todavía no cumples estos requisitos:"))
                 .andExpect(jsonPath("$.missingRequirements.length()").value(2))
                 .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("Un perfil con resumen lo devuelve con procedencia MANUAL derivada")
+    void getProfile_shouldReturnManualSummaryProvenance_whenSummaryExists() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-prov"));
+        profile.updateSummary(new ProfessionalSummary("Analista con tres años en banca."));
+        when(profileAppService.getProfile(profile.getId().value(), "uid-ctrl-prov")).thenReturn(profile);
+
+        mockMvc.perform(get("/api/v1/profiles/{id}", profile.getId().value()).header("X-User-Id", "uid-ctrl-prov"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary").value("Analista con tres años en banca."))
+                .andExpect(jsonPath("$.summaryProvenance").value("MANUAL"));
+    }
+
+    @Test
+    @DisplayName("Un perfil sin resumen devuelve la procedencia del resumen en null")
+    void getProfile_shouldReturnNullSummaryProvenance_whenSummaryIsAbsent() throws Exception {
+        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-prov"));
+        when(profileAppService.getProfile(profile.getId().value(), "uid-ctrl-prov")).thenReturn(profile);
+
+        mockMvc.perform(get("/api/v1/profiles/{id}", profile.getId().value()).header("X-User-Id", "uid-ctrl-prov"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary").doesNotExist())
+                .andExpect(jsonPath("$.summaryProvenance").doesNotExist());
+    }
+
+    // ── PATCH /api/v1/profiles/{id}: información general ─────────────────
+
+    private ResultActions patchInfo(String json) throws Exception {
+        return mockMvc.perform(patch("/api/v1/profiles/" + UUID.randomUUID())
+                .header("X-User-Id", "uid-ctrl-info").contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    private static String jsonOf(String field, String value) {
+        return "{\"" + field + "\":\"" + value + "\"}";
+    }
+
+    @ParameterizedTest(name = "nombre {0}")
+    @ValueSource(strings = {"\"\"", "\"   \"", "\"\\t\\n\"", "\"\\u00a0\"", "\"\\ufeff\""})
+    @DisplayName("Un nombre vacío o con solo espacios responde que es obligatorio, sin llegar al servicio")
+    void updateProfileInfo_shouldReturnNameRequired_whenNameIsBlank(String literal) throws Exception {
+        expectFieldError(patchInfo("{\"name\":" + literal + "}"),
+                "name", "PROFILE_NAME_REQUIRED", "Ingresa un nombre para el perfil.");
+    }
+
+    @ParameterizedTest(name = "{0} de {1} puntos de código")
+    @MethodSource("tooLongInfoTexts")
+    @DisplayName("Un nombre o un resumen que supera su límite en puntos de código responde 422 con su código y su mensaje")
+    void updateProfileInfo_shouldReturnTooLong_whenTextExceedsLimit(String field, String value, int length, String code,
+            String message) throws Exception {
+        expectFieldError(patchInfo(jsonOf(field, value)), field, code, message);
+    }
+
+    static Stream<Arguments> tooLongInfoTexts() {
+        var name = "El nombre no puede superar los 255 caracteres.";
+        var summary = "El resumen no puede superar los 2000 caracteres.";
+        return Stream.of(
+                Arguments.of("name", "a".repeat(256), 256, "PROFILE_NAME_TOO_LONG", name),
+                Arguments.of("name", "a".repeat(255) + "😀", 256, "PROFILE_NAME_TOO_LONG", name),
+                Arguments.of("name", "ñ".repeat(256), 256, "PROFILE_NAME_TOO_LONG", name),
+                Arguments.of("summary", "a".repeat(2001), 2001, "SUMMARY_TOO_LONG", summary),
+                Arguments.of("summary", "a".repeat(1999) + "😀😀", 2001, "SUMMARY_TOO_LONG", summary));
+    }
+
+    @ParameterizedTest(name = "{0} de {1} puntos de código")
+    @MethodSource("infoTextsAtLimit")
+    @DisplayName("Un nombre o un resumen justo en su límite en puntos de código se acepta y llega normalizado al servicio")
+    void updateProfileInfo_shouldAccept_whenTextIsAtLimit(String field, String value, int length) throws Exception {
+        when(profileAppService.updateProfileInfo(any(UpdateProfileInfoCommand.class)))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-info")));
+
+        patchInfo(jsonOf(field, value)).andExpect(status().isOk());
+
+        var command = ArgumentCaptor.forClass(UpdateProfileInfoCommand.class);
+        verify(profileAppService).updateProfileInfo(command.capture());
+        var sent = "name".equals(field) ? command.getValue().name() : command.getValue().summary();
+        assertThat(sent.codePointCount(0, sent.length())).isEqualTo(length);
+    }
+
+    static Stream<Arguments> infoTextsAtLimit() {
+        return Stream.of(
+                Arguments.of("name", "a".repeat(255), 255),
+                Arguments.of("name", "a".repeat(254) + "😀", 255),
+                Arguments.of("name", "é".repeat(255), 255),
+                Arguments.of("summary", "a".repeat(2000), 2000),
+                Arguments.of("summary", "😀".repeat(2000), 2000));
+    }
+
+    @Test
+    @DisplayName("Un nombre vacío y un resumen demasiado largo se informan a la vez, un elemento por campo")
+    void updateProfileInfo_shouldReturnBothFields_whenNameAndSummaryAreInvalid() throws Exception {
+        patchInfo("{\"name\":\"\",\"summary\":\"" + "a".repeat(2001) + "\"}")
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors.length()").value(2))
+                .andExpect(jsonPath("$.errors[*].field", containsInAnyOrder("name", "summary")))
+                .andExpect(jsonPath("$.errors[*].code", containsInAnyOrder("PROFILE_NAME_REQUIRED", "SUMMARY_TOO_LONG")));
+    }
+
+    @ParameterizedTest(name = "modalidad {0}")
+    @ValueSource(strings = {"hybrid", "PRESENCIAL", "", "   "})
+    @DisplayName("Una modalidad fuera de las opciones, incluida la vacía, responde que se seleccione una opción")
+    void updateProfileInfo_shouldReturnModalityInvalid_whenValueIsUnknown(String value) throws Exception {
+        expectFieldError(patchInfo(jsonOf("preferredModality", value)),
+                "preferredModality", "PREFERRED_MODALITY_INVALID_VALUE", SELECT_OPTION);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(delimiter = '|', textBlock = """
+            name    | Analista\\u0000 | PROFILE_NAME_INVALID_CHARACTERS | El nombre tiene caracteres no permitidos.
+            name    | A\\u0007        | PROFILE_NAME_INVALID_CHARACTERS | El nombre tiene caracteres no permitidos.
+            name    | A\\nB           | PROFILE_NAME_INVALID_CHARACTERS | El nombre tiene caracteres no permitidos.
+            summary | Hola\\u0000     | SUMMARY_INVALID_CHARACTERS      | El resumen tiene caracteres no permitidos.
+            summary | Hola\\u0085     | SUMMARY_INVALID_CHARACTERS      | El resumen tiene caracteres no permitidos.
+            """)
+    @DisplayName("Un carácter de control responde 422 con su código en lugar de llegar a la base de datos")
+    void updateProfileInfo_shouldRejectControlCharacter_whenTextHasOne(String field, String value, String code,
+            String message) throws Exception {
+        expectFieldError(patchInfo(jsonOf(field, value)), field, code, message);
+    }
+
+    @ParameterizedTest(name = "{0} con control y {2} caracteres")
+    @CsvSource(delimiter = '|', textBlock = """
+            name    | A\\u0000 | 300  | PROFILE_NAME_INVALID_CHARACTERS | El nombre tiene caracteres no permitidos.
+            name    | \\u0000  | 300  | PROFILE_NAME_INVALID_CHARACTERS | El nombre tiene caracteres no permitidos.
+            summary | \\u0000  | 2001 | SUMMARY_INVALID_CHARACTERS      | El resumen tiene caracteres no permitidos.
+            """)
+    @DisplayName("Un texto con carácter de control y demasiado largo informa siempre los caracteres no permitidos, un solo elemento")
+    void updateProfileInfo_shouldReportInvalidCharacters_whenNameHasControlAndIsTooLong(String field, String prefix,
+            int padding, String code, String message) throws Exception {
+        expectFieldError(patchInfo(jsonOf(field, prefix + "a".repeat(padding))), field, code, message)
+                .andExpect(jsonPath("$.errors.length()").value(1));
+    }
+
+    @ParameterizedTest(name = "modalidad [{0}]")
+    @ValueSource(strings = {"HYBRID ", " HYBRID\\t"})
+    @DisplayName("Una modalidad válida con espacios o tabuladores alrededor se acepta y llega recortada al servicio")
+    void updateProfileInfo_shouldTrimModality_whenValueHasSpaces(String value) throws Exception {
+        when(profileAppService.updateProfileInfo(any(UpdateProfileInfoCommand.class)))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-info")));
+
+        patchInfo(jsonOf("preferredModality", value)).andExpect(status().isOk());
+
+        var command = ArgumentCaptor.forClass(UpdateProfileInfoCommand.class);
+        verify(profileAppService).updateProfileInfo(command.capture());
+        assertThat(command.getValue().preferredModality()).isEqualTo("HYBRID");
+    }
+
+    @ParameterizedTest(name = "resumen {0}")
+    @ValueSource(strings = {"\\u00a0", "\\ufeff", "\\u00a0\\ufeff"})
+    @DisplayName("Un resumen de solo espacios invisibles llega al servicio como vacío, para que lo borre")
+    void updateProfileInfo_shouldClearSummary_whenSummaryIsOnlyInvisibleSpaces(String literal) throws Exception {
+        when(profileAppService.updateProfileInfo(any(UpdateProfileInfoCommand.class)))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-info")));
+
+        patchInfo(jsonOf("summary", literal)).andExpect(status().isOk());
+
+        var command = ArgumentCaptor.forClass(UpdateProfileInfoCommand.class);
+        verify(profileAppService).updateProfileInfo(command.capture());
+        assertThat(command.getValue().summary()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Un cuerpo inválido sobre un perfil ajeno responde 422 antes de comprobar el dueño, sin llegar al servicio")
+    void updateProfileInfo_shouldReturn422_whenProfileIsForeignAndBodyIsInvalid() throws Exception {
+        expectFieldError(patchInfo("{\"name\":\"\"}"), "name", "PROFILE_NAME_REQUIRED", "Ingresa un nombre para el perfil.");
+
+        verify(profileAppService, never()).updateProfileInfo(any());
+    }
+
+    @Test
+    @DisplayName("Un resumen con saltos de línea internos se acepta")
+    void updateProfileInfo_shouldAcceptLineBreaks_whenSummaryHasThem() throws Exception {
+        when(profileAppService.updateProfileInfo(any(UpdateProfileInfoCommand.class)))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-info")));
+
+        patchInfo(jsonOf("summary", "Línea 1\\nLínea 2\\tfin")).andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Editar el perfil de otro Usuario responde 403 PROFILE_NOT_ALLOWED sin detalles internos")
+    void updateProfileInfo_shouldReturn403_whenProfileBelongsToAnotherUser() throws Exception {
+        when(profileAppService.updateProfileInfo(any())).thenThrow(new ProfileAccessDeniedException());
+
+        var result = patchInfo("{\"name\":\"Intruso\"}")
+                .andExpect(status().isForbidden())
+                .andExpect(header().string("Content-Type", containsString("application/problem+json")))
+                .andExpect(jsonPath("$.code").value("PROFILE_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.detail").value("No encontramos lo que buscabas."))
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString())
+                .doesNotContain("\"trace\"").doesNotContain("\"exception\"").doesNotContain("co.edu");
+    }
+
+    @Test
+    @DisplayName("La procedencia del cuerpo se ignora: el comando ya no la lleva")
+    void updateProfileInfo_shouldIgnoreProvenance_whenBodyHasIt() throws Exception {
+        when(profileAppService.updateProfileInfo(any(UpdateProfileInfoCommand.class)))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-info")));
+
+        patchInfo("{\"name\":\"X\",\"provenance\":\"AI_SUGGESTED\"}").andExpect(status().isOk());
+
+        var command = ArgumentCaptor.forClass(UpdateProfileInfoCommand.class);
+        verify(profileAppService).updateProfileInfo(command.capture());
+        assertThat(command.getValue().name()).isEqualTo("X");
+        assertThat(UpdateProfileInfoCommand.class.getRecordComponents())
+                .extracting(java.lang.reflect.RecordComponent::getName).doesNotContain("provenance");
     }
 }

@@ -5327,6 +5327,671 @@
       "description": "Antes de correr esta carpeta, el rol del catálogo a0000007-0000-0000-0000-000000000006 debe estar inactivo; si no, las peticiones de rol inactivo responden 201 y el catálogo lo sigue ofreciendo. Ejecutar sobre la base de la prueba: UPDATE rol_profesional SET estado = 'INACTIVE' WHERE id = 'a0000007-0000-0000-0000-000000000006';"
     },
     {
+      "name": "HU-2.3 — Información general",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "[254, 255, 256, 300, 1999, 2000, 2001].forEach((n) => pm.variables.set('hu23_a' + n, 'a'.repeat(n)));",
+              "pm.variables.set('hu23_n256', '\\u00f1'.repeat(256));",
+              "pm.variables.set('hu23_e254', 'a'.repeat(254) + '\\u{1F600}');",
+              "pm.variables.set('hu23_e255', 'a'.repeat(255) + '\\u{1F600}');",
+              "pm.variables.set('hu23_se2000', '\\u{1F600}'.repeat(2000));",
+              "pm.variables.set('hu23_se2001', 'a'.repeat(1999) + '\\u{1F600}\\u{1F600}');",
+              "pm.variables.set('hu23_mib', 'a'.repeat(1024 * 1024));"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "PATCH profiles/{id}",
+          "item": [
+            {
+              "name": "OK POST /profiles — crea el perfil del Usuario (guarda hu23_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu23_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu23_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu23_profile', pm.response.json().id);", "H.replicated();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "OK POST /profiles — crea el perfil de otro Usuario (guarda hu23_other_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu23_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu23_other_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu23_other_profile', pm.response.json().id);", "H.replicated();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "200 nombre y resumen de 300 (CA-2.3.1)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('name', () => pm.expect(b.name).to.eql(\"Analista de datos\"));", "pm.test('summary de 300 puntos de código', () => pm.expect(Array.from(b.summary).length).to.eql(300));", "pm.test('status', () => pm.expect(b.status).to.eql(\"IN_PROGRESS\"));", "pm.test('summaryProvenance', () => pm.expect(b.summaryProvenance).to.eql(\"MANUAL\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"Analista de datos\", \"summary\": \"{{hu23_a300}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 resumen de 2000 (CA-2.3.7)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('summary de 2000 puntos de código', () => pm.expect(Array.from(b.summary).length).to.eql(2000));", "pm.test('summaryProvenance', () => pm.expect(b.summaryProvenance).to.eql(\"MANUAL\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"{{hu23_a2000}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 resumen de 1999",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('summary de 1999 puntos de código', () => pm.expect(Array.from(b.summary).length).to.eql(1999));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"{{hu23_a1999}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 resumen de 2000 emojis",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('summary de 2000 puntos de código', () => pm.expect(Array.from(b.summary).length).to.eql(2000));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"{{hu23_se2000}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 resumen con saltos de línea y tabulador internos",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('summary', () => pm.expect(b.summary).to.eql(\"Línea 1\\nLínea 2\\tfin\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"Línea 1\\nLínea 2\\tfin\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 resumen con <script>",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('summary', () => pm.expect(b.summary).to.eql(\"<script>alert(1)</script>\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"<script>alert(1)</script>\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 resumen con comillas, % y _",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('summary', () => pm.expect(b.summary).to.eql(\"100 % _x_ \\\"y\\\"\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"100 % _x_ \\\"y\\\"\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 resumen en NFD se guarda en NFC",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('summary', () => pm.expect(b.summary).to.eql(\"José\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"Jose\\u0301\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 nombre de 255 (CA-2.3.9)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('name de 255 puntos de código', () => pm.expect(Array.from(b.name).length).to.eql(255));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"{{hu23_a255}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 nombre de 254",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('name de 254 puntos de código', () => pm.expect(Array.from(b.name).length).to.eql(254));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"{{hu23_a254}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 nombre de 255 con emoji",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('name de 255 puntos de código', () => pm.expect(Array.from(b.name).length).to.eql(255));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"{{hu23_e254}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 nombre con espacios en los extremos se recorta",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('name', () => pm.expect(b.name).to.eql(\"Analista  de datos\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"  Analista  de datos  \"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 modalidad HYBRID con espacios",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('preferredModality', () => pm.expect(b.preferredModality).to.eql(\"HYBRID\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"preferredModality\": \" HYBRID \"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 {} no cambia nada",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('name', () => pm.expect(b.name).to.eql(\"Analista  de datos\"));", "pm.test('preferredModality', () => pm.expect(b.preferredModality).to.eql(\"HYBRID\"));", "pm.test('summary', () => pm.expect(b.summary).to.eql(\"José\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 name y summary null no cambian",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('name', () => pm.expect(b.name).to.eql(\"Analista  de datos\"));", "pm.test('summary', () => pm.expect(b.summary).to.eql(\"José\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": null, \"summary\": null}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 ignora status, provenance, firebaseUid e id",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('status', () => pm.expect(b.status).to.eql(\"IN_PROGRESS\"));", "pm.test('provenance', () => pm.expect(b.provenance).to.eql(\"MANUAL\"));", "pm.test('id', () => pm.expect(b.id).to.eql(pm.collectionVariables.get('hu23_profile')));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"Ana\", \"status\": \"COMPLETED\", \"provenance\": \"AI_SUGGESTED\", \"firebaseUid\": \"otro\", \"id\": \"00000000-0000-0000-0000-000000000000\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 resumen vacío lo borra (CA-2.3.4)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('summary null', () => pm.expect(b.summary).to.eql(null));", "pm.test('summaryProvenance null', () => pm.expect(b.summaryProvenance).to.eql(null));", "pm.test('status', () => pm.expect(b.status).to.eql(\"IN_PROGRESS\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "OK GET posterior: el resumen sigue vacío",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "const b = pm.response.json();", "pm.test('summary null', () => pm.expect(b.summary).to.eql(null));", "pm.test('summaryProvenance null', () => pm.expect(b.summaryProvenance).to.eql(null));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "OK PATCH vuelve a escribir un resumen",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('summary', () => pm.expect(b.summary).to.eql(\"Resumen de prueba.\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"Resumen de prueba.\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "200 resumen solo con espacios lo borra",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('summary null', () => pm.expect(b.summary).to.eql(null));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"   \"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre vacío (CA-2.3.8)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"name\", \"PROFILE_NAME_REQUIRED\", \"Ingresa un nombre para el perfil.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre solo espacios",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"name\", \"PROFILE_NAME_REQUIRED\", \"Ingresa un nombre para el perfil.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"   \"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre con tabulador y salto de línea",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"name\", \"PROFILE_NAME_REQUIRED\", \"Ingresa un nombre para el perfil.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"\\t\\n\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre con espacio duro U+00A0",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"name\", \"PROFILE_NAME_REQUIRED\", \"Ingresa un nombre para el perfil.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"\\u00a0\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre con U+FEFF",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"name\", \"PROFILE_NAME_REQUIRED\", \"Ingresa un nombre para el perfil.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"\\ufeff\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre de 256 (CA-2.3.10)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"name\", \"PROFILE_NAME_TOO_LONG\", \"El nombre no puede superar los 255 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"{{hu23_a256}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre de 256 con emoji",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"name\", \"PROFILE_NAME_TOO_LONG\", \"El nombre no puede superar los 255 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"{{hu23_e255}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre de 256 ñ",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"name\", \"PROFILE_NAME_TOO_LONG\", \"El nombre no puede superar los 255 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"{{hu23_n256}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre con U+0000",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"name\", \"PROFILE_NAME_INVALID_CHARACTERS\", \"El nombre tiene caracteres no permitidos.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"Analista\\u0000\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre con salto de línea",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"name\", \"PROFILE_NAME_INVALID_CHARACTERS\", \"El nombre tiene caracteres no permitidos.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"A\\nB\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 resumen de 2001 (CA-2.3.3)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"summary\", \"SUMMARY_TOO_LONG\", \"El resumen no puede superar los 2000 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"{{hu23_a2001}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 resumen de 2001 con emojis",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"summary\", \"SUMMARY_TOO_LONG\", \"El resumen no puede superar los 2000 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"{{hu23_se2001}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 resumen de 1 MiB",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"summary\", \"SUMMARY_TOO_LONG\", \"El resumen no puede superar los 2000 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"{{hu23_mib}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 resumen con U+0000",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"summary\", \"SUMMARY_INVALID_CHARACTERS\", \"El resumen tiene caracteres no permitidos.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"Hola\\u0000\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 modalidad en minúsculas",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"preferredModality\", \"PREFERRED_MODALITY_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"preferredModality\": \"hybrid\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 modalidad fuera de la lista",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"preferredModality\", \"PREFERRED_MODALITY_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"preferredModality\": \"PRESENCIAL\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 modalidad vacía",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"preferredModality\", \"PREFERRED_MODALITY_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"preferredModality\": \"\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre vacío y resumen de 2001",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"name\", \"PROFILE_NAME_REQUIRED\", \"Ingresa un nombre para el perfil.\"], [\"summary\", \"SUMMARY_TOO_LONG\", \"El resumen no puede superar los 2000 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"\", \"summary\": \"{{hu23_a2001}}\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre, resumen y modalidad a la vez",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"name\", \"PROFILE_NAME_REQUIRED\", \"Ingresa un nombre para el perfil.\"], [\"summary\", \"SUMMARY_TOO_LONG\", \"El resumen no puede superar los 2000 caracteres.\"], [\"preferredModality\", \"PREFERRED_MODALITY_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"\", \"summary\": \"{{hu23_a2001}}\", \"preferredModality\": \"hybrid\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 cuerpo ilegible",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\":", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 cuerpo vacío",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 cuerpo es un arreglo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "[]", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre como objeto",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": {}}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "415 Content-Type text/plain",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(415, \"MEDIA_TYPE_NOT_ALLOWED\", \"Tipo de contenido no admitido.\");"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "text/plain"}],
+                "body": {"mode": "raw", "raw": "name=Ana", "options": {"raw": {"language": "text"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "401 sin X-User-Id",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(401, \"IDENTITY_REQUIRED\", \"Tu sesión expiró. Inicia sesión de nuevo.\");"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"Ana\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "403 perfil de otro Usuario (CA-2.3.11)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(403, \"PROFILE_NOT_ALLOWED\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"Intruso\", \"summary\": \"Resumen ajeno\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_other_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_other_profile}}"]}
+              }
+            },
+            {
+              "name": "OK GET perfil ajeno intacto",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "const b = pm.response.json();", "pm.test('Sin nombre', () => pm.expect(b.name).to.eql(null));", "pm.test('Sin resumen', () => pm.expect(b.summary).to.eql(null));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_other_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_other_profile}}"]}
+              }
+            },
+            {
+              "name": "404 perfil inexistente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"PROFILE_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"Ana\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/00000000-0000-0000-0000-000000000000", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "00000000-0000-0000-0000-000000000000"]}
+              }
+            },
+            {
+              "name": "422 id del perfil no es un UUID",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"PROFILE_ID_INVALID_FORMAT\", \"El identificador del perfil no es válido.\");"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"Ana\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/no-es-uuid", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "no-es-uuid"]}
+              }
+            },
+            {
+              "name": "OK PATCH — nombre y resumen",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"Perfil de prueba HU-2.3\", \"summary\": \"Resumen de prueba.\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "OK POST /educations — agrega una formación",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "OK POST /skills — agrega una habilidad",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"ADVANCED\", \"provenance\": \"MANUAL\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "OK POST /target-roles — agrega un rol objetivo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"professionalRoleId\": \"a0000001-0000-0000-0000-000000000002\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}/target-roles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}", "target-roles"]}
+              }
+            },
+            {
+              "name": "OK POST /completion — el perfil queda activo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Perfil activo', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}", "completion"]}
+              }
+            },
+            {
+              "name": "200 renombrar un perfil Activo (CA-2.3.5)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "H.typeOk('application/json');", "H.noLeaks();", "H.fast();", "const b = pm.response.json();", "pm.test('name', () => pm.expect(b.name).to.eql(\"Analista de datos senior\"));", "pm.test('status', () => pm.expect(b.status).to.eql(\"COMPLETED\"));", "pm.test('summary', () => pm.expect(b.summary).to.eql(\"Resumen de prueba.\"));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"Analista de datos senior\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 borrar el resumen de un perfil Activo (CA-2.3.12)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"summary\", \"SUMMARY_NOT_ALLOWED\", \"No puedes quedarte sin resumen profesional con el perfil activo.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 resumen solo con espacios en un perfil Activo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"summary\", \"SUMMARY_NOT_ALLOWED\", \"No puedes quedarte sin resumen profesional con el perfil activo.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"summary\": \"   \"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "422 nombre válido y resumen vacío en un perfil Activo: no guarda nada",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"summary\", \"SUMMARY_NOT_ALLOWED\", \"No puedes quedarte sin resumen profesional con el perfil activo.\"]]);"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"No se guarda\", \"summary\": \"\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            },
+            {
+              "name": "OK GET perfil Activo conserva nombre, resumen y estado",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "const b = pm.response.json();", "pm.test('name', () => pm.expect(b.name).to.eql(\"Analista de datos senior\"));", "pm.test('summary', () => pm.expect(b.summary).to.eql(\"Resumen de prueba.\"));", "pm.test('status', () => pm.expect(b.status).to.eql(\"COMPLETED\"));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu23_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu23_profile}}"]}
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "DES-02 — HU-2.3",
+      "item": [
+        {
+          "name": "OK POST /profiles — crea el perfil (guarda des23_profile)",
+          "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('des23_uid', 'uid-des-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('des23_profile', pm.response.json().id);"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "X-User-Id", "value": "{{des23_uid}}"}],
+            "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+          }
+        },
+        {
+          "name": "OK PATCH /profiles/{id} — nombre y resumen",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));"]}}],
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "X-User-Id", "value": "{{des23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"name\": \"Analista de datos\", \"summary\": \"Analista con tres años en banca.\"}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{base_url}}/api/v1/profiles/{{des23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{des23_profile}}"]}
+          }
+        },
+        {
+          "name": "OK PATCH /profiles/{id} — borra el resumen",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));"]}}],
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "X-User-Id", "value": "{{des23_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"summary\": \"\"}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{base_url}}/api/v1/profiles/{{des23_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{des23_profile}}"]}
+          }
+        }
+      ]
+    },
+    {
       "name": "HU-2.4 — Experiencia laboral y formación académica",
       "event": [
         {

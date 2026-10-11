@@ -110,6 +110,21 @@ class ProfileController {
               ]
             }""";
 
+    private static final String PROFILE_INFO_INVALID_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Datos no válidos",
+              "status": 422,
+              "detail": "Revisa los campos marcados.",
+              "code": "VALIDATION_FAILED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+              "errors": [
+                {"field": "name", "code": "PROFILE_NAME_REQUIRED", "message": "Ingresa un nombre para el perfil."},
+                {"field": "summary", "code": "SUMMARY_TOO_LONG", "message": "El resumen no puede superar los 2000 caracteres."}
+              ]
+            }
+            """;
+
     private static final String WORK_EXPERIENCE_INVALID_EXAMPLE = """
             {
               "type": "about:blank",
@@ -236,25 +251,35 @@ class ProfileController {
     }
 
     @Operation(summary = "Actualizar información básica del perfil",
-            description = "Un campo ausente o nulo no cambia. Un resumen vacío o con solo espacios lo borra, salvo en un perfil activo.")
+            description = "Un campo ausente o nulo no cambia. Un resumen vacío o con solo espacios lo borra, salvo en un perfil activo. "
+                    + "Los textos se recortan y se guardan tal como se escribieron; la procedencia del cuerpo se ignora. "
+                    + "Se informan a la vez todos los campos inválidos.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Perfil actualizado",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFILE_NAME_REQUIRED, PROFILE_NAME_TOO_LONG, SUMMARY_NOT_ALLOWED (borrar el resumen de un perfil activo), SUMMARY_TOO_LONG, PREFERRED_MODALITY_INVALID_VALUE, PROVENANCE_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "El perfil está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se guardó nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "415", description = "El cuerpo no es JSON (code MEDIA_TYPE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFILE_NAME_REQUIRED, "
+                    + "PROFILE_NAME_INVALID_CHARACTERS, PROFILE_NAME_TOO_LONG, SUMMARY_NOT_ALLOWED (borrar el resumen de un perfil activo), "
+                    + "SUMMARY_INVALID_CHARACTERS, SUMMARY_TOO_LONG, PREFERRED_MODALITY_INVALID_VALUE). Cuerpo ilegible "
+                    + "(REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Nombre vacío y resumen largo", value = PROFILE_INFO_INVALID_EXAMPLE)))
     })
     @PatchMapping("/{id}")
     ResponseEntity<ProfileResponse> updateProfileInfo(@PathVariable UUID id,
             @Valid @RequestBody UpdateProfileInfoRequest r,
             @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.ok(ProfileResponse.from(profileAppService.updateProfileInfo(
-                new UpdateProfileInfoCommand(id, uid, r.name(), r.summary(), r.preferredModality(), r.provenance()))));
+                new UpdateProfileInfoCommand(id, uid, r.name(), r.summary(), r.preferredModality()))));
     }
 
     @Operation(summary = "Agregar experiencia laboral al perfil",

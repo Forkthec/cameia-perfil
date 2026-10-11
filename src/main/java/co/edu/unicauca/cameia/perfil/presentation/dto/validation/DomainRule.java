@@ -7,8 +7,11 @@ import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.FieldValues;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.SingleLineText;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
+import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
 
@@ -28,7 +31,10 @@ import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.EMPLOYMEN
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.END_DATE_INVALID_FORMAT;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.INSTITUTION_INVALID_CHARACTERS;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.POSITION_INVALID_CHARACTERS;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.PREFERRED_MODALITY_INVALID_VALUE;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.PROFILE_NAME_INVALID_CHARACTERS;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.START_DATE_INVALID_FORMAT;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.SUMMARY_INVALID_CHARACTERS;
 
 /**
  * Ejecuta en el borde una regla de forma escrita una sola vez en el dominio, para que se informe
@@ -64,7 +70,11 @@ public @interface DomainRule {
         EDUCATION_LEVEL(text -> FieldValues.option(EducationLevel.class, text, EDUCATION_LEVEL_INVALID_VALUE, "level"),
                 Set.of(EDUCATION_LEVEL_INVALID_VALUE)),
         START_DATE(text -> FieldValues.yearMonth(text, START_DATE_INVALID_FORMAT, "startDate"), Set.of(START_DATE_INVALID_FORMAT)),
-        END_DATE(text -> FieldValues.yearMonth(text, END_DATE_INVALID_FORMAT, "endDate"), Set.of(END_DATE_INVALID_FORMAT));
+        END_DATE(text -> FieldValues.yearMonth(text, END_DATE_INVALID_FORMAT, "endDate"), Set.of(END_DATE_INVALID_FORMAT)),
+        PROFILE_NAME(text -> rejectControl(text, false, ProfileName.CHARACTERS), Set.of(PROFILE_NAME_INVALID_CHARACTERS)),
+        SUMMARY(text -> rejectControl(text, true, ProfessionalSummary.CHARACTERS), Set.of(SUMMARY_INVALID_CHARACTERS)),
+        PREFERRED_MODALITY(text -> FieldValues.option(WorkModality.class, text, PREFERRED_MODALITY_INVALID_VALUE, "preferredModality"),
+                Set.of(PREFERRED_MODALITY_INVALID_VALUE));
 
         private final Consumer<String> validation;
         private final Set<ErrorCode> reportedCodes;

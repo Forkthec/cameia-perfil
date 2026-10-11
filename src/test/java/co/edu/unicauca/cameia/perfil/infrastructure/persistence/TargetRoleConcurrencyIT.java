@@ -130,7 +130,7 @@ class TargetRoleConcurrencyIT {
         var uid = newUid();
         var profileId = profileCreationAppService.createProfile(new CreateProfileCommand(uid)).getId().value();
         profileAppService.updateProfileInfo(new UpdateProfileInfoCommand(
-                profileId, uid, "Perfil de prueba", "Resumen de prueba con más de diez caracteres.", null, null));
+                profileId, uid, "Perfil de prueba", "Resumen de prueba con más de diez caracteres.", null));
         profileAppService.addEducation(new AddEducationCommand(profileId, uid, "Universidad de prueba", "Ingeniería de Sistemas",
                 "UNDERGRADUATE", "2018-01", "2022-12", false));
         profileAppService.addSkill(new AddSkillCommand(profileId, uid, "Java", "ADVANCED", "MANUAL"));

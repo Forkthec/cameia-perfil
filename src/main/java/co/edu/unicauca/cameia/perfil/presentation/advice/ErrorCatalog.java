@@ -108,7 +108,11 @@ final class ErrorCatalog {
             Map.entry("AddEducationRequest.startDate.NotBlank", START_DATE_REQUIRED),
             Map.entry("AddEducationRequest.institution.CodePointSize", INSTITUTION_TOO_LONG),
             Map.entry("AddEducationRequest.degree.CodePointSize", DEGREE_TOO_LONG),
-            Map.entry("UpdateSalaryExpectationRequest.amount.NotNull", SALARY_EXPECTATION_REQUIRED));
+            Map.entry("UpdateSalaryExpectationRequest.amount.NotNull", SALARY_EXPECTATION_REQUIRED),
+            Map.entry("UpdateProfileInfoRequest.name.NotEmptyIfPresent", PROFILE_NAME_REQUIRED),
+            Map.entry("UpdateProfileInfoRequest.name.CodePointSize", PROFILE_NAME_TOO_LONG),
+            Map.entry("UpdateProfileInfoRequest.summary.CodePointSize", SUMMARY_TOO_LONG),
+            Map.entry("UpdateProfileInfoRequest.preferredModality.NotEmptyIfPresent", PREFERRED_MODALITY_INVALID_VALUE));
 
     /** Código del campo → mensaje para la persona. */
     static final Map<ErrorCode, String> FIELD_MESSAGES = Map.ofEntries(
@@ -128,7 +132,11 @@ final class ErrorCatalog {
             Map.entry(DEGREE_REQUIRED, "Ingresa el título obtenido."),
             Map.entry(DEGREE_TOO_LONG, "El título obtenido no puede superar los 150 caracteres."),
             Map.entry(EDUCATION_LEVEL_REQUIRED, "Elige un nivel educativo."),
-            Map.entry(SALARY_EXPECTATION_REQUIRED, "Ingresa la expectativa salarial."));
+            Map.entry(SALARY_EXPECTATION_REQUIRED, "Ingresa la expectativa salarial."),
+            Map.entry(PROFILE_NAME_REQUIRED, "Ingresa un nombre para el perfil."),
+            Map.entry(PROFILE_NAME_TOO_LONG, "El nombre no puede superar los 255 caracteres."),
+            Map.entry(SUMMARY_TOO_LONG, "El resumen no puede superar los 2000 caracteres."),
+            Map.entry(PREFERRED_MODALITY_INVALID_VALUE, SELECT_OPTION));
 
     /** Nombre de la variable de ruta → código cuando su valor no es un UUID. */
     static final Map<String, ErrorCode> PATH_ID_CODES = Map.of(

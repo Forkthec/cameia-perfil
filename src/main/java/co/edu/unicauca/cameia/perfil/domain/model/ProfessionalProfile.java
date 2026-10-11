@@ -50,7 +50,7 @@ public final class ProfessionalProfile {
     private DataProvenance provenance;
     private ProfileStatus status;
     private ReviewStatus reviewStatus;
-    private final Instant createdAt;
+    private Instant createdAt;
     private Instant updatedAt;
     private final List<TargetRole> targetRoles;
     private final List<WorkExperience> workExperiences;
@@ -93,6 +93,7 @@ public final class ProfessionalProfile {
         p.provenance = Objects.requireNonNull(provenance);
         p.status = Objects.requireNonNull(status);
         p.reviewStatus = Objects.requireNonNull(reviewStatus);
+        p.createdAt = Objects.requireNonNull(createdAt);
         p.updatedAt = Objects.requireNonNull(updatedAt);
         p.targetRoles.addAll(targetRoles);
         p.workExperiences.addAll(workExperiences);
@@ -101,7 +102,7 @@ public final class ProfessionalProfile {
         return p;
     }
 
-    // ── Información general (CM-17) ──────────────────────────────────────
+    // ── Información general ──────────────────────────────────────
     public void updateName(ProfileName name) { this.name = name; touch(); }
     /** @param summary resumen nuevo, o {@code null} para borrarlo (CA-2.3.4); un perfil activo no lo pierde (CA-2.3.12) */
     public void updateSummary(ProfessionalSummary summary) {
@@ -112,7 +113,6 @@ public final class ProfessionalProfile {
         this.summary = summary; touch();
     }
     public void updatePreferredModality(WorkModality modality) { this.preferredModality = modality; touch(); }
-    public void updateProvenance(DataProvenance provenance) { this.provenance = Objects.requireNonNull(provenance); touch(); }
 
     // ── Expectativa salarial (CM-19 — dormido en MVP, ver BE-14) ────────
     public void updateSalaryExpectation(SalaryExpectation expectation) { this.salaryExpectation = expectation; touch(); }
