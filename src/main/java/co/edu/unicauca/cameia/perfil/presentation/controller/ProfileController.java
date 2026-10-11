@@ -87,6 +87,24 @@ class ProfileController {
               "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
             }""";
 
+    private static final String PROFILE_INCOMPLETE_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Finalización incompleta",
+              "status": 422,
+              "detail": "Todavía no cumples estos requisitos:",
+              "code": "PROFILE_INCOMPLETE",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+              "missingRequirements": ["NAME", "SUMMARY", "EDUCATION", "SKILLS", "TARGET_ROLES"],
+              "errors": [
+                {"field": "name", "code": "COMPLETION_NAME_REQUIRED", "message": "Nombre del perfil"},
+                {"field": "summary", "code": "COMPLETION_SUMMARY_REQUIRED", "message": "Resumen profesional"},
+                {"field": "education", "code": "COMPLETION_EDUCATION_REQUIRED", "message": "Formación académica"},
+                {"field": "skills", "code": "COMPLETION_SKILLS_REQUIRED", "message": "Habilidades"},
+                {"field": "targetRoles", "code": "COMPLETION_TARGET_ROLES_REQUIRED", "message": "Roles objetivo"}
+              ]
+            }""";
+
     private static final String SKILL_LIMIT_EXAMPLE = """
             {
               "type": "about:blank",
@@ -499,19 +517,6 @@ class ProfileController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Oculto en Swagger: no tiene HU en el MVP (hallazgo I-024 del backlog: {@code IN_REVIEW} no debería alcanzarse).
-     * La ruta sigue respondiendo: un perfil completo pasa a {@code IN_REVIEW} (201). D26 la deja hasta que CM-67
-     * decida si se borra.
-     */
-    @Hidden
-    @PostMapping("/{id}/review-requests")
-    ResponseEntity<ProfileResponse> requestReview(@PathVariable UUID id,
-            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ProfileResponse.from(profileAppService.requestReview(id, uid)));
-    }
-
     @Operation(summary = "Agregar rol objetivo al perfil")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Rol objetivo agregado",
@@ -588,8 +593,10 @@ class ProfileController {
     }
 
     @Operation(summary = "Marcar perfil como COMPLETED",
-            description = "Valida que el perfil cumpla los 5 requisitos (nombre, resumen, ≥1 educación, ≥1 habilidad, ≥1 rol objetivo) " +
-                    "y cambia su estado a COMPLETED. Si no los cumple devuelve 422 con la lista de campos faltantes en missingRequirements.")
+            description = "Valida que el perfil cumpla los cinco requisitos, en este orden: nombre, resumen (de hasta 2000 caracteres), "
+                    + "al menos una formación, al menos una habilidad y al menos un rol objetivo; la experiencia laboral no es requisito. "
+                    + "Si cumple, cambia su estado a COMPLETED. Si no, responde 422 PROFILE_INCOMPLETE con los requisitos que faltan en "
+                    + "missingRequirements y un elemento de errors[] por requisito, en el mismo orden. El cuerpo, si llega, se ignora.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Perfil marcado como COMPLETED",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
@@ -599,9 +606,14 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "El perfil ya está activo (code PROFILE_ALREADY_COMPLETED)",
+            @ApiResponse(responseCode = "409", description = "El perfil ya está activo (code PROFILE_ALREADY_COMPLETED) "
+                    + "o está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se cambió nada",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "El perfil no cumple los requisitos para finalizar (code PROFILE_INCOMPLETE, con missingRequirements[]) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+            @ApiResponse(responseCode = "422", description = "El perfil no cumple los requisitos para finalizar (code PROFILE_INCOMPLETE, "
+                    + "con missingRequirements[] y errors[]) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Perfil nuevo", value = PROFILE_INCOMPLETE_EXAMPLE))),
+            @ApiResponse(responseCode = "500", description = "Fallo inesperado al guardar (code INTERNAL_ERROR): el perfil no cambia",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/completion")

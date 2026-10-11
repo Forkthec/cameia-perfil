@@ -14,10 +14,12 @@ import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotAllowedExcepti
 import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileUpdateInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.exception.SkillLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.SkillNotAllowedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceLimitReachedException;
+import co.edu.unicauca.cameia.perfil.domain.model.CompletionRequirement;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
@@ -327,6 +329,68 @@ class ProfileWriteLockIT {
                 .hasCauseInstanceOf(SkillNotAllowedException.class);
         assertThat(jdbcTemplate.queryForList("select id from habilidad_perfil where perfil_id = ?", UUID.class, profileId))
                 .containsExactly(second);
+        assertThat(jdbcTemplate.queryForObject("select estado from perfil_profesional where id = ?", String.class, profileId))
+                .isEqualTo("COMPLETED");
+    }
+
+    @Test
+    @DisplayName("Finalizar y quitar la única habilidad a la vez: si gana la finalización, la baja se rechaza y el perfil conserva su habilidad")
+    void completeAndRemoveSkill_shouldRejectRemoval_whenCompletionWinsTheLock() throws Exception {
+        prepareCompletableProfile(1);
+        var skillId = profileAppService.getProfile(profileId, uid).getProfileSkills().get(0).getId();
+
+        var held = holdingTransaction(() -> profileAppService.completeProfile(profileId, uid));
+
+        var removal = executor.submit(() -> profileAppService.removeSkill(profileId, uid, skillId));
+        assertThatThrownBy(() -> removal.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+        held.release().countDown();
+
+        assertThat(held.result()).succeedsWithin(10, TimeUnit.SECONDS);
+        assertThatThrownBy(() -> removal.get(10, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(SkillNotAllowedException.class);
+        assertThat(jdbcTemplate.queryForObject("select estado from perfil_profesional where id = ?", String.class, profileId))
+                .isEqualTo("COMPLETED");
+        assertThat(jdbcTemplate.queryForList("select id from habilidad_perfil where perfil_id = ?", UUID.class, profileId))
+                .containsExactly(skillId);
+    }
+
+    @Test
+    @DisplayName("Quitar la única habilidad y finalizar a la vez: si gana la baja, la finalización se rechaza por falta de habilidades")
+    void completeAndRemoveSkill_shouldRejectCompletion_whenRemovalWinsTheLock() throws Exception {
+        prepareCompletableProfile(1);
+        var skillId = profileAppService.getProfile(profileId, uid).getProfileSkills().get(0).getId();
+
+        var held = holdingTransaction(() -> profileAppService.removeSkill(profileId, uid, skillId));
+
+        var completion = executor.submit(() -> profileAppService.completeProfile(profileId, uid));
+        assertThatThrownBy(() -> completion.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+        held.release().countDown();
+
+        assertThat(held.result()).succeedsWithin(10, TimeUnit.SECONDS);
+        assertThatThrownBy(() -> completion.get(10, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(IncompleteProfileException.class)
+                .cause().extracting(cause -> ((IncompleteProfileException) cause).getMissingRequirements())
+                .isEqualTo(java.util.List.of(CompletionRequirement.SKILLS));
+        assertThat(jdbcTemplate.queryForObject("select estado from perfil_profesional where id = ?", String.class, profileId))
+                .isEqualTo("IN_PROGRESS");
+        assertThat(jdbcTemplate.queryForObject("select count(*) from habilidad_perfil where perfil_id = ?", Integer.class, profileId))
+                .isZero();
+    }
+
+    @Test
+    @DisplayName("Dos pestañas que finalizan a la vez: una activa el perfil y la otra recibe que ya está activo")
+    void completeProfile_shouldActivateOnce_whenTwoTabsCompleteTogether() throws Exception {
+        prepareCompletableProfile(1);
+
+        var held = holdingTransaction(() -> profileAppService.completeProfile(profileId, uid));
+
+        var other = executor.submit(() -> profileAppService.completeProfile(profileId, uid));
+        assertThatThrownBy(() -> other.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+        held.release().countDown();
+
+        assertThat(held.result()).succeedsWithin(10, TimeUnit.SECONDS);
+        assertThatThrownBy(() -> other.get(10, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(ProfileAlreadyCompletedException.class);
         assertThat(jdbcTemplate.queryForObject("select estado from perfil_profesional where id = ?", String.class, profileId))
                 .isEqualTo("COMPLETED");
     }

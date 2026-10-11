@@ -46,7 +46,10 @@ class ErrorCatalogTest {
         var responses = ErrorCatalog.RESPONSES.keySet();
         var fields = ErrorCatalog.FIELD_MESSAGES.keySet();
         var domainFields = DOMAIN_FIELD_CODES;
+        var completion = ErrorCatalog.COMPLETION_REQUIREMENTS.values().stream()
+                .map(ErrorCatalog.CompletionItem::code).collect(java.util.stream.Collectors.toSet());
         var all = EnumSet.noneOf(ErrorCode.class);
+        all.addAll(completion);
         all.addAll(responses);
         all.addAll(fields);
         all.addAll(domainFields);
@@ -54,6 +57,17 @@ class ErrorCatalogTest {
         assertThat(all).isEqualTo(EnumSet.allOf(ErrorCode.class));
         assertThat(responses).doesNotContainAnyElementsOf(fields).doesNotContainAnyElementsOf(domainFields);
         assertThat(fields).doesNotContainAnyElementsOf(domainFields);
+        assertThat(completion).doesNotContainAnyElementsOf(responses).doesNotContainAnyElementsOf(fields)
+                .doesNotContainAnyElementsOf(domainFields);
+    }
+
+    @Test
+    @DisplayName("Cada requisito de la finalización tiene su elemento de errors[] con campo, código y rótulo")
+    void completionRequirements_shouldCoverEveryRequirement_whenCatalogLoaded() {
+        assertThat(ErrorCatalog.COMPLETION_REQUIREMENTS).containsOnlyKeys(
+                co.edu.unicauca.cameia.perfil.domain.model.CompletionRequirement.values());
+        assertThat(ErrorCatalog.COMPLETION_REQUIREMENTS.values()).extracting(ErrorCatalog.CompletionItem::field)
+                .containsExactlyInAnyOrder("name", "summary", "education", "skills", "targetRoles");
     }
 
     @Test

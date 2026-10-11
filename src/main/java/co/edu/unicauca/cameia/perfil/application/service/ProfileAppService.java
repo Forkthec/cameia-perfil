@@ -232,11 +232,6 @@ public class ProfileAppService {
         var p = loadForUserForUpdate(profileId, uid); p.removeSkill(skillId); repository.save(p); return p;
     }
 
-    @Transactional
-    public ProfessionalProfile requestReview(UUID profileId, String uid) {
-        var p = loadForUserForUpdate(profileId, uid); p.requestReview(); repository.save(p); return p;
-    }
-
     public ProfessionalProfile getProfile(UUID id, String uid) { return loadForUser(id, uid); }
 
     /**

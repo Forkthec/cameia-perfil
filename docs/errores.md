@@ -31,7 +31,7 @@ Cada rechazo se registra en nivel `WARN` con `code`, `requestId` y `firebaseUid`
 | `PROFILE_UPDATE_IN_PROGRESS` | 409 | Todo `PATCH`, `POST` y `DELETE` sobre `/api/v1/profiles/{id}…` | — | «Estamos guardando otro cambio de tu perfil. Inténtalo de nuevo en unos segundos.» | `ProfileUpdateInProgressException` (otra escritura retuvo la fila del perfil más de 2 s y PostgreSQL cortó la espera con el estado `55P03`; no cambió nada) | `ProfileWriteLockIT.write_shouldFailFast_whenProfileRowIsLockedLongerThanTimeout`, `ApiExceptionHandlerTest.profileUpdateInProgress_shouldReturn409_whenThrown` |
 | `BIRTH_DATE_UNAVAILABLE` | 503 | `POST /api/v1/profiles/{id}/work-experiences` y `/educations` (solo si el registro trae alguna fecha y es válido; si no trae ninguna, no se lee la réplica) | — | «Ocurrió un error. Inténtalo de nuevo.» | `BirthDateUnavailableException`: la réplica local aún no tiene la fecha de nacimiento del Usuario (evento `cuenta.creada` sin procesar); no se guarda nada | `ApiExceptionHandlerTest.birthDateUnavailable_shouldReturn503_whenThrown` |
 | `PROFILE_ALREADY_COMPLETED` | 409 | `POST …/completion` | — | «Este perfil ya está activo.» (CA-2.5.11) | `ProfileAlreadyCompletedException` | `ApiExceptionHandlerTest.businessException_shouldReturnItsStatusAndCode_whenThrown` |
-| `PROFILE_INCOMPLETE` | 422 | `POST …/completion` (y `POST …/review-requests`, sin HU y fuera del OpenAPI) | — | «Todavía no cumples estos requisitos:», con `missingRequirements[]` | `IncompleteProfileException` | `ProfileControllerTest.postCompletion_shouldReturn422WithCommonShape_whenSummaryAndSkillsAreMissing` |
+| `PROFILE_INCOMPLETE` | 422 | `POST …/completion` | — | «Todavía no cumples estos requisitos:», con `missingRequirements[]` (`NAME`, `SUMMARY`, `EDUCATION`, `SKILLS`, `TARGET_ROLES`, en ese orden) y un elemento de `errors[]` por requisito (ver «Requisitos de la finalización») | `IncompleteProfileException` | `ProfileControllerTest.postCompletion_shouldListFiveRequirementsInOrder_whenProfileIsNew`, `ProfessionalProfileTest.complete_shouldListFiveInOrder_whenProfileIsNew` |
 | `PROFESSIONAL_ROLE_NOT_FOUND` | 404 | `POST …/target-roles`, `PATCH …/target-roles/{roleId}` | — | «No encontramos ese rol en el catálogo.» (CA-2.11.12) | `ProfessionalRoleNotFoundException` | `ApiExceptionHandlerTest.businessException_shouldReturnItsStatusAndCode_whenThrown` |
 | `PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE` | 422 | `GET /api/v1/profiles/professional-roles?lang=` | — | «Elige un idioma disponible: español o inglés.» | `UnsupportedLanguageException` | `ProfessionalRoleControllerTest.listAll_shouldReturn422_whenLangIsUnsupported` |
 | `TARGET_ROLE_LIMIT_REACHED` | 409 | `POST …/target-roles` | — | «Ya tienes el máximo de 5 roles objetivo.» (CA-2.11.5) | `MaxTargetRolesExceededException` | `ProfileControllerTest.postTargetRoles_shouldReturn409_whenMaxReached` |
@@ -120,6 +120,20 @@ La clave es `ClaseDelDto.campo.Restricción`, porque `level` y `provenance` se r
 | `PROFESSIONAL_ROLE_ID_REQUIRED` | 422 | `POST …/target-roles`, `PATCH …/target-roles/{roleId}` | `professionalRoleId` | «Selecciona una opción.» | `AddTargetRoleRequest.professionalRoleId.NotNull`, `UpdateTargetRoleRequest.professionalRoleId.NotNull` | La misma y `ProfileControllerTest.updateTargetRole_shouldReturnRoleIdRequired_whenBodyIsEmpty` |
 
 Una restricción de Bean Validation sin fila en esta tabla responde `VALIDATION_FAILED` con «Revisa este campo.»; la prueba `ErrorCatalogTest.everyFieldConstraint_shouldHaveCode_whenDtosAreScanned` hace fallar el build hasta que se agregue.
+
+### Requisitos de la finalización (`errors[].code` de `PROFILE_INCOMPLETE`)
+
+`POST …/completion` responde 422 `PROFILE_INCOMPLETE` con un elemento de `errors[]` por requisito que falta, en el orden de los criterios. El cliente lista los requisitos desde `errors[].field`; el `message` es el rótulo que se muestra. Salen de `ErrorCatalog.COMPLETION_REQUIREMENTS`.
+
+| `code` | Requisito (`missingRequirements`) | Campo | Rótulo | Prueba |
+|---|---|---|---|---|
+| `COMPLETION_NAME_REQUIRED` | `NAME` | `name` | «Nombre del perfil» | `ProfileControllerTest.postCompletion_shouldListFiveRequirementsInOrder_whenProfileIsNew`, `COMPLETION_NAME_REQUIRED` |
+| `COMPLETION_SUMMARY_REQUIRED` | `SUMMARY` | `summary` | «Resumen profesional» | `ProfileControllerTest.postCompletion_shouldListFiveRequirementsInOrder_whenProfileIsNew`, `COMPLETION_SUMMARY_REQUIRED` |
+| `COMPLETION_EDUCATION_REQUIRED` | `EDUCATION` | `education` | «Formación académica» | `ProfileControllerTest.postCompletion_shouldListFiveRequirementsInOrder_whenProfileIsNew`, `COMPLETION_EDUCATION_REQUIRED` |
+| `COMPLETION_SKILLS_REQUIRED` | `SKILLS` | `skills` | «Habilidades» | `ProfileControllerTest.postCompletion_shouldListFiveRequirementsInOrder_whenProfileIsNew`, `COMPLETION_SKILLS_REQUIRED` |
+| `COMPLETION_TARGET_ROLES_REQUIRED` | `TARGET_ROLES` | `targetRoles` | «Roles objetivo» | `ProfileControllerTest.postCompletion_shouldListFiveRequirementsInOrder_whenProfileIsNew`, `COMPLETION_TARGET_ROLES_REQUIRED` |
+
+Un resumen guardado con más de 2000 puntos de código (de antes del límite) cuenta como faltante `SUMMARY`: leerlo no lo valida, finalizar sí.
 
 ## Códigos retirados
 

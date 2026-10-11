@@ -1,6 +1,7 @@
 package co.edu.unicauca.cameia.perfil.presentation.advice;
 
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
+import co.edu.unicauca.cameia.perfil.domain.model.CompletionRequirement;
 import org.springframework.http.HttpStatus;
 
 import java.util.Map;
@@ -34,6 +35,15 @@ final class ErrorCatalog {
      * @param detail mensaje para la persona cuando no lo pone la excepción de negocio
      */
     record Definition(HttpStatus status, String title, String detail) { }
+
+    /**
+     * Elemento de {@code errors[]} que lista un requisito de finalización.
+     *
+     * @param field   nombre del campo que el cliente enlaza con el requisito
+     * @param code    código propio del requisito
+     * @param message rótulo que se muestra en la lista
+     */
+    record CompletionItem(String field, ErrorCode code, String message) { }
 
     private static final String SELECT_OPTION = "Selecciona una opción.";
     private static final String INVALID_ID = "Identificador no válido";
@@ -92,6 +102,14 @@ final class ErrorCatalog {
             entry(SKILL_NOT_FOUND, NOT_FOUND, "Habilidad no encontrada", null));
 
     /** Clave {@code ClaseDelDto.campo.Restricción} → código del campo rechazado. */
+    /** Requisito de la finalización → elemento de errors[] que el cliente lee para listarlo. */
+    static final Map<CompletionRequirement, CompletionItem> COMPLETION_REQUIREMENTS = Map.of(
+            CompletionRequirement.NAME, new CompletionItem("name", COMPLETION_NAME_REQUIRED, "Nombre del perfil"),
+            CompletionRequirement.SUMMARY, new CompletionItem("summary", COMPLETION_SUMMARY_REQUIRED, "Resumen profesional"),
+            CompletionRequirement.EDUCATION, new CompletionItem("education", COMPLETION_EDUCATION_REQUIRED, "Formación académica"),
+            CompletionRequirement.SKILLS, new CompletionItem("skills", COMPLETION_SKILLS_REQUIRED, "Habilidades"),
+            CompletionRequirement.TARGET_ROLES, new CompletionItem("targetRoles", COMPLETION_TARGET_ROLES_REQUIRED, "Roles objetivo"));
+
     static final Map<String, ErrorCode> FIELD_CODES = Map.ofEntries(
             Map.entry("AddWorkExperienceRequest.company.NotBlank", COMPANY_REQUIRED),
             Map.entry("AddWorkExperienceRequest.position.NotBlank", POSITION_REQUIRED),

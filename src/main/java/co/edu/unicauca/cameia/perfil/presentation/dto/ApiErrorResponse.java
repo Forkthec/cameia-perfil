@@ -47,7 +47,7 @@ public record ApiErrorResponse(
         @ArraySchema(schema = @Schema(implementation = FieldError.class),
                 arraySchema = @Schema(description = "Solo con VALIDATION_FAILED: un elemento por campo rechazado"))
         List<FieldError> errors,
-        @ArraySchema(schema = @Schema(example = "summary"),
+        @ArraySchema(schema = @Schema(example = "SUMMARY", allowableValues = {"NAME", "SUMMARY", "EDUCATION", "SKILLS", "TARGET_ROLES"}),
                 arraySchema = @Schema(description = "Solo con PROFILE_INCOMPLETE: requisitos que faltan para finalizar"))
         List<String> missingRequirements) {
 

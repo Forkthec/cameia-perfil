@@ -10,6 +10,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
+import co.edu.unicauca.cameia.perfil.domain.model.CompletionRequirement;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
@@ -1228,24 +1229,12 @@ class ProfileControllerTest {
     }
 
     @Test
-    void postReviewRequests_returns201() throws Exception {
-        var profile = ProfessionalProfile.create(new FirebaseUid("uid-ctrl-rev"));
-        when(profileAppService.requestReview(any(), any())).thenReturn(profile);
-
+    @DisplayName("La ruta review-requests ya no existe y responde 404 ROUTE_NOT_FOUND")
+    void postReviewRequests_shouldReturn404_whenRouteDoesNotExist() throws Exception {
         mockMvc.perform(post("/api/v1/profiles/{id}/review-requests", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-rev"))
-                .andExpect(status().isCreated());
-    }
-
-    @Test
-    void postReviewRequests_returns422WhenProfileIncomplete() throws Exception {
-        when(profileAppService.requestReview(any(), any()))
-                .thenThrow(new IncompleteProfileException(List.of("nombre", "resumen")));
-
-        mockMvc.perform(post("/api/v1/profiles/{id}/review-requests", UUID.randomUUID())
-                        .header("X-User-Id", "uid-ctrl-rev"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.missingRequirements").isArray());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ROUTE_NOT_FOUND"));
     }
 
     @Test
@@ -1449,7 +1438,7 @@ class ProfileControllerTest {
     @DisplayName("Finalizar sin resumen ni habilidades responde la forma común con los dos requisitos")
     void postCompletion_shouldReturn422WithCommonShape_whenSummaryAndSkillsAreMissing() throws Exception {
         when(profileAppService.completeProfile(any(), any()))
-                .thenThrow(new IncompleteProfileException(List.of("SUMMARY", "SKILLS")));
+                .thenThrow(new IncompleteProfileException(List.of(CompletionRequirement.SUMMARY, CompletionRequirement.SKILLS)));
 
         mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID())
                         .header("X-User-Id", "uid-ctrl-comp"))
@@ -1457,7 +1446,84 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.code").value("PROFILE_INCOMPLETE"))
                 .andExpect(jsonPath("$.detail").value("Todavía no cumples estos requisitos:"))
                 .andExpect(jsonPath("$.missingRequirements.length()").value(2))
+                .andExpect(jsonPath("$.errors.length()").value(2))
+                .andExpect(jsonPath("$.errors[0].field").value("summary"))
+                .andExpect(jsonPath("$.errors[1].field").value("skills"))
                 .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("Un perfil nuevo lista los cinco requisitos en orden, en missingRequirements y en errors[]")
+    void postCompletion_shouldListFiveRequirementsInOrder_whenProfileIsNew() throws Exception {
+        when(profileAppService.completeProfile(any(), any())).thenThrow(new IncompleteProfileException(
+                List.of(CompletionRequirement.values())));
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID()).header("X-User-Id", "uid-ctrl-comp"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(header().string("Content-Type", containsString("charset=UTF-8")))
+                .andExpect(jsonPath("$.code").value("PROFILE_INCOMPLETE"))
+                .andExpect(jsonPath("$.detail").value("Todavía no cumples estos requisitos:"))
+                .andExpect(jsonPath("$.missingRequirements").value(
+                        org.hamcrest.Matchers.contains("NAME", "SUMMARY", "EDUCATION", "SKILLS", "TARGET_ROLES")))
+                .andExpect(jsonPath("$.errors[*].field").value(
+                        org.hamcrest.Matchers.contains("name", "summary", "education", "skills", "targetRoles")))
+                .andExpect(jsonPath("$.errors[*].code").value(org.hamcrest.Matchers.contains("COMPLETION_NAME_REQUIRED",
+                        "COMPLETION_SUMMARY_REQUIRED", "COMPLETION_EDUCATION_REQUIRED", "COMPLETION_SKILLS_REQUIRED",
+                        "COMPLETION_TARGET_ROLES_REQUIRED")))
+                .andExpect(jsonPath("$.errors[1].code").value("COMPLETION_SUMMARY_REQUIRED"))
+                .andExpect(jsonPath("$.errors[1].message").value("Resumen profesional"))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("Finalizar un perfil que ya está activo responde 409 PROFILE_ALREADY_COMPLETED")
+    void postCompletion_shouldReturn409_whenProfileIsAlreadyActive() throws Exception {
+        when(profileAppService.completeProfile(any(), any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException());
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID()).header("X-User-Id", "uid-ctrl-comp"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PROFILE_ALREADY_COMPLETED"));
+    }
+
+    @Test
+    @DisplayName("Finalizar el perfil de otro Usuario responde 403")
+    void postCompletion_shouldReturn403_whenProfileBelongsToAnotherUser() throws Exception {
+        when(profileAppService.completeProfile(any(), any())).thenThrow(new ProfileAccessDeniedException());
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID()).header("X-User-Id", "uid-ctrl-comp"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PROFILE_NOT_ALLOWED"));
+    }
+
+    @Test
+    @DisplayName("Un perfil que cumple todo se finaliza con 200 y estado COMPLETED")
+    void postCompletion_shouldReturn200_whenAllRequirementsAreMet() throws Exception {
+        var now = java.time.Instant.parse("2026-10-10T00:00:00Z");
+        var profile = ProfessionalProfile.reconstitute(
+                co.edu.unicauca.cameia.perfil.domain.model.ProfileId.generate(), new FirebaseUid("uid-ctrl-comp"),
+                new ProfileName("Ana"), new ProfessionalSummary("Resumen válido."), null, null,
+                co.edu.unicauca.cameia.perfil.domain.model.DataProvenance.MANUAL,
+                co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus.COMPLETED,
+                co.edu.unicauca.cameia.perfil.domain.model.ReviewStatus.PENDING_REVIEW, now, now,
+                List.of(), List.of(), List.of(), List.of());
+        when(profileAppService.completeProfile(any(), any())).thenReturn(profile);
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID()).header("X-User-Id", "uid-ctrl-comp"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
+    }
+
+    @ParameterizedTest(name = "cuerpo {0}")
+    @ValueSource(strings = {"{\"status\":\"COMPLETED\"}", "{\"x\":", "[]"})
+    @DisplayName("El cuerpo de la finalización se ignora: el resultado depende solo del perfil")
+    void postCompletion_shouldIgnoreBody_whenBodyIsSent(String body) throws Exception {
+        when(profileAppService.completeProfile(any(), any()))
+                .thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-comp")));
+
+        mockMvc.perform(post("/api/v1/profiles/{id}/completion", UUID.randomUUID()).header("X-User-Id", "uid-ctrl-comp")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk());
     }
 
     @Test
