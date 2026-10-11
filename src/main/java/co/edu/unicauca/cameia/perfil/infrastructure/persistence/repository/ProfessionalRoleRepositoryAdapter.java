@@ -30,12 +30,6 @@ class ProfessionalRoleRepositoryAdapter implements ProfessionalRoleRepository {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ProfessionalRole> findAll() {
-        return findAllByLang("es");
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public List<ProfessionalRole> findAllByLang(String lang) {
         if ("en".equals(lang)) {
             return jpa.findAllOrderedEn(ACTIVE).stream().map(e -> toDomain(e, "en")).toList();

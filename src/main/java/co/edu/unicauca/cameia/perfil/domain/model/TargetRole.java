@@ -11,6 +11,7 @@ import java.util.UUID;
  */
 public final class TargetRole {
 
+    /** Largo máximo del título, contado en puntos de código Unicode como la columna {@code VARCHAR(255)}. */
     private static final int MAX_TITLE_LENGTH = 255;
 
     private final UUID id;
@@ -22,7 +23,7 @@ public final class TargetRole {
         this.id = Objects.requireNonNull(id);
         this.professionalRoleId = Objects.requireNonNull(professionalRoleId, "professionalRoleId es obligatorio");
         Objects.requireNonNull(roleTitle, "roleTitle es obligatorio");
-        if (roleTitle.isBlank() || roleTitle.length() > MAX_TITLE_LENGTH) {
+        if (roleTitle.isBlank() || roleTitle.codePointCount(0, roleTitle.length()) > MAX_TITLE_LENGTH) {
             throw new IllegalArgumentException("El título del rol debe tener entre 1 y " + MAX_TITLE_LENGTH + " caracteres");
         }
         this.roleTitle = roleTitle;

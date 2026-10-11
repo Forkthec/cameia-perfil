@@ -9,6 +9,5 @@ import java.util.UUID;
 /** Puerto de dominio para el catálogo de roles profesionales (CM-23). */
 public interface ProfessionalRoleRepository {
     Optional<ProfessionalRole> findById(UUID id);
-    List<ProfessionalRole> findAll();
     List<ProfessionalRole> findAllByLang(String lang);
 }
