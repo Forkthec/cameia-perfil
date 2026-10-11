@@ -55,6 +55,16 @@ class ProfessionalRoleControllerTest {
     }
 
     @Test
+    @DisplayName("Sin roles activos el catálogo responde 200 con la lista vacía")
+    void listAll_shouldReturnEmptyArray_whenNoActiveRoles() throws Exception {
+        when(service.listAllByLang(eq("es"))).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/profiles/professional-roles"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
     void listAll_returnsEnglishWhenLangEn() throws Exception {
         when(service.listAllByLang(eq("en")))
                 .thenReturn(List.of(new ProfessionalRole(ROLE_ID, "Frontend Developer", "Development", true)));

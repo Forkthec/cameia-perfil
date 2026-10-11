@@ -32,7 +32,8 @@ class ProfessionalRoleController {
     private final ProfessionalRoleAppService service;
     ProfessionalRoleController(ProfessionalRoleAppService service) { this.service = service; }
 
-    @Operation(summary = "Listar catálogo de roles profesionales TI")
+    @Operation(summary = "Listar catálogo de roles profesionales TI",
+            description = "Devuelve solo los roles activos, que son los que se pueden elegir como rol objetivo. Sin coincidencias, la lista vacía.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista de roles profesionales",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProfessionalRoleResponse.class)))),

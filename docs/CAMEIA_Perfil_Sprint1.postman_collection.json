@@ -5035,6 +5035,205 @@
               ]
             }
           }
+        },
+        {
+          "name": "OK GET /professional-roles — no ofrece el rol inactivo (CA-2.11.11)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no ofrece el rol inactivo', () => pm.expect(json.map(r => r.id)).to.not.include('a0000007-0000-0000-0000-000000000006'));",
+                  "pm.test('ofrece los demás roles del catálogo', () => pm.expect(json.map(r => r.id)).to.include('a0000001-0000-0000-0000-000000000002'));",
+                  "pm.test('ningún elemento expone estado', () => pm.expect(json.every(r => !('estado' in r) && !('status' in r))).to.eql(true));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/professional-roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "professional-roles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OK GET /professional-roles?lang=en — tampoco en inglés",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no ofrece el rol inactivo', () => pm.expect(json.map(r => r.id)).to.not.include('a0000007-0000-0000-0000-000000000006'));",
+                  "pm.test('ofrece los demás roles del catálogo', () => pm.expect(json.map(r => r.id)).to.include('a0000001-0000-0000-0000-000000000002'));",
+                  "pm.test('ningún elemento expone estado', () => pm.expect(json.every(r => !('estado' in r) && !('status' in r))).to.eql(true));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/professional-roles?lang=en",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "professional-roles"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "en"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "OK GET /professional-roles?estado=INACTIVE — el parámetro se ignora",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no ofrece el rol inactivo', () => pm.expect(json.map(r => r.id)).to.not.include('a0000007-0000-0000-0000-000000000006'));",
+                  "pm.test('ofrece los demás roles del catálogo', () => pm.expect(json.map(r => r.id)).to.include('a0000001-0000-0000-0000-000000000002'));",
+                  "pm.test('ningún elemento expone estado', () => pm.expect(json.every(r => !('estado' in r) && !('status' in r))).to.eql(true));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/professional-roles?estado=INACTIVE",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "professional-roles"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "INACTIVE"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "OK GET /profiles/{id} — el rol sustituido conserva su lugar (CA-2.11.1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('el rol sustituido sigue en la primera posición', () => pm.expect(pm.response.json().targetRoles[0].id).to.eql(pm.collectionVariables.get('role_c')));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_c}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_c}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_c}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR GET /professional-roles?lang=es'-- — 422 idioma no disponible",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Content-Type problem+json con charset', () => { const t = pm.response.headers.get('Content-Type').toLowerCase(); pm.expect(t).to.include('application/problem+json'); pm.expect(t).to.include('charset=utf-8'); });",
+                  "pm.test('code PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE', () => pm.expect(pm.response.json().code).to.eql('PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE'));",
+                  "pm.test('sin eco del valor enviado', () => pm.expect(pm.response.text()).to.not.include(\"es'--\"));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/professional-roles?lang=es%27--",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "professional-roles"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "es%27--"
+                }
+              ]
+            }
+          }
         }
       ],
       "description": "Antes de correr esta carpeta, el rol del catálogo a0000007-0000-0000-0000-000000000006 debe estar inactivo; si no, las peticiones de rol inactivo responden 201 y el catálogo lo sigue ofreciendo. Ejecutar sobre la base de la prueba: UPDATE rol_profesional SET estado = 'INACTIVE' WHERE id = 'a0000007-0000-0000-0000-000000000006';"

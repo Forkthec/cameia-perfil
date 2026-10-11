@@ -6,6 +6,8 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.YearMonth;
@@ -53,7 +55,18 @@ public record ProfileResponse(
     }
 
     /** CM-21/CM-23: seniority eliminado; profesionalRoleId y roleTitle reemplazan title. */
-    public record TargetRoleItem(UUID id, UUID professionalRoleId, String roleTitle, String provenance) {
+    public record TargetRoleItem(
+            @Schema(description = "Identificador del rol objetivo dentro del perfil", format = "uuid",
+                    example = "7d1f6a52-3c0b-4e8a-9b14-2f5d8c6e0a31")
+            UUID id,
+            @Schema(description = "Rol del catálogo al que apunta", format = "uuid",
+                    example = "a0000001-0000-0000-0000-000000000002")
+            UUID professionalRoleId,
+            @Schema(description = "Nombre del rol tal como se guardó", example = "Desarrollador Backend")
+            String roleTitle,
+            @Schema(description = "Procedencia del dato", allowableValues = {"MANUAL", "AI_SUGGESTED", "AI_EDITED"},
+                    example = "MANUAL")
+            String provenance) {
         static TargetRoleItem from(TargetRole r) {
             return new TargetRoleItem(r.getId(), r.getProfessionalRoleId(), r.getRoleTitle(), r.getProvenance().name());
         }
