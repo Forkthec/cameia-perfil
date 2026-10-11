@@ -132,7 +132,7 @@ class ApiExceptionHandlerTest {
                 new Object[]{new ProfileLimitReachedException(), 409, "PROFILE_LIMIT_REACHED"},
                 new Object[]{new ProfileAlreadyCompletedException(), 409, "PROFILE_ALREADY_COMPLETED"},
                 new Object[]{new ProfessionalRoleNotFoundException(), 404, "PROFESSIONAL_ROLE_NOT_FOUND"},
-                new Object[]{new MaxTargetRolesExceededException(5), 422, "TARGET_ROLE_LIMIT_REACHED"},
+                new Object[]{new MaxTargetRolesExceededException(5), 409, "TARGET_ROLE_LIMIT_REACHED"},
                 new Object[]{new DuplicateTargetRoleException(), 409, "TARGET_ROLE_ALREADY_EXISTS"},
                 new Object[]{new LastTargetRoleException(), 422, "TARGET_ROLE_NOT_ALLOWED"},
                 new Object[]{new DuplicateSkillException(), 409, "SKILL_ALREADY_EXISTS"},

@@ -45,7 +45,7 @@ class ProfessionalRoleControllerTest {
     @Test
     void listAll_returnsSpanishByDefault() throws Exception {
         when(service.listAllByLang(eq("es")))
-                .thenReturn(List.of(new ProfessionalRole(ROLE_ID, "Desarrollador Frontend", "Desarrollo")));
+                .thenReturn(List.of(new ProfessionalRole(ROLE_ID, "Desarrollador Frontend", "Desarrollo", true)));
 
         mockMvc.perform(get("/api/v1/profiles/professional-roles"))
                 .andExpect(status().isOk())
@@ -57,7 +57,7 @@ class ProfessionalRoleControllerTest {
     @Test
     void listAll_returnsEnglishWhenLangEn() throws Exception {
         when(service.listAllByLang(eq("en")))
-                .thenReturn(List.of(new ProfessionalRole(ROLE_ID, "Frontend Developer", "Development")));
+                .thenReturn(List.of(new ProfessionalRole(ROLE_ID, "Frontend Developer", "Development", true)));
 
         mockMvc.perform(get("/api/v1/profiles/professional-roles").param("lang", "en"))
                 .andExpect(status().isOk())
@@ -83,7 +83,7 @@ class ProfessionalRoleControllerTest {
     @DisplayName("Un idioma vacío usa el español")
     void listAll_shouldReturnSpanish_whenLangIsEmpty() throws Exception {
         when(service.listAllByLang(eq("es")))
-                .thenReturn(List.of(new ProfessionalRole(ROLE_ID, "Desarrollador Frontend", "Desarrollo")));
+                .thenReturn(List.of(new ProfessionalRole(ROLE_ID, "Desarrollador Frontend", "Desarrollo", true)));
 
         mockMvc.perform(get("/api/v1/profiles/professional-roles").param("lang", ""))
                 .andExpect(status().isOk())

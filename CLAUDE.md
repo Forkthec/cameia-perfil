@@ -118,7 +118,7 @@ El servicio solo debe aceptar tráfico del API Gateway; la autenticidad la garan
 | `PATCH` | `/{id}/salary-expectation` | Actualiza la expectativa salarial |
 | `POST`, `DELETE` | `/{id}/skills`, `/{id}/skills/{skillId}` | Agrega o quita una habilidad |
 | `POST` | `/{id}/review-requests` | Pide la revisión del perfil; oculta del OpenAPI y sin HU en el MVP, CM-67 decide si se borra (D26) |
-| `POST`, `PATCH`, `DELETE` | `/{id}/target-roles`, `/{id}/target-roles/{roleId}` | Gestiona los roles objetivo |
+| `POST`, `PATCH`, `DELETE` | `/{id}/target-roles`, `/{id}/target-roles/{roleId}` | Gestiona los roles objetivo; solo admite roles activos del catálogo (422 si el rol está inactivo), responde 409 al repetir un rol o al agregar un sexto |
 | `POST` | `/{id}/completion` | Finaliza el perfil |
 | `GET` | `/professional-roles?lang=es\|en` | Catálogo de roles profesionales (sin identidad) |
 
@@ -135,6 +135,7 @@ Base PostgreSQL propia `cameia_perfil` y migraciones Flyway en `src/main/resourc
 | `V3__catalogo_roles_profesionales.sql` | Crea el catálogo `rol_profesional` y la clave foránea desde `rol_objetivo` |
 | `V4__i18n_catalogo_roles.sql` | Agrega los nombres en inglés del catálogo |
 | `V5__replica_fecha_nacimiento.sql` | Crea `fecha_nacimiento_usuario` (réplica de la fecha de nacimiento por Usuario) y `evento_procesado` (Inbox de eventos de cuenta) |
+| `V5_1__estado_catalogo_y_restricciones_rol_objetivo.sql` | Agrega el estado del catálogo de roles y las restricciones de `rol_objetivo` (obligatorio, único por perfil, procedencia y revisión, clave foránea sin borrado en cascada) |
 
 No hay claves foráneas hacia otros servicios. Las tablas y columnas van en `snake_case` español y las fechas en `TIMESTAMPTZ`; el resto de las reglas de esquema están en la [sección 7 del estándar](docs/estandar-backend.md#7-base-de-datos). Todo cambio de esquema es una migración nueva.
 

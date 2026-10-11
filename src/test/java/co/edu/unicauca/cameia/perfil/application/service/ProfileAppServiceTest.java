@@ -32,6 +32,8 @@ import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
+import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -221,7 +223,7 @@ class ProfileAppServiceTest {
         var profile = freshProfile();
         profile.addTargetRole(new TargetRole(UUID.randomUUID(), UUID.randomUUID(), "Backend", DataProvenance.MANUAL));
         var roleId = profile.getTargetRoles().get(0).getId();
-        var catalogRole = new ProfessionalRole(UUID.randomUUID(), "Frontend Developer", "Desarrollo");
+        var catalogRole = new ProfessionalRole(UUID.randomUUID(), "Frontend Developer", "Desarrollo", true);
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         when(roleRepository.findById(catalogRole.id())).thenReturn(Optional.of(catalogRole));
 
@@ -235,7 +237,7 @@ class ProfileAppServiceTest {
     @Test
     @DisplayName("Editar un rol objetivo que no está en el perfil no guarda nada")
     void updateTargetRole_shouldThrowTargetRoleNotFound_whenRoleIsNotInProfile() {
-        var catalogRole = new ProfessionalRole(UUID.randomUUID(), "Frontend Developer", "Desarrollo");
+        var catalogRole = new ProfessionalRole(UUID.randomUUID(), "Frontend Developer", "Desarrollo", true);
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
         when(roleRepository.findById(catalogRole.id())).thenReturn(Optional.of(catalogRole));
 
@@ -323,10 +325,10 @@ class ProfileAppServiceTest {
     void addTargetRole_addsRoleAndSaves() {
         var profile = freshProfile();
         var roleId = UUID.randomUUID();
-        var catRole = new ProfessionalRole(roleId, "Backend Developer", "Desarrollo");
+        var catRole = new ProfessionalRole(roleId, "Backend Developer", "Desarrollo", true);
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
         when(roleRepository.findById(roleId)).thenReturn(Optional.of(catRole));
-        service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), SVC_UID, roleId, "MANUAL"));
+        service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), SVC_UID, roleId));
         assertThat(profile.getTargetRoles()).hasSize(1);
         assertThat(profile.getTargetRoles().get(0).getRoleTitle()).isEqualTo("Backend Developer");
         verify(repository).save(profile);
@@ -379,7 +381,7 @@ class ProfileAppServiceTest {
                 use("addSkill", s -> s.addSkill(new AddSkillCommand(id, SVC_UID, "Java", "ADVANCED", "MANUAL"))),
                 use("removeSkill", s -> s.removeSkill(id, SVC_UID, UUID.randomUUID())),
                 use("requestReview", s -> s.requestReview(id, SVC_UID)),
-                use("addTargetRole", s -> s.addTargetRole(new AddTargetRoleCommand(id, SVC_UID, UUID.randomUUID(), "MANUAL"))),
+                use("addTargetRole", s -> s.addTargetRole(new AddTargetRoleCommand(id, SVC_UID, UUID.randomUUID()))),
                 use("updateTargetRole", s -> s.updateTargetRole(
                         new UpdateTargetRoleCommand(id, SVC_UID, UUID.randomUUID(), UUID.randomUUID()))),
                 use("removeTargetRole", s -> s.removeTargetRole(id, SVC_UID, UUID.randomUUID())),
@@ -431,6 +433,169 @@ class ProfileAppServiceTest {
         when(repository.findById(any())).thenReturn(Optional.of(freshProfile()));
         assertThatThrownBy(() -> service.getProfile(UUID.randomUUID(), "uid-otra-persona"))
                 .isInstanceOf(ProfileAccessDeniedException.class);
+    }
+
+    // ── roles objetivo: solo roles activos, procedencia MANUAL ────────────
+
+    private static final ProfessionalRole ACTIVE_ROLE = new ProfessionalRole(
+            UUID.fromString("a0000001-0000-0000-0000-000000000002"), "Desarrollador Backend", "Desarrollo", true);
+    private static final ProfessionalRole INACTIVE_ROLE = new ProfessionalRole(
+            UUID.fromString("a0000007-0000-0000-0000-000000000006"), "Desarrollador Blockchain", "Otros TI", false);
+
+    @org.junit.jupiter.params.ParameterizedTest(name = "perfil {0}")
+    @org.junit.jupiter.params.provider.EnumSource(value = ProfileStatus.class, names = {"IN_PROGRESS", "COMPLETED"})
+    @DisplayName("Agregar un rol activo guarda la procedencia MANUAL, con el perfil en curso o finalizado")
+    void addTargetRole_shouldStoreManualProvenance_whenRoleIsActive(ProfileStatus status) {
+        var profile = status == ProfileStatus.COMPLETED ? completeProfile() : freshProfile();
+        var uid = profile.getFirebaseUid().value();
+        if (status == ProfileStatus.COMPLETED) profile.complete();
+        var before = profile.getTargetRoles().size();
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+        when(roleRepository.findById(ACTIVE_ROLE.id())).thenReturn(Optional.of(ACTIVE_ROLE));
+
+        service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), uid, ACTIVE_ROLE.id()));
+
+        assertThat(profile.getTargetRoles()).hasSize(before + 1);
+        var added = profile.getTargetRoles().getLast();
+        assertThat(added.getProvenance()).isEqualTo(DataProvenance.MANUAL);
+        assertThat(added.getRoleTitle()).isEqualTo("Desarrollador Backend");
+        verify(repository).save(profile);
+    }
+
+    @Test
+    @DisplayName("Agregar un rol inactivo se rechaza en professionalRoleId y no guarda nada")
+    void addTargetRole_shouldRejectInactiveRole_whenCatalogRoleIsDisabled() {
+        var profile = freshProfile();
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+        when(roleRepository.findById(INACTIVE_ROLE.id())).thenReturn(Optional.of(INACTIVE_ROLE));
+
+        assertThatThrownBy(() -> service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), SVC_UID, INACTIVE_ROLE.id())))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("professionalRoleId", ErrorCode.PROFESSIONAL_ROLE_DISABLED)));
+        verify(repository, never()).save(any());
+        assertThat(profile.getTargetRoles()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Con 5 roles, un rol inactivo se rechaza como inactivo y no como máximo alcanzado")
+    void addTargetRole_shouldRejectInactiveRole_beforeLimit_whenProfileIsFull() {
+        var profile = fullProfile();
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+        when(roleRepository.findById(INACTIVE_ROLE.id())).thenReturn(Optional.of(INACTIVE_ROLE));
+
+        assertThatThrownBy(() -> service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), SVC_UID, INACTIVE_ROLE.id())))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("professionalRoleId", ErrorCode.PROFESSIONAL_ROLE_DISABLED)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Con 5 roles, un rol activo nuevo responde máximo alcanzado y no guarda")
+    void addTargetRole_shouldThrowLimit_whenProfileIsFull() {
+        var profile = fullProfile();
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+        when(roleRepository.findById(ACTIVE_ROLE.id())).thenReturn(Optional.of(ACTIVE_ROLE));
+
+        assertThatThrownBy(() -> service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), SVC_UID, ACTIVE_ROLE.id())))
+                .isInstanceOf(MaxTargetRolesExceededException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Un rol que no está en el catálogo responde 404 y no guarda")
+    void addTargetRole_shouldThrowNotFound_whenRoleIsNotInCatalog() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
+        when(roleRepository.findById(any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.addTargetRole(new AddTargetRoleCommand(UUID.randomUUID(), SVC_UID, UUID.randomUUID())))
+                .isInstanceOf(ProfessionalRoleNotFoundException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Sustituir por un rol inactivo se rechaza y el perfil conserva su rol")
+    void updateTargetRole_shouldRejectInactiveRole_whenCatalogRoleIsDisabled() {
+        var profile = freshProfile();
+        var original = new TargetRole(UUID.randomUUID(), ACTIVE_ROLE.id(), "Desarrollador Backend", DataProvenance.MANUAL);
+        profile.addTargetRole(original);
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+        when(roleRepository.findById(INACTIVE_ROLE.id())).thenReturn(Optional.of(INACTIVE_ROLE));
+
+        assertThatThrownBy(() -> service.updateTargetRole(
+                new UpdateTargetRoleCommand(UUID.randomUUID(), SVC_UID, original.getId(), INACTIVE_ROLE.id())))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("professionalRoleId", ErrorCode.PROFESSIONAL_ROLE_DISABLED)));
+        assertThat(profile.getTargetRoles()).singleElement()
+                .satisfies(r -> assertThat(r.getProfessionalRoleId()).isEqualTo(ACTIVE_ROLE.id()));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Sustituir un rol objetivo que no está en el perfil por un rol inactivo informa primero el error del catálogo")
+    void updateTargetRole_shouldReportCatalogRole_whenRoleIdIsNotInProfile() {
+        var profile = freshProfile();
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+        when(roleRepository.findById(INACTIVE_ROLE.id())).thenReturn(Optional.of(INACTIVE_ROLE));
+
+        assertThatThrownBy(() -> service.updateTargetRole(
+                new UpdateTargetRoleCommand(UUID.randomUUID(), SVC_UID, UUID.randomUUID(), INACTIVE_ROLE.id())))
+                .isInstanceOfSatisfying(InvalidFieldsException.class, e -> assertThat(e.getErrors())
+                        .extracting(FieldError::field, FieldError::code)
+                        .containsExactly(tuple("professionalRoleId", ErrorCode.PROFESSIONAL_ROLE_DISABLED)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Sustituir conserva el id y la procedencia del rol y cambia el rol del catálogo")
+    void updateTargetRole_shouldKeepIdAndProvenance_whenRoleIsReplaced() {
+        var profile = freshProfile();
+        var original = new TargetRole(UUID.randomUUID(), UUID.randomUUID(), "Otro rol", DataProvenance.AI_SUGGESTED);
+        profile.addTargetRole(original);
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+        when(roleRepository.findById(ACTIVE_ROLE.id())).thenReturn(Optional.of(ACTIVE_ROLE));
+
+        service.updateTargetRole(new UpdateTargetRoleCommand(UUID.randomUUID(), SVC_UID, original.getId(), ACTIVE_ROLE.id()));
+
+        assertThat(profile.getTargetRoles()).singleElement().satisfies(r -> {
+            assertThat(r.getId()).isEqualTo(original.getId());
+            assertThat(r.getProvenance()).isEqualTo(DataProvenance.AI_SUGGESTED);
+            assertThat(r.getProfessionalRoleId()).isEqualTo(ACTIVE_ROLE.id());
+            assertThat(r.getRoleTitle()).isEqualTo("Desarrollador Backend");
+        });
+        verify(repository).save(profile);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+    @org.junit.jupiter.params.provider.MethodSource("targetRoleWrites")
+    @DisplayName("Una escritura de roles objetivo sobre un perfil ajeno responde 403 sin guardar ni consultar el catálogo")
+    void targetRoleWrites_shouldThrowAccessDenied_whenProfileBelongsToOtherUser(String name,
+            java.util.function.Consumer<ProfileAppService> call) {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshProfile()));
+
+        assertThatThrownBy(() -> call.accept(service)).isInstanceOf(ProfileAccessDeniedException.class);
+
+        verify(repository, never()).save(any());
+        org.mockito.Mockito.verifyNoInteractions(roleRepository);
+    }
+
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> targetRoleWrites() {
+        var id = UUID.randomUUID();
+        return java.util.stream.Stream.of(
+                use("addTargetRole", s -> s.addTargetRole(new AddTargetRoleCommand(id, "uid-other", UUID.randomUUID()))),
+                use("updateTargetRole", s -> s.updateTargetRole(
+                        new UpdateTargetRoleCommand(id, "uid-other", UUID.randomUUID(), UUID.randomUUID()))),
+                use("removeTargetRole", s -> s.removeTargetRole(id, "uid-other", UUID.randomUUID())));
+    }
+
+    private static ProfessionalProfile fullProfile() {
+        var profile = freshProfile();
+        for (int i = 0; i < 5; i++) {
+            profile.addTargetRole(new TargetRole(UUID.randomUUID(), UUID.randomUUID(), "Rol " + i, DataProvenance.MANUAL));
+        }
+        return profile;
     }
 
     private static ProfessionalProfile freshProfile() {

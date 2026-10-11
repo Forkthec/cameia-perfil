@@ -11,6 +11,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedExcepti
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRole;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
@@ -130,20 +131,39 @@ public class ProfileAppService {
 
     public ProfessionalProfile getProfile(UUID id, String uid) { return loadForUser(id, uid); }
 
+    /**
+     * Agrega un rol objetivo al perfil de quien llama. La procedencia siempre es manual: el servidor la fija.
+     *
+     * @param cmd perfil, usuario que llama y rol del catálogo a agregar
+     * @return el perfil con el nuevo rol objetivo
+     * @throws ProfessionalRoleNotFoundException si el rol no existe en el catálogo
+     * @throws InvalidFieldsException            si el rol del catálogo está inactivo
+     * @throws MaxTargetRolesExceededException   si el perfil ya tiene el máximo de roles objetivo
+     * @throws DuplicateTargetRoleException      si el rol ya está en el perfil
+     */
     @Transactional
     public ProfessionalProfile addTargetRole(AddTargetRoleCommand cmd) {
         var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
-        var role = roleRepository.findById(cmd.professionalRoleId())
-                .orElseThrow(ProfessionalRoleNotFoundException::new);
-        p.addTargetRole(new TargetRole(UUID.randomUUID(), role.id(), role.nombre(), provenance(cmd.provenance())));
+        var role = selectableRole(cmd.professionalRoleId());
+        // Un rol agregado a mano nunca trae origen de IA: la procedencia la fija el servidor.
+        p.addTargetRole(new TargetRole(UUID.randomUUID(), role.id(), role.nombre(), DataProvenance.MANUAL));
         repository.save(p); return p;
     }
 
+    /**
+     * Sustituye el rol del catálogo de un rol objetivo; conserva su identificador, su procedencia y su lugar en la lista.
+     *
+     * @param cmd perfil, usuario que llama, rol objetivo a sustituir y nuevo rol del catálogo
+     * @return el perfil con el rol objetivo sustituido
+     * @throws ProfessionalRoleNotFoundException si el nuevo rol no existe en el catálogo
+     * @throws InvalidFieldsException            si el nuevo rol del catálogo está inactivo
+     * @throws TargetRoleNotFoundException       si el rol objetivo no está en el perfil
+     * @throws DuplicateTargetRoleException      si el nuevo rol ya está en el perfil
+     */
     @Transactional
     public ProfessionalProfile updateTargetRole(UpdateTargetRoleCommand cmd) {
         var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
-        var role = roleRepository.findById(cmd.professionalRoleId())
-                .orElseThrow(ProfessionalRoleNotFoundException::new);
+        var role = selectableRole(cmd.professionalRoleId());
         p.updateTargetRole(cmd.roleId(), role.id(), role.nombre());
         repository.save(p); return p;
     }
@@ -185,6 +205,13 @@ public class ProfileAppService {
     private ProfessionalProfile loadForUser(UUID profileId, String uid) {
         var owner = FirebaseUid.required(uid);
         return checkOwner(load(profileId), owner);
+    }
+
+    /** Busca el rol en el catálogo y exige que se pueda elegir: 404 si no existe, 422 si está inactivo. */
+    private ProfessionalRole selectableRole(UUID professionalRoleId) {
+        return roleRepository.findById(professionalRoleId)
+                .orElseThrow(ProfessionalRoleNotFoundException::new)
+                .requireSelectable();
     }
 
     /** Carga el perfil de quien llama bloqueando su fila; todo caso de uso que modifica un perfil empieza aquí. */

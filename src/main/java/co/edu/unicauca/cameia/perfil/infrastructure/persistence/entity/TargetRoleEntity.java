@@ -28,7 +28,7 @@ public class TargetRoleEntity {
     @JoinColumn(name = "perfil_id", nullable = false)
     private ProfessionalProfileEntity profile;
 
-    @Column(name = "rol_profesional_id")
+    @Column(name = "rol_profesional_id", nullable = false)
     private UUID rolProfesionalId;
 
     @Column(name = "nombre_rol", nullable = false, length = 255)

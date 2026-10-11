@@ -84,6 +84,47 @@ class ProfessionalProfileTest {
     }
 
     @Test
+    @DisplayName("Con 4 roles todavía se acepta el quinto")
+    void addTargetRole_shouldAccept_whenProfileHasFourRoles() {
+        var profile = ProfessionalProfile.create(UID);
+        for (int i = 0; i < ProfessionalProfile.MAX_TARGET_ROLES - 1; i++) {
+            profile.addTargetRole(role(UUID.randomUUID(), "Role " + i));
+        }
+
+        profile.addTargetRole(role(UUID.randomUUID(), "Quinto"));
+
+        assertThat(profile.getTargetRoles()).hasSize(ProfessionalProfile.MAX_TARGET_ROLES);
+    }
+
+    @Test
+    @DisplayName("Con 5 roles, repetir uno de ellos informa el máximo y no el duplicado")
+    void addTargetRole_shouldReportLimit_whenFullAndRepeated() {
+        var repeated = UUID.randomUUID();
+        var profile = ProfessionalProfile.create(UID);
+        profile.addTargetRole(role(repeated, "Repetido"));
+        for (int i = 1; i < ProfessionalProfile.MAX_TARGET_ROLES; i++) {
+            profile.addTargetRole(role(UUID.randomUUID(), "Role " + i));
+        }
+
+        assertThatThrownBy(() -> profile.addTargetRole(role(repeated, "Repetido")))
+                .isInstanceOf(MaxTargetRolesExceededException.class);
+    }
+
+    @Test
+    @DisplayName("Sustituir un rol por el mismo rol del catálogo no es un duplicado")
+    void updateTargetRole_shouldKeepRole_whenReplacedBySameCatalogRole() {
+        var catalogId = UUID.randomUUID();
+        var existing = role(catalogId, "Backend Dev");
+        var profile = ProfessionalProfile.create(UID);
+        profile.addTargetRole(existing);
+
+        profile.updateTargetRole(existing.getId(), catalogId, "Backend Dev");
+
+        assertThat(profile.getTargetRoles()).singleElement()
+                .satisfies(r -> assertThat(r.getId()).isEqualTo(existing.getId()));
+    }
+
+    @Test
     void addTargetRole_throwsDuplicateForSameProfessionalRoleId() {
         var roleId = UUID.randomUUID();
         var profile = ProfessionalProfile.create(UID);

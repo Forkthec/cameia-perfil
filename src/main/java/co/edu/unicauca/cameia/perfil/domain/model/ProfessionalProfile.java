@@ -127,6 +127,15 @@ public final class ProfessionalProfile {
         touch();
     }
 
+    /**
+     * Sustituye el rol del catálogo de un rol objetivo; conserva su identificador, su procedencia y su lugar en la lista.
+     *
+     * @param roleId             identificador del rol objetivo a sustituir
+     * @param professionalRoleId nuevo rol del catálogo; si es nulo se conserva el actual
+     * @param roleTitle          título del nuevo rol; si es nulo se conserva el actual
+     * @throws TargetRoleNotFoundException  si el rol objetivo no está en el perfil
+     * @throws DuplicateTargetRoleException si el nuevo rol ya está en otro rol objetivo del perfil
+     */
     public void updateTargetRole(UUID roleId, UUID professionalRoleId, String roleTitle) {
         Objects.requireNonNull(roleId);
         TargetRole existing = targetRoles.stream().filter(r -> r.getId().equals(roleId))
