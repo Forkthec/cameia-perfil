@@ -590,6 +590,66 @@ class ProfileAppServiceTest {
                 use("removeTargetRole", s -> s.removeTargetRole(id, "uid-other", UUID.randomUUID())));
     }
 
+    @Test
+    @DisplayName("Un perfil en Borrador puede quedarse sin roles objetivo")
+    void removeTargetRole_shouldRemoveLastRole_whenProfileIsDraft() {
+        var profile = freshProfile();
+        var role = new TargetRole(UUID.randomUUID(), ACTIVE_ROLE.id(), "Desarrollador Backend", DataProvenance.MANUAL);
+        profile.addTargetRole(role);
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        service.removeTargetRole(UUID.randomUUID(), SVC_UID, role.getId());
+
+        assertThat(profile.getTargetRoles()).isEmpty();
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_PROGRESS);
+        verify(repository).save(profile);
+    }
+
+    @Test
+    @DisplayName("El único rol de un perfil activo no se elimina: el perfil conserva el rol y el estado")
+    void removeTargetRole_shouldKeepRoleAndStatus_whenLastRoleOfCompletedProfile() {
+        var profile = completeProfile();
+        profile.complete();
+        var roleId = profile.getTargetRoles().get(0).getId();
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        assertThatThrownBy(() -> service.removeTargetRole(UUID.randomUUID(), COMPLETE_UID, roleId))
+                .isInstanceOf(LastTargetRoleException.class);
+
+        assertThat(profile.getTargetRoles()).hasSize(1);
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Un perfil activo con dos roles puede quitar uno y sigue activo")
+    void removeTargetRole_shouldRemoveRole_whenCompletedProfileHasTwo() {
+        var profile = completeProfile();
+        var second = new TargetRole(UUID.randomUUID(), ACTIVE_ROLE.id(), "Desarrollador Backend", DataProvenance.MANUAL);
+        profile.addTargetRole(second);
+        profile.complete();
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+
+        service.removeTargetRole(UUID.randomUUID(), COMPLETE_UID, second.getId());
+
+        assertThat(profile.getTargetRoles()).hasSize(1);
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
+        verify(repository).save(profile);
+    }
+
+    @Test
+    @DisplayName("Repetir la eliminación de un rol ya eliminado responde que no existe")
+    void removeTargetRole_shouldThrowNotFound_whenRoleWasAlreadyRemoved() {
+        var profile = freshProfile();
+        var role = new TargetRole(UUID.randomUUID(), ACTIVE_ROLE.id(), "Desarrollador Backend", DataProvenance.MANUAL);
+        profile.addTargetRole(role);
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+        service.removeTargetRole(UUID.randomUUID(), SVC_UID, role.getId());
+
+        assertThatThrownBy(() -> service.removeTargetRole(UUID.randomUUID(), SVC_UID, role.getId()))
+                .isInstanceOf(TargetRoleNotFoundException.class);
+    }
+
     private static ProfessionalProfile fullProfile() {
         var profile = freshProfile();
         for (int i = 0; i < 5; i++) {

@@ -79,7 +79,7 @@ final class ErrorCatalog {
             entry(PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE, UNPROCESSABLE_CONTENT, "Idioma no disponible", null),
             entry(TARGET_ROLE_LIMIT_REACHED, CONFLICT, "Máximo de roles objetivo alcanzado", null),
             entry(TARGET_ROLE_ALREADY_EXISTS, CONFLICT, "Rol objetivo duplicado", null),
-            entry(TARGET_ROLE_NOT_ALLOWED, UNPROCESSABLE_CONTENT, "No se puede eliminar el último rol objetivo", null),
+            entry(TARGET_ROLE_NOT_ALLOWED, CONFLICT, "No se puede eliminar el último rol objetivo", null),
             entry(SKILL_ALREADY_EXISTS, CONFLICT, "Habilidad duplicada", null),
             entry(TARGET_ROLE_NOT_FOUND, NOT_FOUND, "Rol objetivo no encontrado", null),
             entry(WORK_EXPERIENCE_NOT_FOUND, NOT_FOUND, "Experiencia no encontrada", null),

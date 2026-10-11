@@ -125,6 +125,15 @@ class ProfessionalProfileTest {
     }
 
     @Test
+    @DisplayName("Eliminar de un perfil sin roles responde que el rol no existe")
+    void removeTargetRole_shouldThrowNotFound_whenProfileHasNoRoles() {
+        var profile = ProfessionalProfile.create(UID);
+
+        assertThatThrownBy(() -> profile.removeTargetRole(UUID.fromString("33333333-3333-4333-8333-333333333333")))
+                .isInstanceOf(TargetRoleNotFoundException.class);
+    }
+
+    @Test
     void addTargetRole_throwsDuplicateForSameProfessionalRoleId() {
         var roleId = UUID.randomUUID();
         var profile = ProfessionalProfile.create(UID);

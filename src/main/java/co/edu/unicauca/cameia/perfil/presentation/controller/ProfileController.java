@@ -87,6 +87,34 @@ class ProfileController {
               "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
             }""";
 
+    /** Partes comunes de los ejemplos de error: forma común RFC 9457 más {@code code} y {@code requestId}. */
+    private static final String EXAMPLE_HEAD = "{\"type\": \"about:blank\", ";
+    private static final String EXAMPLE_TAIL = ", \"requestId\": \"3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10\"}";
+
+    private static final String REMOVE_TARGET_ROLE_IDENTITY_EXAMPLE = EXAMPLE_HEAD
+            + "\"title\": \"Identidad requerida\", \"status\": 401, \"detail\": \"Tu sesión expiró. Inicia sesión de nuevo.\", "
+            + "\"code\": \"IDENTITY_REQUIRED\"" + EXAMPLE_TAIL;
+
+    private static final String REMOVE_TARGET_ROLE_FORBIDDEN_EXAMPLE = EXAMPLE_HEAD
+            + "\"title\": \"Acceso denegado\", \"status\": 403, \"detail\": \"No encontramos lo que buscabas.\", "
+            + "\"code\": \"PROFILE_NOT_ALLOWED\"" + EXAMPLE_TAIL;
+
+    private static final String REMOVE_TARGET_ROLE_NOT_FOUND_EXAMPLE = EXAMPLE_HEAD
+            + "\"title\": \"Rol objetivo no encontrado\", \"status\": 404, \"detail\": \"No encontramos lo que buscabas.\", "
+            + "\"code\": \"TARGET_ROLE_NOT_FOUND\"" + EXAMPLE_TAIL;
+
+    private static final String LAST_TARGET_ROLE_EXAMPLE = EXAMPLE_HEAD
+            + "\"title\": \"Rol objetivo no permitido\", \"status\": 409, \"detail\": \"No puedes quedarte sin roles objetivo con el perfil activo.\", "
+            + "\"code\": \"TARGET_ROLE_NOT_ALLOWED\"" + EXAMPLE_TAIL;
+
+    private static final String UPDATE_IN_PROGRESS_EXAMPLE = EXAMPLE_HEAD
+            + "\"title\": \"Perfil ocupado\", \"status\": 409, \"detail\": \"Estamos guardando otro cambio de tu perfil. Inténtalo de nuevo en unos segundos.\", "
+            + "\"code\": \"PROFILE_UPDATE_IN_PROGRESS\"" + EXAMPLE_TAIL;
+
+    private static final String TARGET_ROLE_ID_INVALID_EXAMPLE = EXAMPLE_HEAD
+            + "\"title\": \"Identificador no válido\", \"status\": 422, \"detail\": \"El identificador del rol objetivo no es válido.\", "
+            + "\"code\": \"TARGET_ROLE_ID_INVALID_FORMAT\"" + EXAMPLE_TAIL;
+
     private final ProfileAppService profileAppService;
     private final ProfileCreationAppService profileCreationAppService;
 
@@ -354,17 +382,27 @@ class ProfileController {
                 new UpdateTargetRoleCommand(id, uid, roleId, r.professionalRoleId()))));
     }
 
-    @Operation(summary = "Eliminar rol objetivo del perfil")
+    @Operation(summary = "Eliminar rol objetivo del perfil",
+            description = "Elimina el rol objetivo indicado. Esta operación no recibe cuerpo: si el cliente envía uno, se ignora.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Rol objetivo eliminado, sin cuerpo"),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = REMOVE_TARGET_ROLE_IDENTITY_EXAMPLE))),
             @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = REMOVE_TARGET_ROLE_FORBIDDEN_EXAMPLE))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o rol objetivo que no es de este perfil (code TARGET_ROLE_NOT_FOUND)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "No se puede eliminar el único rol objetivo de un perfil COMPLETED (code TARGET_ROLE_NOT_ALLOWED) o identificador mal escrito (PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = REMOVE_TARGET_ROLE_NOT_FOUND_EXAMPLE))),
+            @ApiResponse(responseCode = "409", description = "No se puede eliminar el único rol objetivo de un perfil activo (code TARGET_ROLE_NOT_ALLOWED) u otra escritura en curso (PROFILE_UPDATE_IN_PROGRESS)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = {
+                                    @ExampleObject(name = "Último rol de un perfil activo", value = LAST_TARGET_ROLE_EXAMPLE),
+                                    @ExampleObject(name = "Escritura en curso", value = UPDATE_IN_PROGRESS_EXAMPLE)})),
+            @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = TARGET_ROLE_ID_INVALID_EXAMPLE)))
     })
     @DeleteMapping("/{id}/target-roles/{roleId}")
     ResponseEntity<Void> removeTargetRole(@PathVariable UUID id, @PathVariable UUID roleId,

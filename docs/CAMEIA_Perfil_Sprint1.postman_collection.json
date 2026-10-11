@@ -72,6 +72,18 @@
     {
       "key": "role_c",
       "value": ""
+    },
+    {
+      "key": "user_d",
+      "value": "firebase-uid-roles-borrador"
+    },
+    {
+      "key": "profile_d",
+      "value": ""
+    },
+    {
+      "key": "role_d",
+      "value": ""
     }
   ],
   "item": [
@@ -1286,16 +1298,18 @@
           }
         },
         {
-          "name": "ERR DELETE /target-roles/{roleId} — 422 último rol de un perfil activo (CA-2.11.3)",
+          "name": "ERR DELETE /target-roles/{roleId} — 409 último rol de un perfil activo (CA-2.11.3)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));",
                   "pm.test('code TARGET_ROLE_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('TARGET_ROLE_NOT_ALLOWED'));",
-                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql('No puedes quedarte sin roles objetivo con el perfil activo.'));"
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql('No puedes quedarte sin roles objetivo con el perfil activo.'));",
+                  "pm.test('Content-Type problem+json con charset', () => { const t = pm.response.headers.get('Content-Type').toLowerCase(); pm.expect(t).to.include('application/problem+json'); pm.expect(t).to.include('charset=utf-8'); });",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
                 ]
               }
             }
@@ -4681,6 +4695,343 @@
                 "profiles",
                 "{{profile_c}}",
                 "target-roles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OK POST /profiles — Usuario D crea su perfil (guarda profile_d)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('profile_d', pm.response.json().id);",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_d}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OK POST /target-roles — Usuario D agrega un rol (guarda role_d)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('role_d', pm.response.json().targetRoles[0].id);",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_d}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"professionalRoleId\": \"a0000001-0000-0000-0000-000000000007\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_d}}/target-roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_d}}",
+                "target-roles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR DELETE /target-roles/{roleId} — 403 perfil ajeno",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Content-Type problem+json con charset', () => { const t = pm.response.headers.get('Content-Type').toLowerCase(); pm.expect(t).to.include('application/problem+json'); pm.expect(t).to.include('charset=utf-8'); });",
+                  "pm.test('code PROFILE_NOT_ALLOWED', () => pm.expect(pm.response.json().code).to.eql('PROFILE_NOT_ALLOWED'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"No encontramos lo que buscabas.\"));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_c}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_d}}/target-roles/{{role_d}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_d}}",
+                "target-roles",
+                "{{role_d}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR DELETE /target-roles/{ajeno} — 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Content-Type problem+json con charset', () => { const t = pm.response.headers.get('Content-Type').toLowerCase(); pm.expect(t).to.include('application/problem+json'); pm.expect(t).to.include('charset=utf-8'); });",
+                  "pm.test('code TARGET_ROLE_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('TARGET_ROLE_NOT_FOUND'));",
+                  "pm.test('detail del backlog', () => pm.expect(pm.response.json().detail).to.eql(\"No encontramos lo que buscabas.\"));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_d}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_d}}/target-roles/11111111-2222-4333-8444-555555555555",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_d}}",
+                "target-roles",
+                "11111111-2222-4333-8444-555555555555"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR DELETE /target-roles/%27%20OR%201=1 — 422 identificador hostil",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Content-Type problem+json con charset', () => { const t = pm.response.headers.get('Content-Type').toLowerCase(); pm.expect(t).to.include('application/problem+json'); pm.expect(t).to.include('charset=utf-8'); });",
+                  "pm.test('code TARGET_ROLE_ID_INVALID_FORMAT', () => pm.expect(pm.response.json().code).to.eql('TARGET_ROLE_ID_INVALID_FORMAT'));",
+                  "pm.test('detail del identificador', () => pm.expect(pm.response.json().detail).to.eql(\"El identificador del rol objetivo no es válido.\"));",
+                  "pm.test('instance es la ruta de la petición', () => pm.expect(pm.response.json().instance).to.match(/\\/target-roles\\/%27%20OR%201=1$/));",
+                  "pm.test('Sin eco del valor hostil fuera de instance', () => { const cuerpo = pm.response.json(); delete cuerpo.instance; pm.expect(JSON.stringify(cuerpo)).to.not.match(/OR 1=1|OR%201/); });",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_d}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_d}}/target-roles/%27%20OR%201=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_d}}",
+                "target-roles",
+                "%27%20OR%201=1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OK DELETE /target-roles/{roleId} — 204 último rol en Borrador (CA-2.11.9)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));",
+                  "pm.test('cuerpo vacío', () => pm.expect(pm.response.text()).to.eql(''));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_d}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_d}}/target-roles/{{role_d}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_d}}",
+                "target-roles",
+                "{{role_d}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OK GET /profiles/{id} — sigue en Borrador sin roles",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));",
+                  "pm.test('sin roles objetivo', () => pm.expect(pm.response.json().targetRoles).to.eql([]));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_d}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_d}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_d}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ERR DELETE /target-roles/{roleId} — 404 al repetir la eliminación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Content-Type problem+json con charset', () => { const t = pm.response.headers.get('Content-Type').toLowerCase(); pm.expect(t).to.include('application/problem+json'); pm.expect(t).to.include('charset=utf-8'); });",
+                  "pm.test('code TARGET_ROLE_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('TARGET_ROLE_NOT_FOUND'));",
+                  "pm.test('Tiempo de respuesta menor a 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|org\\.|co\\.edu|SQL/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{user_d}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{profile_d}}/target-roles/{{role_d}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{profile_d}}",
+                "target-roles",
+                "{{role_d}}"
               ]
             }
           }
