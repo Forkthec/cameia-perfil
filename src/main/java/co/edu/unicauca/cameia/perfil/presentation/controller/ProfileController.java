@@ -87,6 +87,37 @@ class ProfileController {
               "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
             }""";
 
+    private static final String SKILL_LIMIT_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Máximo de habilidades alcanzado",
+              "status": 409,
+              "detail": "Ya tienes el máximo de 20 habilidades.",
+              "code": "SKILL_LIMIT_REACHED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String SKILL_DUPLICATE_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Habilidad duplicada",
+              "status": 409,
+              "detail": "Esa habilidad ya está en tu perfil.",
+              "code": "SKILL_ALREADY_EXISTS",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+              "errors": [{"field": "skillName", "code": "SKILL_ALREADY_EXISTS", "message": "Esa habilidad ya está en tu perfil."}]
+            }""";
+
+    private static final String SKILL_NOT_ALLOWED_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "No se puede eliminar la última habilidad",
+              "status": 409,
+              "detail": "No puedes quedarte sin habilidades con el perfil activo. Agrega otra antes de eliminar esta.",
+              "code": "SKILL_NOT_ALLOWED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
     private static final String EDUCATION_NOT_ALLOWED_EXAMPLE = """
             {
               "type": "about:blank",
@@ -420,7 +451,7 @@ class ProfileController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Habilidad agregada",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: SKILL_NAME_REQUIRED, SKILL_NAME_TOO_LONG, SKILL_LEVEL_REQUIRED, SKILL_LEVEL_INVALID_VALUE, PROVENANCE_REQUIRED, PROVENANCE_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: SKILL_NAME_REQUIRED, SKILL_NAME_TOO_LONG, SKILL_LEVEL_REQUIRED, SKILL_LEVEL_INVALID_VALUE, SKILL_NAME_INVALID_CHARACTERS). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -428,7 +459,13 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "La habilidad ya está en el perfil, sin distinguir mayúsculas ni espacios (code SKILL_ALREADY_EXISTS)",
+            @ApiResponse(responseCode = "409", description = "El perfil ya tiene 20 habilidades (code SKILL_LIMIT_REACHED), "
+                    + "ya tiene esa habilidad sin distinguir mayúsculas, tildes ni espacios (code SKILL_ALREADY_EXISTS, con errors[skillName]) "
+                    + "o está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se agregó nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = {@ExampleObject(name = "Máximo alcanzado", value = SKILL_LIMIT_EXAMPLE),
+                                    @ExampleObject(name = "Habilidad repetida", value = SKILL_DUPLICATE_EXAMPLE)})),
+            @ApiResponse(responseCode = "415", description = "El cuerpo no es JSON (code MEDIA_TYPE_NOT_ALLOWED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/skills")
@@ -436,7 +473,7 @@ class ProfileController {
             @Valid @RequestBody AddSkillRequest r,
             @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addSkill(
-                new AddSkillCommand(id, uid, r.skillName(), r.level(), r.provenance()))));
+                new AddSkillCommand(id, uid, r.skillName(), r.level()))));
     }
 
     @Operation(summary = "Eliminar habilidad del perfil")
@@ -448,6 +485,10 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o habilidad que no es de este perfil (code SKILL_NOT_FOUND)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Es la única habilidad de un perfil activo (code SKILL_NOT_ALLOWED) "
+                    + "o el perfil está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se quitó nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Última habilidad", value = SKILL_NOT_ALLOWED_EXAMPLE))),
             @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o SKILL_ID_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })

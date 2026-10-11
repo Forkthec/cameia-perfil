@@ -9,6 +9,8 @@ import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.FieldValues;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
+import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
+import co.edu.unicauca.cameia.perfil.domain.model.SkillName;
 import co.edu.unicauca.cameia.perfil.domain.model.SingleLineText;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
@@ -33,6 +35,8 @@ import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.INSTITUTI
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.POSITION_INVALID_CHARACTERS;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.PREFERRED_MODALITY_INVALID_VALUE;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.PROFILE_NAME_INVALID_CHARACTERS;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.SKILL_LEVEL_INVALID_VALUE;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.SKILL_NAME_INVALID_CHARACTERS;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.START_DATE_INVALID_FORMAT;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.SUMMARY_INVALID_CHARACTERS;
 
@@ -74,7 +78,10 @@ public @interface DomainRule {
         PROFILE_NAME(text -> rejectControl(text, false, ProfileName.CHARACTERS), Set.of(PROFILE_NAME_INVALID_CHARACTERS)),
         SUMMARY(text -> rejectControl(text, true, ProfessionalSummary.CHARACTERS), Set.of(SUMMARY_INVALID_CHARACTERS)),
         PREFERRED_MODALITY(text -> FieldValues.option(WorkModality.class, text, PREFERRED_MODALITY_INVALID_VALUE, "preferredModality"),
-                Set.of(PREFERRED_MODALITY_INVALID_VALUE));
+                Set.of(PREFERRED_MODALITY_INVALID_VALUE)),
+        SKILL_NAME(text -> rejectControl(text, false, SkillName.CHARACTERS), Set.of(SKILL_NAME_INVALID_CHARACTERS)),
+        SKILL_LEVEL(text -> FieldValues.option(SkillLevel.class, text, SKILL_LEVEL_INVALID_VALUE, "level"),
+                Set.of(SKILL_LEVEL_INVALID_VALUE));
 
         private final Consumer<String> validation;
         private final Set<ErrorCode> reportedCodes;

@@ -172,4 +172,22 @@ class OpenApiDocumentIT {
         assertThat(schemas.get("EducationItem").get("properties").has("fieldOfStudy")).isFalse();
         assertThat(response.body()).contains("EDUCATION_LIMIT_REACHED", "EDUCATION_NOT_ALLOWED");
     }
+
+    @Test
+    @DisplayName("El OpenAPI de la habilidad publica el límite de 60, los niveles, sin procedencia, y los códigos 409")
+    void addSkillRequest_shouldDocumentLimits_whenApiDocsAreGenerated() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+
+        var schema = JsonMapper.builder().build().readTree(response.body()).get("components").get("schemas")
+                .get("AddSkillRequest").get("properties");
+        assertThat(schema.get("skillName").get("maxLength").asInt()).isEqualTo(60);
+        assertThat(schema.get("skillName").get("minLength").asInt()).isEqualTo(1);
+        assertThat(schema.get("level").get("enum").valueStream().map(v -> v.asString()).toList())
+                .containsExactlyInAnyOrder("BASIC", "INTERMEDIATE", "ADVANCED");
+        assertThat(schema.has("provenance")).isFalse();
+        assertThat(response.body()).contains("SKILL_LIMIT_REACHED", "SKILL_NOT_ALLOWED", "SKILL_ALREADY_EXISTS",
+                "SKILL_NAME_INVALID_CHARACTERS");
+    }
 }

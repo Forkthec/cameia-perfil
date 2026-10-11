@@ -11,6 +11,8 @@ import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.SkillLimitReachedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.SkillNotAllowedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.SkillNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceLimitReachedException;
@@ -40,6 +42,8 @@ public final class ProfessionalProfile {
     public static final int MAX_WORK_EXPERIENCES = 4;
     /** Máximo de formaciones académicas por perfil. */
     public static final int MAX_EDUCATIONS = 5;
+    /** Máximo de habilidades por perfil. */
+    public static final int MAX_SKILLS = 20;
 
     private final ProfileId id;
     private final FirebaseUid firebaseUid;
@@ -219,22 +223,45 @@ public final class ProfessionalProfile {
         touch();
     }
 
-    // ── Habilidades (CM-19) ──────────────────────────────────────────────
+    // ── Habilidades ──────────────────────────────────────────────────────
+    /**
+     * Agrega una habilidad. El máximo se comprueba primero: con {@value #MAX_SKILLS} no se acepta ninguna,
+     * repetida o no.
+     *
+     * @param skill habilidad que se agrega
+     * @throws SkillLimitReachedException si el perfil ya tiene el máximo
+     * @throws DuplicateSkillException    si el perfil ya tiene la misma habilidad
+     */
     public void addSkill(ProfileSkill skill) {
         Objects.requireNonNull(skill);
-        String normalizado = normalizarNombreHabilidad(skill.getSkillName());
-        boolean duplicada = profileSkills.stream()
-                .anyMatch(s -> normalizarNombreHabilidad(s.getSkillName()).equals(normalizado));
-        if (duplicada) throw new DuplicateSkillException();
+        if (profileSkills.size() >= MAX_SKILLS) {
+            throw new SkillLimitReachedException();
+        }
+        if (profileSkills.stream().anyMatch(s -> s.getName().sameAs(skill.getName()))) {
+            throw new DuplicateSkillException();
+        }
         profileSkills.add(skill);
         touch();
     }
 
-    private static String normalizarNombreHabilidad(String nombre) {
-        return nombre.trim().replaceAll("\\s+", " ").toLowerCase(java.util.Locale.ROOT);
-    }
+    /**
+     * Elimina una habilidad; un perfil Activo conserva al menos una. Las dos comprobaciones corren con la
+     * fila del perfil bloqueada, así una finalización en otra pestaña no deja un perfil Activo sin habilidades.
+     * Un identificador ajeno responde «no encontrado» antes que «no permitido».
+     *
+     * @param skillId identificador de la habilidad
+     * @throws SkillNotFoundException   si el identificador no es una habilidad de este perfil
+     * @throws SkillNotAllowedException si es la única habilidad de un perfil Activo
+     */
     public void removeSkill(UUID skillId) {
-        removeById(profileSkills, s -> s.getId().equals(skillId), SkillNotFoundException::new);
+        if (profileSkills.stream().noneMatch(s -> s.getId().equals(skillId))) {
+            throw new SkillNotFoundException();
+        }
+        if (status == ProfileStatus.COMPLETED && profileSkills.size() == 1) {
+            throw new SkillNotAllowedException();
+        }
+        profileSkills.removeIf(s -> s.getId().equals(skillId));
+        touch();
     }
 
     /** Quita el elemento del perfil, o lanza el «no encontrado» si no es de este perfil (CA-2.4.58, 2.4.59, 2.5.23). */

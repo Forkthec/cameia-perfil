@@ -818,7 +818,6 @@ class ProfileControllerTest {
             case SKILLS -> {
                 body.put("skillName", "\"Java\"");
                 body.put("level", "\"ADVANCED\"");
-                body.put("provenance", "\"MANUAL\"");
             }
             case EDUCATIONS -> {
                 body.put("institution", "\"Unicauca\"");
@@ -846,7 +845,6 @@ class ProfileControllerTest {
                 new Object[]{WORK_EXPERIENCE, "employmentStatus", false, "EMPLOYMENT_STATUS_REQUIRED", SELECT_OPTION},
                 new Object[]{SKILLS, "skillName", true, "SKILL_NAME_REQUIRED", "Ingresa una habilidad."},
                 new Object[]{SKILLS, "level", true, "SKILL_LEVEL_REQUIRED", "Elige un nivel."},
-                new Object[]{SKILLS, "provenance", true, "PROVENANCE_REQUIRED", SELECT_OPTION},
                 new Object[]{TARGET_ROLES, "professionalRoleId", false, "PROFESSIONAL_ROLE_ID_REQUIRED", SELECT_OPTION},
                 new Object[]{EDUCATIONS, "institution", true, "INSTITUTION_REQUIRED", "Ingresa la institución."},
                 new Object[]{EDUCATIONS, "degree", true, "DEGREE_REQUIRED", "Ingresa el título obtenido."},
@@ -976,7 +974,7 @@ class ProfileControllerTest {
                         .header("X-User-Id", "uid-ctrl-skill")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"skillName": "Java", "level": "EXPERT", "provenance": "MANUAL"}
+                                {"skillName": "Java", "level": "ADVANCED"}
                                 """))
                 .andExpect(status().isCreated());
     }
@@ -989,7 +987,7 @@ class ProfileControllerTest {
                         .header("X-User-Id", "uid-ctrl-skill")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"skillName": "Java", "level": "ADVANCED", "provenance": "MANUAL"}
+                                {"skillName": "Java", "level": "ADVANCED"}
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title").value("Habilidad duplicada"));
@@ -1033,6 +1031,161 @@ class ProfileControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("WORK_EXPERIENCE_NOT_FOUND"))
                 .andExpect(jsonPath("$.detail").value("No encontramos lo que buscabas."));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions postSkill(String json) throws Exception {
+        return mockMvc.perform(post("/api/v1/profiles/" + UUID.randomUUID() + "/skills")
+                .header("X-User-Id", "uid-ctrl-skill").contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    @ParameterizedTest(name = "{0}={1}")
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', textBlock = """
+            skillName | ""
+            skillName | " "
+            skillName | "\\t\\n"
+            skillName | "\\u00a0"
+            skillName | null
+            level     | ""
+            level     | " "
+            level     | "\\t\\n"
+            level     | null
+            """)
+    @DisplayName("Un nombre o un nivel vacío, en blanco o null responde que es obligatorio")
+    void addSkill_shouldReturnRequired_whenFieldIsMissingOrBlank(String field, String value) throws Exception {
+        var json = "skillName".equals(field)
+                ? "{\"skillName\":" + value + ",\"level\":\"BASIC\"}"
+                : "{\"skillName\":\"Java\",\"level\":" + value + "}";
+        var code = "skillName".equals(field) ? "SKILL_NAME_REQUIRED" : "SKILL_LEVEL_REQUIRED";
+        var message = "skillName".equals(field) ? "Ingresa una habilidad." : "Elige un nivel.";
+
+        expectFieldError(postSkill(json), field, code, message);
+    }
+
+    @ParameterizedTest(name = "{1} puntos de código")
+    @MethodSource("tooLongSkillNames")
+    @DisplayName("Un nombre de más de 60 puntos de código responde 422 con su código y su mensaje")
+    void addSkill_shouldReturnTooLong_whenNameExceedsLimit(String name, int length) throws Exception {
+        expectFieldError(postSkill("{\"skillName\":\"" + name + "\",\"level\":\"BASIC\"}"),
+                "skillName", "SKILL_NAME_TOO_LONG", "La habilidad no puede superar los 60 caracteres.");
+    }
+
+    static Stream<Arguments> tooLongSkillNames() {
+        return Stream.of(Arguments.of("a".repeat(61), 61), Arguments.of("a".repeat(60) + "😀", 61),
+                Arguments.of("ñ".repeat(61), 61));
+    }
+
+    @ParameterizedTest(name = "{1} puntos de código")
+    @MethodSource("skillNamesAtLimit")
+    @DisplayName("Un nombre de 60 puntos de código o menos se acepta")
+    void addSkill_shouldAccept_whenNameIsAtLimit(String name, int length) throws Exception {
+        when(profileAppService.addSkill(any())).thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-skill")));
+
+        postSkill("{\"skillName\":\"" + name + "\",\"level\":\"BASIC\"}").andExpect(status().isCreated());
+    }
+
+    static Stream<Arguments> skillNamesAtLimit() {
+        return Stream.of(Arguments.of("a".repeat(60), 60), Arguments.of("a".repeat(59) + "😀", 60),
+                Arguments.of("é".repeat(60), 60), Arguments.of("a".repeat(59), 59));
+    }
+
+    @ParameterizedTest(name = "nivel {0}")
+    @ValueSource(strings = {"EXPERT", "basic", "Basic", "BEGINNER"})
+    @DisplayName("Un nivel que no es una opción responde 422 con su código")
+    void addSkill_shouldReturnLevelInvalid_whenLevelIsUnknown(String level) throws Exception {
+        expectFieldError(postSkill("{\"skillName\":\"Java\",\"level\":\"" + level + "\"}"),
+                "level", "SKILL_LEVEL_INVALID_VALUE", SELECT_OPTION);
+    }
+
+    @Test
+    @DisplayName("Un nombre en blanco y un nivel desconocido informan los dos campos a la vez")
+    void addSkill_shouldReturnBothFields_whenNameIsBlankAndLevelIsUnknown() throws Exception {
+        postSkill("{\"skillName\":\"   \",\"level\":\"EXPERT\"}")
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors.length()").value(2))
+                .andExpect(jsonPath("$.errors[?(@.field=='skillName')].code").value("SKILL_NAME_REQUIRED"))
+                .andExpect(jsonPath("$.errors[?(@.field=='level')].code").value("SKILL_LEVEL_INVALID_VALUE"));
+    }
+
+    @Test
+    @DisplayName("Un nombre con un carácter de control responde 422 con su código y su mensaje")
+    void addSkill_shouldRejectControlCharacter_whenNameHasNul() throws Exception {
+        expectFieldError(postSkill("{\"skillName\":\"Py\\u0000\",\"level\":\"BASIC\"}"),
+                "skillName", "SKILL_NAME_INVALID_CHARACTERS", "La habilidad tiene caracteres no permitidos.");
+    }
+
+    @Test
+    @DisplayName("El 409 de una habilidad repetida trae el error bajo el campo skillName")
+    void addSkill_shouldReturn409_whenSkillIsDuplicated() throws Exception {
+        when(profileAppService.addSkill(any())).thenThrow(new DuplicateSkillException());
+
+        postSkill("{\"skillName\":\"Java\",\"level\":\"BASIC\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("SKILL_ALREADY_EXISTS"))
+                .andExpect(jsonPath("$.errors.length()").value(1))
+                .andExpect(jsonPath("$.errors[0].field").value("skillName"))
+                .andExpect(jsonPath("$.errors[0].code").value("SKILL_ALREADY_EXISTS"))
+                .andExpect(jsonPath("$.errors[0].message").value("Esa habilidad ya está en tu perfil."));
+    }
+
+    @Test
+    @DisplayName("Agregar la habilidad 21 responde 409 con el máximo y sin errors")
+    void addSkill_shouldReturn409_whenLimitReached() throws Exception {
+        when(profileAppService.addSkill(any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.SkillLimitReachedException());
+
+        postSkill("{\"skillName\":\"Java\",\"level\":\"BASIC\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("SKILL_LIMIT_REACHED"))
+                .andExpect(jsonPath("$.detail").value("Ya tienes el máximo de 20 habilidades."))
+                .andExpect(jsonPath("$.errors").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Un campo provenance o id en el cuerpo se ignora")
+    void addSkill_shouldIgnoreUnexpectedFields_whenBodyHasThem() throws Exception {
+        when(profileAppService.addSkill(any())).thenReturn(ProfessionalProfile.create(new FirebaseUid("uid-ctrl-skill")));
+
+        postSkill("{\"skillName\":\"Java\",\"level\":\"BASIC\",\"provenance\":\"AI_SUGGESTED\",\"id\":\"x\"}")
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("Eliminar la última habilidad de un perfil activo responde 409 con su código")
+    void removeSkill_shouldReturn409_whenLastSkillOfActiveProfile() throws Exception {
+        when(profileAppService.removeSkill(any(), any(), any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.SkillNotAllowedException());
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/skills/{skillId}", UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-skill"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("SKILL_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.detail").value(
+                        "No puedes quedarte sin habilidades con el perfil activo. Agrega otra antes de eliminar esta."))
+                .andExpect(jsonPath("$.errors").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Eliminar una habilidad que no es del perfil responde 404 con su código")
+    void removeSkill_shouldReturn404_whenSkillIsNotInProfile() throws Exception {
+        when(profileAppService.removeSkill(any(), any(), any()))
+                .thenThrow(new co.edu.unicauca.cameia.perfil.domain.exception.SkillNotFoundException());
+
+        mockMvc.perform(delete("/api/v1/profiles/{id}/skills/{skillId}", UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-skill"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("SKILL_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("Las dos rutas de habilidades responden 403 con un perfil ajeno")
+    void skills_shouldReturn403_whenProfileBelongsToAnotherUser() throws Exception {
+        when(profileAppService.addSkill(any())).thenThrow(new ProfileAccessDeniedException());
+        when(profileAppService.removeSkill(any(), any(), any())).thenThrow(new ProfileAccessDeniedException());
+
+        postSkill("{\"skillName\":\"Java\",\"level\":\"BASIC\"}").andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/v1/profiles/{id}/skills/{skillId}", UUID.randomUUID(), UUID.randomUUID())
+                        .header("X-User-Id", "uid-ctrl-skill"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

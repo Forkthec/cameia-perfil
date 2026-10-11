@@ -323,7 +323,7 @@ class ApiExceptionHandlerTest {
         toThrow = () -> new InvalidFieldsException(List.of(
                 new InvalidFieldsException.FieldError("endDate", ErrorCode.END_DATE_BEFORE_START_DATE,
                         "La fecha de fin no puede ser anterior a la de inicio."),
-                new InvalidFieldsException.FieldError("provenance", ErrorCode.PROVENANCE_INVALID_VALUE,
+                new InvalidFieldsException.FieldError("preferredModality", ErrorCode.PREFERRED_MODALITY_INVALID_VALUE,
                         "Selecciona una opción.")));
 
         mockMvc.perform(get("/boom").header("X-Request-Id", "req-fields-1"))
@@ -335,8 +335,8 @@ class ApiExceptionHandlerTest {
                 .andExpect(jsonPath("$.errors[0].code").value("END_DATE_BEFORE_START_DATE"))
                 .andExpect(jsonPath("$.errors[0].message")
                         .value("La fecha de fin no puede ser anterior a la de inicio."))
-                .andExpect(jsonPath("$.errors[1].field").value("provenance"))
-                .andExpect(jsonPath("$.errors[1].code").value("PROVENANCE_INVALID_VALUE"))
+                .andExpect(jsonPath("$.errors[1].field").value("preferredModality"))
+                .andExpect(jsonPath("$.errors[1].code").value("PREFERRED_MODALITY_INVALID_VALUE"))
                 .andExpect(jsonPath("$.requestId").value("req-fields-1"));
     }
 

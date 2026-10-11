@@ -9,6 +9,8 @@ import co.edu.unicauca.cameia.perfil.domain.exception.LastTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.MaxTargetRolesExceededException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAlreadyCompletedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.SkillLimitReachedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.SkillNotAllowedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.SkillNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceNotFoundException;
@@ -65,7 +67,7 @@ class ProfessionalProfileTest {
         profile.addTargetRole(role(UUID.randomUUID(), "Backend Dev"));
         assertThat(profile.isComplete()).isFalse();
 
-        profile.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), SkillName.of("Java"), SkillLevel.ADVANCED, DataProvenance.MANUAL));
         assertThat(profile.isComplete()).isFalse();
 
         profile.addEducation(edu());
@@ -261,32 +263,125 @@ class ProfessionalProfileTest {
     @Test
     void addSkill_throwsDuplicateForSameNameIgnoringCase() {
         var profile = ProfessionalProfile.create(UID);
-        profile.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), SkillName.of("Java"), SkillLevel.ADVANCED, DataProvenance.MANUAL));
 
         assertThatThrownBy(() -> profile.addSkill(
-                new ProfileSkill(UUID.randomUUID(), "JAVA", SkillLevel.BASIC, DataProvenance.MANUAL)))
+                new ProfileSkill(UUID.randomUUID(), SkillName.of("JAVA"), SkillLevel.BASIC, DataProvenance.MANUAL)))
                 .isInstanceOf(DuplicateSkillException.class);
     }
 
     @Test
     void addSkill_throwsDuplicateForSameNameIgnoringExtraSpaces() {
         var profile = ProfessionalProfile.create(UID);
-        profile.addSkill(new ProfileSkill(UUID.randomUUID(), "Java Script", SkillLevel.ADVANCED, DataProvenance.MANUAL));
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), SkillName.of("Java Script"), SkillLevel.ADVANCED, DataProvenance.MANUAL));
 
         assertThatThrownBy(() -> profile.addSkill(
-                new ProfileSkill(UUID.randomUUID(), "Java  Script", SkillLevel.BASIC, DataProvenance.MANUAL)))
+                new ProfileSkill(UUID.randomUUID(), SkillName.of("Java  Script"), SkillLevel.BASIC, DataProvenance.MANUAL)))
                 .isInstanceOf(DuplicateSkillException.class);
     }
 
     @Test
     void addSkill_allowsDifferentSkillNames() {
         var profile = ProfessionalProfile.create(UID);
-        profile.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), SkillName.of("Java"), SkillLevel.ADVANCED, DataProvenance.MANUAL));
 
         assertThatCode(() -> profile.addSkill(
-                new ProfileSkill(UUID.randomUUID(), "Python", SkillLevel.BASIC, DataProvenance.MANUAL)))
+                new ProfileSkill(UUID.randomUUID(), SkillName.of("Python"), SkillLevel.BASIC, DataProvenance.MANUAL)))
                 .doesNotThrowAnyException();
         assertThat(profile.getProfileSkills()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("La vigésima habilidad se acepta cuando el perfil tiene diecinueve")
+    void addSkill_shouldAcceptTwentieth_whenProfileHasNineteen() {
+        var profile = profileWithSkills(19);
+
+        profile.addSkill(skill("skill-20"));
+
+        assertThat(profile.getProfileSkills()).hasSize(ProfessionalProfile.MAX_SKILLS);
+    }
+
+    @Test
+    @DisplayName("La habilidad 21 se rechaza con el máximo y el perfil queda igual")
+    void addSkill_shouldRejectTwentyFirst_whenProfileHasTwenty() {
+        var profile = profileWithSkills(20);
+
+        assertThatThrownBy(() -> profile.addSkill(skill("skill-21")))
+                .isInstanceOf(SkillLimitReachedException.class)
+                .hasMessage("Ya tienes el máximo de 20 habilidades.");
+        assertThat(profile.getProfileSkills()).hasSize(20);
+    }
+
+    @Test
+    @DisplayName("Con veinte habilidades el máximo se comprueba antes que el duplicado")
+    void addSkill_shouldRejectLimitFirst_whenProfileHasTwentyAndSkillIsRepeated() {
+        var profile = profileWithSkills(20);
+
+        assertThatThrownBy(() -> profile.addSkill(skill("SKILL-01")))
+                .isInstanceOf(SkillLimitReachedException.class);
+    }
+
+    @Test
+    @DisplayName("Una habilidad que solo difiere en las tildes es la misma")
+    void addSkill_shouldRejectDuplicate_whenOnlyAccentsDiffer() {
+        var profile = ProfessionalProfile.create(UID);
+        profile.addSkill(skill("Programación"));
+
+        assertThatThrownBy(() -> profile.addSkill(skill("programacion")))
+                .isInstanceOf(DuplicateSkillException.class);
+        assertThat(profile.getProfileSkills()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Un perfil en Borrador puede quedarse sin su última habilidad")
+    void removeSkill_shouldRemoveLast_whenProfileIsInProgress() {
+        var profile = ProfessionalProfile.create(UID);
+        var only = skill("Java");
+        profile.addSkill(only);
+
+        profile.removeSkill(only.getId());
+
+        assertThat(profile.getProfileSkills()).isEmpty();
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.IN_PROGRESS);
+    }
+
+    @Test
+    @DisplayName("La última habilidad de un perfil activo no se elimina y el perfil sigue activo")
+    void removeSkill_shouldRejectLast_whenProfileIsCompleted() {
+        var profile = buildCompleteProfile();
+        profile.complete();
+        var only = profile.getProfileSkills().get(0);
+
+        assertThatThrownBy(() -> profile.removeSkill(only.getId()))
+                .isInstanceOf(SkillNotAllowedException.class)
+                .hasMessage("No puedes quedarte sin habilidades con el perfil activo. Agrega otra antes de eliminar esta.");
+        assertThat(profile.getProfileSkills()).hasSize(1);
+        assertThat(profile.getStatus()).isEqualTo(ProfileStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("Un perfil activo con dos habilidades puede eliminar una")
+    void removeSkill_shouldRemove_whenCompletedProfileHasTwo() {
+        var profile = buildCompleteProfile();
+        profile.addSkill(skill("Python"));
+        profile.complete();
+        var first = profile.getProfileSkills().get(0);
+
+        profile.removeSkill(first.getId());
+
+        assertThat(profile.getProfileSkills()).hasSize(1);
+        assertThat(profile.getProfileSkills().get(0).getSkillName()).isEqualTo("Python");
+    }
+
+    @Test
+    @DisplayName("Un identificador ajeno responde «no encontrado» antes que la regla de la última habilidad")
+    void removeSkill_shouldThrowNotFound_whenIdIsForeignInCompletedProfileWithOne() {
+        var profile = buildCompleteProfile();
+        profile.complete();
+
+        assertThatThrownBy(() -> profile.removeSkill(UUID.randomUUID()))
+                .isInstanceOf(SkillNotFoundException.class);
+        assertThat(profile.getProfileSkills()).hasSize(1);
     }
 
     // ── requestReview() ───────────────────────────────────────────────────
@@ -597,12 +692,24 @@ class ProfessionalProfileTest {
         assertThat(rebuilt.getUpdatedAt()).isEqualTo(updated);
     }
 
+    private static ProfileSkill skill(String name) {
+        return new ProfileSkill(UUID.randomUUID(), SkillName.of(name), SkillLevel.BASIC, DataProvenance.MANUAL);
+    }
+
+    private static ProfessionalProfile profileWithSkills(int count) {
+        var profile = ProfessionalProfile.create(UID);
+        for (int index = 1; index <= count; index++) {
+            profile.addSkill(skill(String.format("skill-%02d", index)));
+        }
+        return profile;
+    }
+
     private static ProfessionalProfile buildCompleteProfile() {
         var profile = ProfessionalProfile.create(UID);
         profile.updateName(new ProfileName("Ana Sofía"));
         profile.updateSummary(new ProfessionalSummary("Desarrolladora backend con experiencia en Spring Boot."));
         profile.addTargetRole(role(UUID.randomUUID(), "Backend Dev"));
-        profile.addSkill(new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL));
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), SkillName.of("Java"), SkillLevel.ADVANCED, DataProvenance.MANUAL));
         profile.addEducation(edu());
         return profile;
     }

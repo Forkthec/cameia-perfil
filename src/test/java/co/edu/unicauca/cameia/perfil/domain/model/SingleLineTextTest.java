@@ -96,4 +96,13 @@ class SingleLineTextTest {
     void hasControlCharacter_shouldBeFalse_whenTextIsPlain(String text) {
         assertThat(SingleLineText.hasControlCharacter(text, false)).isFalse();
     }
+
+    @Test
+    @DisplayName("Cada secuencia de espacios, de cualquier clase, se une en un solo espacio")
+    void collapseSpaces_shouldJoinEachRun_whenTextHasSeveralSpaceKinds() {
+        assertThat(SingleLineText.collapseSpaces("a   b")).isEqualTo("a b");
+        assertThat(SingleLineText.collapseSpaces("a 	" + (char) 160 + "b")).isEqualTo("a b");
+        assertThat(SingleLineText.collapseSpaces("sin espacios dobles")).isEqualTo("sin espacios dobles");
+        assertThat(SingleLineText.collapseSpaces("😀  😀")).isEqualTo("😀 😀");
+    }
 }

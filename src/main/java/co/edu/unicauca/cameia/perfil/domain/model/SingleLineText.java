@@ -75,6 +75,31 @@ public final class SingleLineText {
         return codePoint == TAB || codePoint == LINE_FEED || codePoint == CARRIAGE_RETURN;
     }
 
+    /**
+     * Une cada secuencia de espacios, de cualquier clase, en un solo espacio normal.
+     *
+     * @param text texto ya normalizado; no {@code null}
+     * @return el texto con un único espacio por secuencia
+     */
+    public static String collapseSpaces(String text) {
+        var joined = new StringBuilder(text.length());
+        boolean inSpace = false;
+        for (int index = 0; index < text.length(); ) {
+            int codePoint = text.codePointAt(index);
+            index += Character.charCount(codePoint);
+            if (isSpace(codePoint)) {
+                if (!inSpace) {
+                    joined.append(' ');
+                }
+                inSpace = true;
+            } else {
+                joined.appendCodePoint(codePoint);
+                inSpace = false;
+            }
+        }
+        return joined.toString();
+    }
+
     /** Recorta por puntos de código desde los dos extremos con la misma noción de espacio que JavaScript. */
     private static String trim(String text) {
         int start = 0;

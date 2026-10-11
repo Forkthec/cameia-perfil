@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
@@ -16,6 +17,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.ReviewStatus;
 import co.edu.unicauca.cameia.perfil.domain.model.SalaryExpectation;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
+import co.edu.unicauca.cameia.perfil.domain.model.SkillName;
 import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft;
@@ -132,6 +134,21 @@ class ProfessionalProfileRepositoryAdapterIT {
     }
 
     @Test
+    @DisplayName("Dos habilidades con la misma clave de comparación se traducen a la excepción de negocio de duplicado")
+    void save_shouldThrowDuplicateSkill_whenComparisonKeyRepeatsInProfile() {
+        var skills = List.of(
+                new ProfileSkill(UUID.randomUUID(), SkillName.of("Programación"), SkillLevel.BASIC, DataProvenance.MANUAL),
+                new ProfileSkill(UUID.randomUUID(), SkillName.of("programacion"), SkillLevel.ADVANCED, DataProvenance.MANUAL));
+        var profile = ProfessionalProfile.reconstitute(
+                ProfileId.generate(), new FirebaseUid("firebase-it-dup-skill"), null, null, null, null,
+                DataProvenance.MANUAL, ProfileStatus.IN_PROGRESS, ReviewStatus.PENDING_REVIEW,
+                Instant.parse("2026-10-10T00:00:00Z"), Instant.parse("2026-10-10T00:00:00Z"),
+                List.of(), List.of(), List.of(), skills);
+
+        assertThatThrownBy(() -> repository.save(profile)).isInstanceOf(DuplicateSkillException.class);
+    }
+
+    @Test
     @DisplayName("El conteo incluye todos los perfiles del Usuario y solo los suyos")
     void countByFirebaseUid_shouldCountOnlyOwnProfiles_whenSeveralExist() {
         var uid = new FirebaseUid("firebase-it-count-002");
@@ -179,7 +196,7 @@ class ProfessionalProfileRepositoryAdapterIT {
         var ongoing = Education.rebuild(UUID.randomUUID(), new EducationDraft("Unicauca", "Maestría",
                 EducationLevel.POSTGRADUATE, YearMonth.of(2023, 1), null, true), DataProvenance.MANUAL);
         var role = new TargetRole(UUID.randomUUID(), CATALOG_ROLE_ID, "Desarrollador Frontend", DataProvenance.MANUAL);
-        var skill = new ProfileSkill(UUID.randomUUID(), "Java", SkillLevel.ADVANCED, DataProvenance.MANUAL);
+        var skill = new ProfileSkill(UUID.randomUUID(), SkillName.of("Java"), SkillLevel.ADVANCED, DataProvenance.MANUAL);
         profile.addWorkExperience(current);
         profile.addWorkExperience(ended);
         profile.addEducation(finished);

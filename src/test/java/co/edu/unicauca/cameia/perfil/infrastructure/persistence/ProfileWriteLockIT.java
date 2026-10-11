@@ -9,11 +9,14 @@ import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
 import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
 import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotAllowedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.EducationNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileUpdateInProgressException;
+import co.edu.unicauca.cameia.perfil.domain.exception.SkillLimitReachedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.SkillNotAllowedException;
 import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceLimitReachedException;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
@@ -269,6 +272,66 @@ class ProfileWriteLockIT {
     }
 
     @Test
+    @DisplayName("Dos altas simultáneas sobre un perfil con diecinueve habilidades dejan veinte: la segunda recibe el máximo")
+    void addSkill_shouldKeepTwenty_whenTwoRequestsArriveWithNineteen() throws Exception {
+        for (int i = 1; i <= 19; i++) {
+            profileAppService.addSkill(new AddSkillCommand(profileId, uid, "skill-" + i, "BASIC"));
+        }
+
+        var held = holdingTransaction(() -> profileAppService.addSkill(new AddSkillCommand(profileId, uid, "skill-20", "BASIC")));
+
+        var other = executor.submit(() -> profileAppService.addSkill(new AddSkillCommand(profileId, uid, "skill-21", "BASIC")));
+        assertThatThrownBy(() -> other.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+        held.release().countDown();
+
+        assertThat(held.result()).succeedsWithin(10, TimeUnit.SECONDS);
+        assertThatThrownBy(() -> other.get(10, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(SkillLimitReachedException.class);
+        assertThat(jdbcTemplate.queryForObject("select count(*) from habilidad_perfil where perfil_id = ?", Integer.class, profileId))
+                .isEqualTo(20);
+    }
+
+    @Test
+    @DisplayName("La misma habilidad en dos altas simultáneas: una termina bien y la otra recibe que ya existe")
+    void addSkill_shouldKeepOne_whenSameSkillArrivesTwiceAtOnce() throws Exception {
+        var held = holdingTransaction(() -> profileAppService.addSkill(new AddSkillCommand(profileId, uid, "Python", "BASIC")));
+
+        var other = executor.submit(() -> profileAppService.addSkill(new AddSkillCommand(profileId, uid, "python", "ADVANCED")));
+        assertThatThrownBy(() -> other.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+        held.release().countDown();
+
+        assertThat(held.result()).succeedsWithin(10, TimeUnit.SECONDS);
+        assertThatThrownBy(() -> other.get(10, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(DuplicateSkillException.class);
+        assertThat(jdbcTemplate.queryForList("select nombre_habilidad from habilidad_perfil where perfil_id = ?", String.class, profileId))
+                .containsExactly("Python");
+    }
+
+    @Test
+    @DisplayName("Dos pestañas que eliminan las dos habilidades de un perfil activo: la segunda recibe que no puede quedarse sin habilidades")
+    void removeSkill_shouldRejectSecond_whenTwoTabsDeleteBothSkillsOfActiveProfile() throws Exception {
+        prepareCompletableProfile(1);
+        profileAppService.addSkill(new AddSkillCommand(profileId, uid, "Python", "BASIC"));
+        var completed = profileAppService.completeProfile(profileId, uid);
+        var first = completed.getProfileSkills().get(0).getId();
+        var second = completed.getProfileSkills().get(1).getId();
+
+        var held = holdingTransaction(() -> profileAppService.removeSkill(profileId, uid, first));
+
+        var other = executor.submit(() -> profileAppService.removeSkill(profileId, uid, second));
+        assertThatThrownBy(() -> other.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+        held.release().countDown();
+
+        assertThat(held.result()).succeedsWithin(10, TimeUnit.SECONDS);
+        assertThatThrownBy(() -> other.get(10, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(SkillNotAllowedException.class);
+        assertThat(jdbcTemplate.queryForList("select id from habilidad_perfil where perfil_id = ?", UUID.class, profileId))
+                .containsExactly(second);
+        assertThat(jdbcTemplate.queryForObject("select estado from perfil_profesional where id = ?", String.class, profileId))
+                .isEqualTo("COMPLETED");
+    }
+
+    @Test
     @DisplayName("Vaciar el resumen mientras otra pestaña finaliza: la finalización espera, ve el resumen vacío y se rechaza")
     void updateProfileInfo_shouldNeverLeaveActiveProfileWithoutSummary_whenCompletionRunsAtTheSameTime() throws Exception {
         prepareCompletableProfile(1);
@@ -369,9 +432,23 @@ class ProfileWriteLockIT {
             profileAppService.addEducation(new AddEducationCommand(profileId, uid, "Universidad " + i,
                     "Ingeniería de Sistemas", "UNDERGRADUATE", "2018-01", "2022-12", false));
         }
-        profileAppService.addSkill(new AddSkillCommand(profileId, uid, "Java", "ADVANCED", "MANUAL"));
+        profileAppService.addSkill(new AddSkillCommand(profileId, uid, "Java", "ADVANCED"));
         profileAppService.addTargetRole(new AddTargetRoleCommand(profileId, uid,
                 UUID.fromString("a0000001-0000-0000-0000-000000000002")));
+    }
+
+    /** Ejecuta la operación dentro de una transacción que no confirma hasta soltar el cierre, y espera a que tenga el bloqueo. */
+    private HeldRemoval holdingTransaction(Runnable operation) throws InterruptedException {
+        var locked = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var result = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+            operation.run();
+            locked.countDown();
+            awaitRelease(release);
+            return null;
+        }));
+        assertThat(locked.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
+        return new HeldRemoval(result, release);
     }
 
     private AddWorkExperienceCommand command(String company) {

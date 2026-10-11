@@ -1,36 +1,48 @@
 package co.edu.unicauca.cameia.perfil.domain.model;
 
-import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
-
 import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Habilidad asociada al perfil (C4: HabilidadPerfil). Entidad interna de {@link ProfessionalProfile}.
+ * Habilidad asociada al perfil (Habilidad del perfil). Entidad interna de {@link ProfessionalProfile}.
  *
- * <p>El catálogo de habilidades ({@code Habilidad} en C4) no se modela en el dominio de Perfil:
- * la clave es el nombre de la habilidad como string, que el Frontend valida contra el catálogo.
- * Esto evita acoplar el dominio de Perfil al microservicio que owna el catálogo.
+ * <p>El catálogo de habilidades no se modela en el dominio de Perfil: la habilidad es el nombre que escribe la persona,
+ * con las reglas de {@link SkillName}. Esto evita acoplar el dominio de Perfil al servicio que sea dueño de un catálogo.</p>
  */
 public final class ProfileSkill {
 
-    private static final int MAX_NAME_LENGTH = 255;
-
     private final UUID id;
-    private final String skillName;
+    private final SkillName name;
     private final SkillLevel level;
     private final DataProvenance provenance;
 
-    public ProfileSkill(UUID id, String skillName, SkillLevel level, DataProvenance provenance) {
+    /**
+     * Crea la habilidad.
+     *
+     * @param id         identificador de la habilidad
+     * @param name       nombre ya validado
+     * @param level      nivel
+     * @param provenance procedencia del dato
+     */
+    public ProfileSkill(UUID id, SkillName name, SkillLevel level, DataProvenance provenance) {
         this.id = Objects.requireNonNull(id);
-        this.skillName = FieldRules.requiredText(skillName, "skillName", ErrorCode.SKILL_NAME_REQUIRED,
-                "Ingresa una habilidad.", ErrorCode.SKILL_NAME_TOO_LONG, "La habilidad", MAX_NAME_LENGTH);
+        this.name = Objects.requireNonNull(name);
         this.level = Objects.requireNonNull(level);
         this.provenance = Objects.requireNonNull(provenance);
     }
 
+    /** @return identificador de la habilidad */
     public UUID getId() { return id; }
-    public String getSkillName() { return skillName; }
+
+    /** @return nombre de la habilidad con sus reglas */
+    public SkillName getName() { return name; }
+
+    /** @return el texto del nombre tal como se guarda */
+    public String getSkillName() { return name.value(); }
+
+    /** @return nivel */
     public SkillLevel getLevel() { return level; }
+
+    /** @return procedencia del dato */
     public DataProvenance getProvenance() { return provenance; }
 }

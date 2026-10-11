@@ -90,8 +90,6 @@ public enum ErrorCode {
     SALARY_EXPECTATION_OUT_OF_RANGE,
     /** La modalidad de trabajo preferida no es una de las opciones. */
     PREFERRED_MODALITY_INVALID_VALUE,
-    /** La procedencia del dato no es una de las opciones. */
-    PROVENANCE_INVALID_VALUE,
     /** El estado laboral no es una de las opciones. */
     EMPLOYMENT_STATUS_INVALID_VALUE,
     /** El nivel de la formación académica no es una de las opciones. */
@@ -148,8 +146,6 @@ public enum ErrorCode {
     START_DATE_REQUIRED,
     /** Falta el estado laboral. */
     EMPLOYMENT_STATUS_REQUIRED,
-    /** Falta la procedencia del dato. */
-    PROVENANCE_REQUIRED,
     /** Falta el nombre de la habilidad. */
     SKILL_NAME_REQUIRED,
     /** Falta el nivel de la habilidad. */
@@ -167,5 +163,11 @@ public enum ErrorCode {
     /** El nombre del perfil tiene un carácter de control. */
     PROFILE_NAME_INVALID_CHARACTERS,
     /** El resumen profesional tiene un carácter de control distinto de tabulador, salto de línea y retorno. */
-    SUMMARY_INVALID_CHARACTERS
+    SUMMARY_INVALID_CHARACTERS,
+    /** El nombre de la habilidad tiene un carácter de control. */
+    SKILL_NAME_INVALID_CHARACTERS,
+    /** El perfil ya tiene el máximo de habilidades; no se agregó ninguna. */
+    SKILL_LIMIT_REACHED,
+    /** Un perfil activo no puede quedarse sin habilidades; no se eliminó nada. */
+    SKILL_NOT_ALLOWED
 }

@@ -1,5 +1,6 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence.repository;
 
+import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationInProgressException;
 import co.edu.unicauca.cameia.perfil.domain.exception.ProfileUpdateInProgressException;
@@ -42,6 +43,9 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
     /** Restricción que impide repetir un rol del catálogo dentro de un perfil. */
     static final String UNIQUE_TARGET_ROLE = "uq_rol_objetivo_perfil_rol_profesional";
 
+    /** Restricción que impide repetir una habilidad, sin distinguir mayúsculas, tildes ni espacios, dentro de un perfil. */
+    static final String UNIQUE_SKILL = "uq_habilidad_perfil_nombre";
+
     /** Máximo de causas que se recorren, para no girar en una cadena con ciclo. */
     private static final int MAX_CAUSES = 32;
 
@@ -61,7 +65,13 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
             // Se escribe ya para que una violación de restricción se traduzca aquí y no al confirmar, fuera del adaptador.
             jpa.saveAndFlush(ProfessionalProfileMapping.toEntity(profile));
         } catch (DataIntegrityViolationException e) {
-            throw violates(e, UNIQUE_TARGET_ROLE) ? new DuplicateTargetRoleException() : e;
+            if (violates(e, UNIQUE_TARGET_ROLE)) {
+                throw new DuplicateTargetRoleException();
+            }
+            if (violates(e, UNIQUE_SKILL)) {
+                throw new DuplicateSkillException();
+            }
+            throw e;
         }
     }
 

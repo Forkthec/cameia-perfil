@@ -6,6 +6,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileSkill;
+import co.edu.unicauca.cameia.perfil.domain.model.SkillName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.ReviewStatus;
@@ -113,6 +114,8 @@ final class ProfessionalProfileMapping {
         e.setId(d.getId());
         e.setProfile(parent);
         e.setSkillName(d.getSkillName());
+        // La clave se reescribe en cada guardado: así la restricción UNIQUE compara siempre con la regla de la aplicación.
+        e.setComparisonKey(d.getName().comparisonKey());
         e.setLevel(d.getLevel());
         e.setProvenance(d.getProvenance());
         return e;
@@ -170,7 +173,7 @@ final class ProfessionalProfileMapping {
     }
 
     private static ProfileSkill toSkillDomain(ProfileSkillEntity e) {
-        return new ProfileSkill(e.getId(), e.getSkillName(), e.getLevel(), e.getProvenance());
+        return new ProfileSkill(e.getId(), new SkillName(e.getSkillName()), e.getLevel(), e.getProvenance());
     }
 
     private static LocalDate toFirstDayOfMonth(YearMonth ym) {

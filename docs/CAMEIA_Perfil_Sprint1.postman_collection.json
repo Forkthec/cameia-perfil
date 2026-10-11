@@ -5992,6 +5992,936 @@
       ]
     },
     {
+      "name": "HU-2.5 — Habilidades",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "[59, 60, 61].forEach((n) => pm.variables.set('hu25_a' + n, 'a'.repeat(n)));",
+              "pm.variables.set('hu25_e59', 'a'.repeat(59) + '\\u{1F600}');",
+              "pm.variables.set('hu25_e60', 'a'.repeat(60) + '\\u{1F600}');",
+              "pm.variables.set('hu25_n61', '\\u00f1'.repeat(61));",
+              "pm.variables.set('hu25_acute60', '\\u00e9'.repeat(60));",
+              "pm.variables.set('hu25_mib', 'a'.repeat(1024 * 1024));"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "POST skills",
+          "item": [
+            {
+              "name": "OK POST /profiles — crea el perfil del Usuario (guarda hu25_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu25_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu25_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu25_profile', pm.response.json().id);", "H.replicated();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "OK POST /profiles — crea el perfil de otro Usuario (guarda hu25_other_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu25_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu25_other_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu25_other_profile', pm.response.json().id);", "H.replicated();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "OK POST /profiles — crea el perfil del límite (guarda hu25_full_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu25_full_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu25_full_profile', pm.response.json().id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_full_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "201 Python intermedio (CA-2.5.1)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Python\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level INTERMEDIATE', () => pm.expect(s.level).to.eql('INTERMEDIATE'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Python\", \"level\": \"INTERMEDIATE\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 Machine Learning",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Machine Learning\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Machine Learning\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 Programación",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Programación\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level ADVANCED', () => pm.expect(s.level).to.eql('ADVANCED'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Programación\", \"level\": \"ADVANCED\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 Diseño",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Diseño\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Diseño\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 habilidad de 60 (CA-2.5.8)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === pm.variables.get('hu25_a60'));", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"{{hu25_a60}}\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 habilidad de 59",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === pm.variables.get('hu25_a59'));", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"{{hu25_a59}}\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 habilidad de 60 con emoji",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === pm.variables.get('hu25_e59'));", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"{{hu25_e59}}\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 habilidad de 60 é",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === pm.variables.get('hu25_acute60'));", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"{{hu25_acute60}}\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 espacios en los extremos se recortan",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Go\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"  Go  \", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 espacios internos se guardan",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Deep   Learning\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Deep   Learning\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 HTML se guarda como texto",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"<b>Excel</b>\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"<b>Excel</b>\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 con % y _",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"100 % a_b\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"100 % a_b\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 NFD se guarda en NFC",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Café\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Cafe\\u0301\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 ignora id y status",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Rust\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));", "pm.test('status del perfil', () => pm.expect(b.status).to.eql('IN_PROGRESS'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Rust\", \"level\": \"BASIC\", \"provenance\": \"AI_SUGGESTED\", \"id\": \"00000000-0000-0000-0000-000000000000\", \"status\": \"COMPLETED\", \"firebaseUid\": \"otro\", \"profileId\": \"x\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 provenance desconocida se ignora",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Kotlin\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Kotlin\", \"level\": \"BASIC\", \"provenance\": \"HUMAN\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 nombre numérico se convierte en texto",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"123\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": 123, \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "409 machine learning repetida (CA-2.5.2)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");", "H.fieldError('skillName', \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"machine learning\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "409 programacion sin tilde (CA-2.5.20)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");", "H.fieldError('skillName', \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"programacion\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "409 PROGRAMACIÓN en mayúsculas",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");", "H.fieldError('skillName', \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"PROGRAMACIÓN\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "409 Diseno con n (Diseño)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");", "H.fieldError('skillName', \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Diseno\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "409 espacios internos y extremos",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");", "H.fieldError('skillName', \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"  MACHINE   LEARNING \", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "409 U+00A0 al final",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");", "H.fieldError('skillName', \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Python\\u00a0\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "409 mismo nombre con otro nivel",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");", "H.fieldError('skillName', \"SKILL_ALREADY_EXISTS\", \"Esa habilidad ya está en tu perfil.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Python\", \"level\": \"ADVANCED\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad vacía",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_REQUIRED\", \"Ingresa una habilidad.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad solo espacios",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_REQUIRED\", \"Ingresa una habilidad.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"   \", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad con tabulador y salto de línea",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_REQUIRED\", \"Ingresa una habilidad.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"\\t\\n\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad con espacio duro U+00A0",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_REQUIRED\", \"Ingresa una habilidad.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"\\u00a0\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad con U+FEFF",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_REQUIRED\", \"Ingresa una habilidad.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"\\ufeff\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad ausente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_REQUIRED\", \"Ingresa una habilidad.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad null",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_REQUIRED\", \"Ingresa una habilidad.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": null, \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad de 61 (CA-2.5.9)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_TOO_LONG\", \"La habilidad no puede superar los 60 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"{{hu25_a61}}\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad de 61 con emoji",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_TOO_LONG\", \"La habilidad no puede superar los 60 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"{{hu25_e60}}\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad de 61 ñ",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_TOO_LONG\", \"La habilidad no puede superar los 60 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"{{hu25_n61}}\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad de 1 MiB",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_TOO_LONG\", \"La habilidad no puede superar los 60 caracteres.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"{{hu25_mib}}\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad con U+0000",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_INVALID_CHARACTERS\", \"La habilidad tiene caracteres no permitidos.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Py\\u0000\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 habilidad con U+0007",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_INVALID_CHARACTERS\", \"La habilidad tiene caracteres no permitidos.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Py\\u0007\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 sin nivel (CA-2.5.7)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"level\", \"SKILL_LEVEL_REQUIRED\", \"Elige un nivel.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 nivel null",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"level\", \"SKILL_LEVEL_REQUIRED\", \"Elige un nivel.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": null}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 nivel vacío",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"level\", \"SKILL_LEVEL_REQUIRED\", \"Elige un nivel.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 nivel solo espacios",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"level\", \"SKILL_LEVEL_REQUIRED\", \"Elige un nivel.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"  \"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 nivel EXPERT (CA-2.5.10)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"level\", \"SKILL_LEVEL_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"EXPERT\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 nivel en minúsculas",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"level\", \"SKILL_LEVEL_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"basic\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 nivel con mayúscula inicial",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"level\", \"SKILL_LEVEL_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"Basic\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 nombre vacío y nivel EXPERT",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_REQUIRED\", \"Ingresa una habilidad.\"], [\"level\", \"SKILL_LEVEL_INVALID_VALUE\", \"Selecciona una opción.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"\", \"level\": \"EXPERT\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 cuerpo {} informa los dos campos",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.fields([[\"skillName\", \"SKILL_NAME_REQUIRED\", \"Ingresa una habilidad.\"], [\"level\", \"SKILL_LEVEL_REQUIRED\", \"Elige un nivel.\"]]);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 cuerpo ilegible",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\":", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 cuerpo vacío",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 cuerpo es un arreglo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "[]", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "422 nombre como objeto",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"REQUEST_BODY_INVALID_FORMAT\", \"Revisa el formato de los datos enviados.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": {}, \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "415 Content-Type text/plain",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(415, \"MEDIA_TYPE_NOT_ALLOWED\", \"Tipo de contenido no admitido.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "text/plain"}],
+                "body": {"mode": "raw", "raw": "skillName=Java", "options": {"raw": {"language": "text"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "401 sin X-User-Id",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(401, \"IDENTITY_REQUIRED\", \"Tu sesión expiró. Inicia sesión de nuevo.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "403 agregar habilidad a un perfil ajeno (CA-2.5.15)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(403, \"PROFILE_NOT_ALLOWED\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Intruso\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_other_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_other_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "OK GET perfil: 0 habilidades",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('0 habilidades', () => pm.expect(pm.response.json().profileSkills.length).to.eql(0));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_other_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_other_profile}}"]}
+              }
+            },
+            {
+              "name": "404 perfil inexistente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"PROFILE_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/00000000-0000-0000-0000-000000000000/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "00000000-0000-0000-0000-000000000000", "skills"]}
+              }
+            },
+            {
+              "name": "422 id del perfil no es un UUID",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"PROFILE_ID_INVALID_FORMAT\", \"El identificador del perfil no es válido.\");"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu24_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/no-es-uuid/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "no-es-uuid", "skills"]}
+              }
+            },
+            {
+              "name": "OK GET perfil: 16 habilidades",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('16 habilidades', () => pm.expect(pm.response.json().profileSkills.length).to.eql(16));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_profile}}"]}
+              }
+            },
+            {
+              "name": "OK POST /skills — skill-01 y las diecisiete siguientes hasta 19",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const uid = pm.variables.get('hu25_full_uid');", "const url = pm.variables.get('base_url') + '/api/v1/profiles/' + pm.variables.get('hu25_full_profile') + '/skills';", "const next = (i) => i <= 19 && pm.sendRequest({ url, method: 'POST', header: { 'X-User-Id': uid, 'Content-Type': 'application/json' }, body: { mode: 'raw', raw: JSON.stringify({ skillName: 'skill-' + String(i).padStart(2, '0'), level: 'BASIC' }) } }, (e, r) => {", "    pm.test('Alta auxiliar ' + i, () => { pm.expect(e).to.eql(null); pm.expect(r.code).to.eql(201); });", "    next(i + 1);", "});", "next(2);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_full_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"skill-01\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_full_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_full_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "201 vigésima habilidad (CA-2.5.3)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"skill-20\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));", "pm.test('20 habilidades', () => pm.expect(b.profileSkills.length).to.eql(20));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_full_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"skill-20\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_full_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_full_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "409 habilidad 21 (CA-2.5.19)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"SKILL_LIMIT_REACHED\", \"Ya tienes el máximo de 20 habilidades.\");", "pm.test('Sin errors[]', () => pm.expect(pm.response.json().errors).to.eql(undefined));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_full_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"skill-21\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_full_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_full_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "409 con 20 y repetida: gana el máximo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"SKILL_LIMIT_REACHED\", \"Ya tienes el máximo de 20 habilidades.\");", "pm.test('Sin errors[]', () => pm.expect(pm.response.json().errors).to.eql(undefined));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_full_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"SKILL-01\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_full_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_full_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "OK GET perfil: 20 habilidades",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('20 habilidades', () => pm.expect(pm.response.json().profileSkills.length).to.eql(20));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_full_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_full_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_full_profile}}"]}
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE skills/{skillId}",
+          "item": [
+            {
+              "name": "OK POST /profiles — crea el perfil del Usuario (guarda hu25_del_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu25_del_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));", "const H = eval(pm.globals.get('hu24Helpers'));", "H.replicate(pm.collectionVariables.get('hu25_del_uid'), '1990-01-01');"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu25_del_profile', pm.response.json().id);", "H.replicated();"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "OK POST /profiles — crea el perfil de otro Usuario (guarda hu25_del_other_profile)",
+              "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('hu25_del_other_uid', 'uid-pm-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('hu25_del_other_profile', pm.response.json().id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+              }
+            },
+            {
+              "name": "OK POST /skills — el otro Usuario agrega una (guarda hu25_other_skill)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Python\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));", "pm.collectionVariables.set('hu25_other_skill', s.id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_other_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Python\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_other_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_other_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "OK POST /skills — agrega una (guarda hu25_skill)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Java\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level ADVANCED', () => pm.expect(s.level).to.eql('ADVANCED'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));", "pm.collectionVariables.set('hu25_skill', s.id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"ADVANCED\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "404 habilidad de otro perfil (CA-2.5.23)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"SKILL_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/skills/{{hu25_other_skill}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "skills", "{{hu25_other_skill}}"]}
+              }
+            },
+            {
+              "name": "404 habilidad inexistente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"SKILL_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/skills/00000000-0000-0000-0000-000000000000", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "skills", "00000000-0000-0000-0000-000000000000"]}
+              }
+            },
+            {
+              "name": "403 eliminar habilidad de un perfil ajeno (CA-2.5.15)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(403, \"PROFILE_NOT_ALLOWED\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_other_profile}}/skills/{{hu25_other_skill}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_other_profile}}", "skills", "{{hu25_other_skill}}"]}
+              }
+            },
+            {
+              "name": "OK GET perfil ajeno conserva su habilidad",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('La habilidad ajena sigue', () => pm.expect(pm.response.json().profileSkills.map(x => x.id)).to.include(pm.collectionVariables.get('hu25_other_skill')));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_other_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_other_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_other_profile}}"]}
+              }
+            },
+            {
+              "name": "422 id de la habilidad no es un UUID",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"SKILL_ID_INVALID_FORMAT\", \"El identificador de la habilidad no es válido.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/skills/x", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "skills", "x"]}
+              }
+            },
+            {
+              "name": "422 id del perfil no es un UUID",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(422, \"PROFILE_ID_INVALID_FORMAT\", \"El identificador del perfil no es válido.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/no-es-uuid/skills/{{hu25_skill}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "no-es-uuid", "skills", "{{hu25_skill}}"]}
+              }
+            },
+            {
+              "name": "404 perfil inexistente",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"PROFILE_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/00000000-0000-0000-0000-000000000000/skills/{{hu25_skill}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "00000000-0000-0000-0000-000000000000", "skills", "{{hu25_skill}}"]}
+              }
+            },
+            {
+              "name": "401 sin X-User-Id",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(401, \"IDENTITY_REQUIRED\", \"Tu sesión expiró. Inicia sesión de nuevo.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/skills/{{hu25_skill}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "skills", "{{hu25_skill}}"]}
+              }
+            },
+            {
+              "name": "204 única habilidad en Borrador (CA-2.5.16)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.noContent();"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/skills/{{hu25_skill}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "skills", "{{hu25_skill}}"]}
+              }
+            },
+            {
+              "name": "404 la misma habilidad otra vez",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(404, \"SKILL_NOT_FOUND\", \"No encontramos lo que buscabas.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/skills/{{hu25_skill}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "skills", "{{hu25_skill}}"]}
+              }
+            },
+            {
+              "name": "OK GET perfil: 0 habilidades",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('0 habilidades', () => pm.expect(pm.response.json().profileSkills.length).to.eql(0));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}"]}
+              }
+            },
+            {
+              "name": "OK POST /skills — agrega la única habilidad (guarda hu25_skill)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Java\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level ADVANCED', () => pm.expect(s.level).to.eql('ADVANCED'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));", "pm.collectionVariables.set('hu25_skill', s.id);"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Java\", \"level\": \"ADVANCED\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "OK PATCH /profiles/{id} — nombre y resumen",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));"]}}],
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"name\": \"Perfil de prueba HU-2.5\", \"summary\": \"Resumen de prueba.\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}"]}
+              }
+            },
+            {
+              "name": "OK POST /educations — agrega una formación",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"inProgress\": false}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/educations", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "educations"]}
+              }
+            },
+            {
+              "name": "OK POST /target-roles — agrega un rol objetivo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"professionalRoleId\": \"a0000001-0000-0000-0000-000000000002\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/target-roles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "target-roles"]}
+              }
+            },
+            {
+              "name": "OK POST /completion — el perfil queda activo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Perfil activo', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/completion", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "completion"]}
+              }
+            },
+            {
+              "name": "409 última habilidad de un perfil Activo (CA-2.5.12)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.problem(409, \"SKILL_NOT_ALLOWED\", \"No puedes quedarte sin habilidades con el perfil activo. Agrega otra antes de eliminar esta.\");"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/skills/{{hu25_skill}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "skills", "{{hu25_skill}}"]}
+              }
+            },
+            {
+              "name": "OK GET perfil sigue Activo y con su habilidad",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Sigue activo', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));", "pm.test('Conserva la habilidad', () => pm.expect(pm.response.json().profileSkills.map(x => x.id)).to.include(pm.collectionVariables.get('hu25_skill')));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}"]}
+              }
+            },
+            {
+              "name": "OK POST /skills — agrega una segunda habilidad en el perfil Activo",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "const b = H.created();", "const s = (b.profileSkills || []).find((x) => x.skillName === \"Python\");", "pm.test('La habilidad está en el perfil', () => pm.expect(s).to.exist);", "pm.test('level BASIC', () => pm.expect(s.level).to.eql('BASIC'));", "pm.test('provenance MANUAL', () => pm.expect(s.provenance).to.eql('MANUAL'));"]}}],
+              "request": {
+                "method": "POST",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{\"skillName\": \"Python\", \"level\": \"BASIC\"}", "options": {"raw": {"language": "json"}}},
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "skills"]}
+              }
+            },
+            {
+              "name": "204 una de dos en Activo (CA-2.5.17)",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "H.noContent();"]}}],
+              "request": {
+                "method": "DELETE",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}/skills/{{hu25_skill}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}", "skills", "{{hu25_skill}}"]}
+              }
+            },
+            {
+              "name": "OK GET perfil sigue Activo con una habilidad",
+              "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Sigue activo', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));", "pm.test('Una habilidad', () => pm.expect(pm.response.json().profileSkills.length).to.eql(1));"]}}],
+              "request": {
+                "method": "GET",
+                "header": [{"key": "X-User-Id", "value": "{{hu25_del_uid}}"}],
+                "url": {"raw": "{{base_url}}/api/v1/profiles/{{hu25_del_profile}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{hu25_del_profile}}"]}
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "DES-02 — HU-2.5",
+      "item": [
+        {
+          "name": "OK POST /profiles — crea el perfil (guarda des25_profile)",
+          "event": [{"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["pm.collectionVariables.set('des25_uid', 'uid-des-' + pm.variables.replaceIn('{{$guid}}'));"]}}, {"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('des25_profile', pm.response.json().id);"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "X-User-Id", "value": "{{des25_uid}}"}],
+            "url": {"raw": "{{base_url}}/api/v1/profiles", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles"]}
+          }
+        },
+        {
+          "name": "OK POST /profiles/{id}/skills — agrega una habilidad",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('des25_skill', pm.response.json().profileSkills[0].id);"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "X-User-Id", "value": "{{des25_uid}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"skillName\": \"Python\", \"level\": \"INTERMEDIATE\"}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{base_url}}/api/v1/profiles/{{des25_profile}}/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{des25_profile}}", "skills"]}
+          }
+        },
+        {
+          "name": "OK DELETE /profiles/{id}/skills/{skillId} — elimina la habilidad",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["const H = eval(pm.globals.get('hu24Helpers'));", "pm.test('Status 204', () => pm.response.to.have.status(204));"]}}],
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "X-User-Id", "value": "{{des25_uid}}"}],
+            "url": {"raw": "{{base_url}}/api/v1/profiles/{{des25_profile}}/skills/{{des25_skill}}", "host": ["{{base_url}}"], "path": ["api", "v1", "profiles", "{{des25_profile}}", "skills", "{{des25_skill}}"]}
+          }
+        }
+      ]
+    },
+    {
       "name": "HU-2.4 — Experiencia laboral y formación académica",
       "event": [
         {

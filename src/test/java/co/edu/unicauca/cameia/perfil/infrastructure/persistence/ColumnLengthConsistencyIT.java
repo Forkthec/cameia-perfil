@@ -3,6 +3,7 @@ package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
+import co.edu.unicauca.cameia.perfil.domain.model.SkillName;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.ProfessionalProfileEntity;
 import jakarta.persistence.Column;
@@ -69,6 +70,16 @@ class ColumnLengthConsistencyIT {
 
     private static int columnLength(String attribute) throws NoSuchFieldException {
         return ProfessionalProfileEntity.class.getDeclaredField(attribute).getAnnotation(Column.class).length();
+    }
+
+    @Test
+    @DisplayName("Los largos del nombre de la habilidad y de su clave de comparación son el límite del dominio")
+    void skillColumnLengths_shouldMatchDomainLimit_whenSchemaIsMigrated() throws Exception {
+        var expected = Map.of(
+                "nombre_habilidad", SkillName.MAX_LENGTH,
+                "nombre_normalizado", SkillName.MAX_LENGTH);
+
+        assertColumnLengths("habilidad_perfil", expected);
     }
 
     /** Migra la base y compara el largo de cada columna con el límite del dominio. */

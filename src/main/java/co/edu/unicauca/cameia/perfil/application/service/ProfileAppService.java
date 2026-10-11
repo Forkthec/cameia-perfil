@@ -29,6 +29,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.SalaryExpectation;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.SingleLineText;
+import co.edu.unicauca.cameia.perfil.domain.model.SkillName;
 import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft;
@@ -49,8 +50,9 @@ import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.EDUCATION
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.EMPLOYMENT_STATUS_INVALID_VALUE;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.END_DATE_INVALID_FORMAT;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.PREFERRED_MODALITY_INVALID_VALUE;
-import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.PROVENANCE_INVALID_VALUE;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.SKILL_LEVEL_INVALID_VALUE;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.SKILL_LEVEL_REQUIRED;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.SKILL_NAME_REQUIRED;
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.START_DATE_INVALID_FORMAT;
 
 @Service
@@ -207,11 +209,22 @@ public class ProfileAppService {
 
     @Transactional
     public ProfessionalProfile addSkill(AddSkillCommand cmd) {
-        var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
-        p.addSkill(new ProfileSkill(UUID.randomUUID(), cmd.skillName(),
-                FieldValues.option(SkillLevel.class, cmd.level(), SKILL_LEVEL_INVALID_VALUE, "level"),
-                provenance(cmd.provenance())));
-        repository.save(p); return p;
+        var profile = loadForUserForUpdate(cmd.profileId(), cmd.uid());
+        var errors = new InvalidFieldsException.Collector();
+        var name = cmd.skillName() == null ? null : collect(errors, () -> SkillName.of(cmd.skillName()));
+        if (cmd.skillName() == null) {
+            errors.add("skillName", SKILL_NAME_REQUIRED, "Ingresa una habilidad.");
+        }
+        var level = cmd.level() == null ? null : collect(errors, () -> FieldValues.option(
+                SkillLevel.class, cmd.level(), SKILL_LEVEL_INVALID_VALUE, "level"));
+        if (cmd.level() == null) {
+            errors.add("level", SKILL_LEVEL_REQUIRED, "Elige un nivel.");
+        }
+        errors.throwIfAny();
+        // Lo que entra por esta ruta es siempre MANUAL: la IA escribe por sus propias rutas.
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), name, level, DataProvenance.MANUAL));
+        repository.save(profile);
+        return profile;
     }
 
     @Transactional
@@ -277,10 +290,6 @@ public class ProfileAppService {
     }
 
     // ── Shared ────────────────────────────────────────────────────────────
-
-    private static DataProvenance provenance(String value) {
-        return FieldValues.option(DataProvenance.class, value, PROVENANCE_INVALID_VALUE, "provenance");
-    }
 
     private static YearMonth startDate(String value) {
         return FieldValues.yearMonth(value, START_DATE_INVALID_FORMAT, "startDate");

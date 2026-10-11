@@ -45,8 +45,8 @@ class ProfileValueRulesTest {
                         "La expectativa salarial no puede tener más de 13 dígitos."),
                 Arguments.of("habilidad en blanco", (Executable) () -> skill(" "),
                         "skillName", ErrorCode.SKILL_NAME_REQUIRED, "Ingresa una habilidad."),
-                Arguments.of("habilidad de 256", (Executable) () -> skill("a".repeat(256)),
-                        "skillName", ErrorCode.SKILL_NAME_TOO_LONG, "La habilidad no puede superar los 255 caracteres."),
+                Arguments.of("habilidad de 61", (Executable) () -> skill("a".repeat(61)),
+                        "skillName", ErrorCode.SKILL_NAME_TOO_LONG, "La habilidad no puede superar los 60 caracteres."),
                 Arguments.of("empresa en blanco", (Executable) () -> experience(" ", "Dev"),
                         "company", ErrorCode.COMPANY_REQUIRED, "Ingresa la empresa."),
                 Arguments.of("empresa de 101", (Executable) () -> experience("a".repeat(101), "Dev"),
@@ -99,7 +99,7 @@ class ProfileValueRulesTest {
             new SalaryExpectation(BigDecimal.ZERO);
             new SalaryExpectation(new BigDecimal("9999999999999.99"));
             new SalaryExpectation(new BigDecimal("1E+12"));
-            skill("a".repeat(255));
+            skill("a".repeat(60));
             experience("a".repeat(100), "a".repeat(100));
             WorkExperience.create(new WorkExperienceDraft("ACME", "Dev", "a".repeat(500), START, null,
                     EmploymentStatus.CURRENT), BOUNDS);
@@ -117,7 +117,7 @@ class ProfileValueRulesTest {
     }
 
     private static ProfileSkill skill(String name) {
-        return new ProfileSkill(UUID.randomUUID(), name, SkillLevel.BASIC, DataProvenance.MANUAL);
+        return new ProfileSkill(UUID.randomUUID(), SkillName.of(name), SkillLevel.BASIC, DataProvenance.MANUAL);
     }
 
     private static WorkExperience experience(String company, String position) {
