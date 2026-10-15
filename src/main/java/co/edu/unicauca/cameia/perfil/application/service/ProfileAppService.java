@@ -65,13 +65,16 @@ public class ProfileAppService {
     private final Clock clock;
     /** Réplica local de la fecha de nacimiento: es la única fuente de la fecha; Perfil no llama a Cuentas. */
     private final BirthDateReplica birthDateReplica;
+    /** Anuncia los cambios de un perfil activo; se llama en la misma transacción que el cambio. */
+    private final ProfileEventsAppService events;
 
     ProfileAppService(ProfessionalProfileRepository repository, ProfessionalRoleRepository roleRepository, Clock clock,
-            BirthDateReplica birthDateReplica) {
+            BirthDateReplica birthDateReplica, ProfileEventsAppService events) {
         this.repository = repository;
         this.roleRepository = roleRepository;
         this.clock = clock;
         this.birthDateReplica = birthDateReplica;
+        this.events = events;
     }
 
     /**
@@ -98,7 +101,7 @@ public class ProfileAppService {
         if (name != null) profile.updateName(name);
         if (cmd.summary() != null) profile.updateSummary(summary);
         if (modality != null) profile.updatePreferredModality(modality);
-        repository.save(profile);
+        saveAndAnnounce(profile);
         return profile;
     }
 
@@ -135,7 +138,7 @@ public class ProfileAppService {
                 employmentStatus(cmd.employmentStatus()));
         boolean hasDates = draft.startDate() != null || draft.endDate() != null;
         profile.addWorkExperience(createWithBirthMonth(cmd.uid(), hasDates, bounds -> WorkExperience.create(draft, bounds)));
-        repository.save(profile);
+        saveAndAnnounce(profile);
         return profile;
     }
 
@@ -175,7 +178,7 @@ public class ProfileAppService {
 
     @Transactional
     public ProfessionalProfile removeWorkExperience(UUID profileId, String uid, UUID expId) {
-        var p = loadForUserForUpdate(profileId, uid); p.removeWorkExperience(expId); repository.save(p); return p;
+        var p = loadForUserForUpdate(profileId, uid); p.removeWorkExperience(expId); saveAndAnnounce(p); return p;
     }
 
     @Transactional
@@ -185,7 +188,7 @@ public class ProfileAppService {
                 startDate(cmd.startDate()), endDate(cmd.endDate()), cmd.inProgress());
         boolean hasDates = draft.startDate() != null || draft.endDate() != null;
         profile.addEducation(createWithBirthMonth(cmd.uid(), hasDates, bounds -> Education.create(draft, bounds)));
-        repository.save(profile);
+        saveAndAnnounce(profile);
         return profile;
     }
 
@@ -197,13 +200,14 @@ public class ProfileAppService {
 
     @Transactional
     public ProfessionalProfile removeEducation(UUID profileId, String uid, UUID eduId) {
-        var p = loadForUserForUpdate(profileId, uid); p.removeEducation(eduId); repository.save(p); return p;
+        var p = loadForUserForUpdate(profileId, uid); p.removeEducation(eduId); saveAndAnnounce(p); return p;
     }
 
     @Transactional
     public ProfessionalProfile updateSalaryExpectation(UpdateSalaryExpectationCommand cmd) {
         var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
         p.updateSalaryExpectation(new SalaryExpectation(cmd.amount()));
+        // La expectativa salarial no viaja en el evento del perfil: guardar basta.
         repository.save(p); return p;
     }
 
@@ -223,13 +227,13 @@ public class ProfileAppService {
         errors.throwIfAny();
         // Lo que entra por esta ruta es siempre MANUAL: la IA escribe por sus propias rutas.
         profile.addSkill(new ProfileSkill(UUID.randomUUID(), name, level, DataProvenance.MANUAL));
-        repository.save(profile);
+        saveAndAnnounce(profile);
         return profile;
     }
 
     @Transactional
     public ProfessionalProfile removeSkill(UUID profileId, String uid, UUID skillId) {
-        var p = loadForUserForUpdate(profileId, uid); p.removeSkill(skillId); repository.save(p); return p;
+        var p = loadForUserForUpdate(profileId, uid); p.removeSkill(skillId); saveAndAnnounce(p); return p;
     }
 
     public ProfessionalProfile getProfile(UUID id, String uid) { return loadForUser(id, uid); }
@@ -250,7 +254,7 @@ public class ProfileAppService {
         var role = selectableRole(cmd.professionalRoleId());
         // Un rol agregado a mano nunca trae origen de IA: la procedencia la fija el servidor.
         p.addTargetRole(new TargetRole(UUID.randomUUID(), role.id(), role.nombre(), DataProvenance.MANUAL));
-        repository.save(p); return p;
+        saveAndAnnounce(p); return p;
     }
 
     /**
@@ -268,23 +272,34 @@ public class ProfileAppService {
         var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
         var role = selectableRole(cmd.professionalRoleId());
         p.updateTargetRole(cmd.roleId(), role.id(), role.nombre());
-        repository.save(p); return p;
+        saveAndAnnounce(p); return p;
     }
 
     @Transactional
     public ProfessionalProfile removeTargetRole(UUID profileId, String uid, UUID roleId) {
-        var p = loadForUserForUpdate(profileId, uid); p.removeTargetRole(roleId); repository.save(p); return p;
+        var p = loadForUserForUpdate(profileId, uid); p.removeTargetRole(roleId); saveAndAnnounce(p); return p;
     }
 
     @Transactional
     public ProfessionalProfile completeProfile(UUID profileId, String uid) {
         var p = loadForUserForUpdate(profileId, uid);
         p.complete();
-        repository.save(p);
+        saveAndAnnounce(p);
         return p;
     }
 
     // ── Shared ────────────────────────────────────────────────────────────
+
+    /**
+     * Guarda el perfil y, si está activo, anuncia el cambio en la misma transacción; toda escritura que Entrevista debe ver
+     * pasa por aquí.
+     *
+     * @param profile perfil ya modificado por el caso de uso
+     */
+    private void saveAndAnnounce(ProfessionalProfile profile) {
+        repository.save(profile);
+        events.announceIfCompleted(profile);
+    }
 
     private static YearMonth startDate(String value) {
         return FieldValues.yearMonth(value, START_DATE_INVALID_FORMAT, "startDate");

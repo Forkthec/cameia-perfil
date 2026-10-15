@@ -21,6 +21,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,8 +40,10 @@ class OutboxRelayAppServiceTest {
     private final OutboxRepository outbox = mock(OutboxRepository.class);
     private final EventPublisher publisher = mock(EventPublisher.class);
     private final PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
+    /** Tareas que el relevo entregó al ejecutor posterior al commit, sin correrlas todavía. */
+    private final List<Runnable> deferred = new ArrayList<>();
     private final OutboxRelayAppService service = new OutboxRelayAppService(outbox, publisher,
-            Clock.fixed(NOW, ZoneOffset.UTC), transactionManager);
+            Clock.fixed(NOW, ZoneOffset.UTC), transactionManager, deferred::add);
     private final ListAppender<ILoggingEvent> logs = new ListAppender<>();
 
     @BeforeEach
@@ -88,8 +91,33 @@ class OutboxRelayAppServiceTest {
 
         verify(publisher, never()).publish(any());
         TransactionSynchronizationManager.getSynchronizations().forEach(synchronization -> synchronization.afterCommit());
+        // El intento sale del hilo de la petición: sigue sin publicar hasta que el ejecutor lo corra.
+        verify(publisher, never()).publish(any());
+        assertThat(deferred).hasSize(1);
+        deferred.get(0).run();
         verify(publisher).publish(event);
         verify(outbox).markPublished(event.id(), NOW);
+    }
+
+    @Test
+    @DisplayName("Si el ejecutor rechaza el intento, la petición no lo ve y la fila queda pendiente para el Job")
+    void relayAfterCommit_shouldKeepRowPending_whenExecutorRejects() {
+        var rejecting = new OutboxRelayAppService(outbox, publisher, Clock.fixed(NOW, ZoneOffset.UTC),
+                transactionManager, task -> {
+                    throw new RejectedExecutionException("cola llena");
+                });
+        TransactionSynchronizationManager.initSynchronization();
+        var event = event();
+
+        rejecting.relayAfterCommit(event);
+        TransactionSynchronizationManager.getSynchronizations().forEach(synchronization -> synchronization.afterCommit());
+
+        verify(publisher, never()).publish(any());
+        verify(outbox, never()).markPublished(any(), any());
+        assertThat(logs.list).anySatisfy(entry -> {
+            assertThat(entry.getLevel()).isEqualTo(Level.WARN);
+            assertThat(entry.getFormattedMessage()).contains(event.id().toString());
+        });
     }
 
     @Test
