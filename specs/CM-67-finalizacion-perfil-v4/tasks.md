@@ -183,7 +183,7 @@ Reglas 1 a 9 de arriba, con dos cambios: esta parte **sí** lleva una migración
 
 # PR 3 — Publicación de `perfil.profesional-actualizado` (`CM-67-evento-perfil-actualizado`, sobre el PR 2)
 
-**BLOQUEADO** hasta dos respuestas: (1) quién genera `embedding` (decisión 1 del documento enviado a Juan David Vela Coronado el 9-oct; recomendación B: se publica sin `embedding` y Entrevistas lo calcula); (2) la composición de `contextoProfesional` y `rolesAspirados`, que decide Backend porque es dueño de los dos lados del contrato (pregunta para Paula, spec §17). `usuarioId` = `firebaseUid` (decidido). No se escribe la carga con campos supuestos.
+Se ejecuta con la spec `specs/CM-67-EventoPerfilActualizado/`.
 
 ## [ ] T-10 · Contrato v1 — ≤ 30 min, ≈ 150 líneas
 

@@ -30,12 +30,14 @@ co.edu.unicauca.cameia.perfil
 │   └── command             // objetos de entrada de los casos de uso
 ├── domain
 │   ├── model               // agregados, entidades, objetos de valor, enumerados
+│   ├── event               // eventos de dominio y su correlación (ProfileUpdated, CorrelationId)
 │   ├── port                // interfaces que el dominio define y no implementa
 │   └── exception           // excepciones de negocio
 └── infrastructure
     ├── persistence
     │   ├── entity          // modelo JPA, distinto del modelo de dominio
     │   └── repository      // Spring Data y adaptadores de los puertos
+    ├── web                 // correlación con el X-Request-Id de la petición
     ├── messaging
     │   ├── consumer        // @RabbitListener
     │   ├── publisher       // RabbitTemplate
@@ -44,7 +46,7 @@ co.edu.unicauca.cameia.perfil
     └── config              // configuración de Spring
 ```
 
-El servicio no tiene `infrastructure/client` ni `persistence/mapper`: el mapeo entre dominio y entidad se escribe a mano y es privado al paquete del adaptador (en el adaptador, o en una clase `<Agregado>Mapping` del mismo paquete cuando el adaptador pasaría de 200 líneas). Si hace falta una carpeta nueva (`domain/service`, `domain/policy`, `domain/event`, `infrastructure/ia`), se pregunta antes de crearla.
+El servicio no tiene `infrastructure/client` ni `persistence/mapper`: el mapeo entre dominio y entidad se escribe a mano y es privado al paquete del adaptador (en el adaptador, o en una clase `<Agregado>Mapping` del mismo paquete cuando el adaptador pasaría de 200 líneas). Si hace falta una carpeta nueva (`domain/service`, `domain/policy`, `infrastructure/ia`), se pregunta antes de crearla.
 
 **Regla de dependencias.** `domain` no importa nada de `presentation`, `application` ni `infrastructure`, ni `org.springframework`, `jakarta.persistence`, `com.rabbitmq` o `com.google`; `application` depende de `domain` por sus puertos; `infrastructure` implementa los puertos de `domain`; `presentation` no importa `infrastructure`; no hay dependencias circulares. La vigila `ArquitecturaTest`, y toda clase nueva debe pasarla.
 
@@ -60,7 +62,9 @@ El servicio no tiene `infrastructure/client` ni `persistence/mapper`: el mapeo e
 | Dominio | `ProfessionalProfileRepository`, `ProfessionalRoleRepository` | Puertos de persistencia |
 | Infraestructura | `ProfessionalProfileRepositoryAdapter`, `ProfessionalRoleRepositoryAdapter` | Implementan los puertos sobre Spring Data |
 | Infraestructura | `AccountEventsRabbitConfig`, `AccountEventsRetryConfig`, `AccountCreatedListener`, `AccountDeletedListener`, `AccountEventsErrorHandler`, `AccountEventsRecoverer` | Consumen `cuenta.creada` y `cuenta.eliminada` para mantener la réplica de la fecha de nacimiento, con Inbox, reintentos y una cola de fallidos por cola |
-| Infraestructura | `RabbitConfig`, `SubscriptionUpdatedListener`, `ConsumptionRecordedListener`, `ProfileEventPublisher` | Mensajería restante: esqueletos (ver sección 10) |
+| Aplicación | `ProfileEventsAppService`, `OutboxRelayAppService` | Anuncian `perfil.profesional-actualizado` con tabla de salida: el evento se guarda en la transacción del cambio, se intenta tras el commit en un ejecutor aparte y el Job lo reintenta |
+| Infraestructura | `RabbitConfig`, `RabbitEventPublisher`, `RelayExecutorConfig`, `ProfileEventsRelayJobRunner` | Exchange, colas (incluida la de Entrevista), publicación con confirmación, ejecutor acotado del intento posterior al commit y Job de relevo |
+| Infraestructura | `SubscriptionUpdatedListener`, `ConsumptionRecordedListener` | Consumidores de suscripción y de consumo: esqueletos (ver sección 10) |
 
 **Persistencia en tres piezas.** Un `JpaRepository` suelto no es el repositorio del dominio. El puerto vive en `domain/port` con el vocabulario del dominio; el `JpaRepository` y el adaptador viven en `infrastructure/persistence/repository` (el adaptador implementa el puerto y es el único que conoce las dos orillas). `application.service` inyecta el puerto, nunca el adaptador ni el `JpaRepository`.
 
@@ -117,7 +121,6 @@ El servicio solo debe aceptar tráfico del API Gateway; la autenticidad la garan
 | `POST`, `DELETE` | `/{id}/educations`, `/{id}/educations/{eduId}` | Agrega o quita educación |
 | `PATCH` | `/{id}/salary-expectation` | Actualiza la expectativa salarial |
 | `POST`, `DELETE` | `/{id}/skills`, `/{id}/skills/{skillId}` | Agrega o quita una habilidad |
-| `POST` | `/{id}/review-requests` | Pide la revisión del perfil; oculta del OpenAPI y sin HU en el MVP, CM-67 decide si se borra (D26) |
 | `POST`, `PATCH`, `DELETE` | `/{id}/target-roles`, `/{id}/target-roles/{roleId}` | Gestiona los roles objetivo; solo admite roles activos del catálogo (422 si el rol está inactivo), responde 409 al repetir un rol o al agregar un sexto |
 | `POST` | `/{id}/completion` | Finaliza el perfil |
 | `GET` | `/professional-roles?lang=es\|en` | Catálogo de roles profesionales (sin identidad) |
@@ -136,6 +139,10 @@ Base PostgreSQL propia `cameia_perfil` y migraciones Flyway en `src/main/resourc
 | `V4__i18n_catalogo_roles.sql` | Agrega los nombres en inglés del catálogo |
 | `V5__replica_fecha_nacimiento.sql` | Crea `fecha_nacimiento_usuario` (réplica de la fecha de nacimiento por Usuario) y `evento_procesado` (Inbox de eventos de cuenta) |
 | `V5_1__estado_catalogo_y_restricciones_rol_objetivo.sql` | Agrega el estado del catálogo de roles y las restricciones de `rol_objetivo` (obligatorio, único por perfil, procedencia y revisión, clave foránea sin borrado en cascada) |
+| `V6__alinear_experiencia_laboral.sql` | Alinea `experiencia_laboral` con las reglas de HU-2.4: largos de 100/100/500, inicio opcional, restricciones con nombre e índice de la clave foránea |
+| `V7__alinear_educacion.sql` | Alinea `educacion` con las reglas de HU-2.4: largos de 150, restricciones con nombre e índice de la clave foránea; elimina `area_estudio` porque el campo salió del contrato |
+| `V8__alinear_habilidad_perfil.sql` | Alinea `habilidad_perfil` con las reglas de HU-2.5: nombre de 60, clave de comparación para no repetir una habilidad dentro de un perfil, restricciones con nombre e índice de la clave foránea |
+| `V9__evento_saliente.sql` | Crea la tabla de salida de eventos de Perfil: el evento se guarda en la misma transacción que el cambio y se publica después |
 
 No hay claves foráneas hacia otros servicios. Las tablas y columnas van en `snake_case` español y las fechas en `TIMESTAMPTZ`; el resto de las reglas de esquema están en la [sección 7 del estándar](docs/estandar-backend.md#7-base-de-datos). Todo cambio de esquema es una migración nueva.
 
@@ -179,7 +186,7 @@ Rama, commit, tipos, título de PR, revisión y merge: rige [CONTRIBUTING.md](CO
 
 - El título del PR lleva `[IA-ASISTIDO]` al final cuando hubo IA; el commit no lo lleva. Un commit asistido por IA lleva el trailer `Co-Authored-By` con el modelo.
 - Una IA puede abrir un PR; nunca lo fusiona. El control humano lo marca la persona que revisa.
-- Un PR cubre una pieza reconocible y no pasa de 1000 líneas entre agregadas y eliminadas.
+- Un PR por tarea de Jira, sin tope de líneas, con un commit por capacidad.
 - Antes del código hay una spec aprobada en `specs/CM-NNN-Descripcion/` (`spec.md`, `plan.md` y `tasks.md`); el flujo está en la sección 12 de [docs/estandar-backend.md](docs/estandar-backend.md).
 - Las decisiones con peso humano se registran en [docs/bitacora-ia/](docs/bitacora-ia/README.md).
 
@@ -190,9 +197,10 @@ Las specs nuevas viven en `specs/CM-NNN-Descripcion/` con `Descripcion` en Pasca
 | Pendiente | Responsable | Qué bloquea |
 |---|---|---|
 | API y consumidor de RabbitMQ en el mismo proceso | Backend (arranque, `Dockerfile`, `docker-compose.yml`) y DevOps (recursos de Cloud Run) | Escalar la API sin duplicar consumidores |
-| Los consumidores de suscripción y de consumo y el publicador de eventos del perfil son esqueletos con `TODO`: sin payload definido, idempotencia ni Outbox | Backend, con Cuentas | Reaccionar a cambios de plan; publicar cambios del perfil |
+| Los consumidores de suscripción y de consumo son esqueletos con `TODO`: sin payload definido, idempotencia ni Outbox | Backend, con Cuentas | Reaccionar a cambios de plan |
 | El cupo de perfiles es fijo en 1 (Plan Free), a la espera de la réplica del plan | Backend y Product Owner | Perfiles múltiples según el plan |
 | Swagger UI y OpenAPI sin bandera de apagado ni perfil `prod` | Backend (CM-283) | Cerrar la documentación en producción |
 | Cobertura por debajo de la meta del estándar | Backend (CM-283) | Cumplir el 70 % de la rúbrica y la meta del 90 % |
 | Lecturas que consume Entrevista (`GET /api/v1/profiles?status=COMPLETED`, con paginación, y las sugerencias de roles): no existen en el código | Backend, con Entrevista | Integración con Entrevista |
 | Extracción de CV, sugerencias y asistente de redacción con IA: sin implementar (`Resume`, `QuotaGuard`, adaptadores de LLM) | Backend y Product Owner | Todo lo que dependa de IA |
+| El Job `profile-events-relay` no está programado en staging | DevOps, por una tarea de Vela | Reintentar en staging lo que falle tras el commit |
