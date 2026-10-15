@@ -1,6 +1,7 @@
 package co.edu.unicauca.cameia.perfil.domain.port;
 
 import co.edu.unicauca.cameia.perfil.domain.event.OutboundEvent;
+import co.edu.unicauca.cameia.perfil.domain.event.ProfileUpdated;
 
 import java.time.Instant;
 import java.util.List;
@@ -20,6 +21,14 @@ public interface OutboxRepository {
      * @param event evento que se guarda
      */
     void append(OutboundEvent event);
+
+    /**
+     * Guarda el evento de perfil actualizado como pendiente, con su carga del contrato v1, en la transacción del cambio.
+     *
+     * @param event evento con el perfil activo ya modificado
+     * @return el evento tal como quedó guardado, listo para el intento posterior al commit
+     */
+    OutboundEvent appendProfileUpdated(ProfileUpdated event);
 
     /**
      * Lee los pendientes más antiguos y los bloquea, de modo que otra instancia del relevo salte esas filas.

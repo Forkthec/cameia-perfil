@@ -1,7 +1,10 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
+import co.edu.unicauca.cameia.perfil.domain.event.CorrelationId;
 import co.edu.unicauca.cameia.perfil.domain.event.OutboundEvent;
+import co.edu.unicauca.cameia.perfil.domain.event.ProfileUpdated;
 import co.edu.unicauca.cameia.perfil.domain.port.OutboxRepository;
+import co.edu.unicauca.cameia.perfil.support.ActiveProfiles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -79,6 +82,40 @@ class OutboxRepositoryAdapterIT {
         assertThat(row.get("id_correlacion")).isEqualTo("req-1");
         assertThat(row.get("fecha_publicacion")).isNull();
         assertThat(((Number) row.get("intentos")).intValue()).isZero();
+    }
+
+    private ProfileUpdated profileUpdated() {
+        return new ProfileUpdated(UUID.randomUUID(), ActiveProfiles.example(), Instant.parse("2026-10-15T12:00:00.123Z"),
+                new CorrelationId("req-77"));
+    }
+
+    @Test
+    @DisplayName("El evento del perfil se guarda pendiente con la carga del contrato v1 y sin embedding")
+    void appendProfileUpdated_shouldStorePendingRowWithContractPayload_whenCalledInTransaction() {
+        var event = profileUpdated();
+
+        var stored = new TransactionTemplate(transactionManager).execute(status -> outbox.appendProfileUpdated(event));
+
+        var row = jdbc.queryForMap("SELECT tipo, version, agregado_id, id_correlacion, fecha_publicacion, intentos, "
+                + "carga->>'usuarioId' AS usuario, carga->'contextoProfesional'->>'estado' AS estado, "
+                + "jsonb_exists(carga, 'embedding') AS tiene_embedding FROM evento_saliente WHERE id = ?", event.eventId());
+        assertThat(stored.id()).isEqualTo(event.eventId());
+        assertThat(row.get("tipo")).isEqualTo("perfil.profesional-actualizado");
+        assertThat(((Number) row.get("version")).intValue()).isEqualTo(1);
+        assertThat(row.get("agregado_id")).isEqualTo(ActiveProfiles.PROFILE_ID);
+        assertThat(row.get("id_correlacion")).isEqualTo("req-77");
+        assertThat(row.get("fecha_publicacion")).isNull();
+        assertThat(((Number) row.get("intentos")).intValue()).isZero();
+        assertThat(row.get("usuario")).isEqualTo(ActiveProfiles.OWNER);
+        assertThat(row.get("estado")).isEqualTo("COMPLETED");
+        assertThat(row.get("tiene_embedding")).isEqualTo(false);
+    }
+
+    @Test
+    @DisplayName("Guardar el evento del perfil sin una transacción abierta falla y no deja filas")
+    void appendProfileUpdated_shouldFail_whenNoTransactionIsActive() {
+        assertThatThrownBy(() -> outbox.appendProfileUpdated(profileUpdated())).isInstanceOf(IllegalTransactionStateException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM evento_saliente", Integer.class)).isZero();
     }
 
     @Test

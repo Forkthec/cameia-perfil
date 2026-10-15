@@ -7,3 +7,4 @@ Cada entrada es un archivo `NN_tema_prompt.md`, con `NN` consecutivo.
 | Entrada | Decisión | Salida |
 |---|---|---|
 | [01_alinear-estandar-backend_prompt.md](01_alinear-estandar-backend_prompt.md) | Alinear los documentos y el estándar de los cuatro repositorios de Backend | [Spec de CM-283](../../specs/CM-283-AlinearEstandar/spec.md) |
+| [02_provenance-ignorado-en-el-patch-de-informacion-general_prompt.md](02_provenance-ignorado-en-el-patch-de-informacion-general_prompt.md) | Ignorar `provenance` en el `PATCH` de información general (decisión D5) | [Spec de CM-54](../../specs/CM-54-informacion-general-resumen/spec.md) |

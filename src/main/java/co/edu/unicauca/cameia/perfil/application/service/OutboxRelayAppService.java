@@ -6,6 +6,7 @@ import co.edu.unicauca.cameia.perfil.domain.port.EventPublisher;
 import co.edu.unicauca.cameia.perfil.domain.port.OutboxRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -15,12 +16,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Publica los eventos de la tabla de salida y deja registrado el resultado de cada intento.
  *
- * <p>Hay dos caminos. Tras el commit de una escritura se intenta publicar su evento una vez, sin transacción abierta
- * durante la llamada al broker; el resultado se anota en una transacción corta aparte. El Job periódico toma los
+ * <p>Hay dos caminos. Tras el commit de una escritura se intenta publicar su evento una vez, en un hilo aparte del de la
+ * petición y sin transacción abierta durante la llamada al broker; el resultado se anota en una transacción corta. El Job periódico toma los
  * pendientes con bloqueo de fila (las filas que otra instancia ya tomó se saltan) y los publica en una transacción por
  * lote, acotada por el plazo de confirmación de cada evento. El contrato es de al menos una vez: los consumidores son
  * idempotentes.</p>
@@ -39,12 +42,16 @@ public class OutboxRelayAppService {
     private final Clock clock;
     private final TransactionTemplate required;
     private final TransactionTemplate requiresNew;
+    /** Corre el intento posterior al commit fuera del hilo de la petición. */
+    private final Executor afterCommitExecutor;
 
     OutboxRelayAppService(OutboxRepository outbox, EventPublisher publisher, Clock clock,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager,
+            @Qualifier("profileEventsRelayExecutor") Executor afterCommitExecutor) {
         this.outbox = outbox;
         this.publisher = publisher;
         this.clock = clock;
+        this.afterCommitExecutor = afterCommitExecutor;
         this.required = new TransactionTemplate(transactionManager);
         this.requiresNew = new TransactionTemplate(transactionManager);
         this.requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -53,8 +60,9 @@ public class OutboxRelayAppService {
     /**
      * Intenta publicar el evento una vez, justo después de que se confirme la transacción en curso.
      *
-     * <p>Un fallo aquí nunca cambia la respuesta de la petición: se registra en {@code WARN} y la fila queda pendiente
-     * para el Job. Sin transacción en curso, publica de inmediato.</p>
+     * <p>El intento corre en otro hilo, así que ni un broker lento ni un pool de conexiones lleno hacen esperar a la
+     * petición. Un fallo, o un ejecutor lleno, nunca cambia la respuesta: se registra en {@code WARN} y la fila queda
+     * pendiente para el Job. Sin transacción en curso, publica de inmediato en el hilo que llama.</p>
      *
      * @param event evento que acaba de guardarse en la tabla de salida
      */
@@ -66,9 +74,22 @@ public class OutboxRelayAppService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                relayOne(event);
+                handOff(event);
             }
         });
+    }
+
+    /**
+     * Entrega el intento al ejecutor: en este punto la conexión de la petición sigue tomada y anotar el resultado aquí
+     * pediría otra. Si el ejecutor está lleno, el evento queda pendiente para el Job.
+     */
+    private void handOff(OutboundEvent event) {
+        try {
+            afterCommitExecutor.execute(() -> relayOne(event));
+        } catch (RejectedExecutionException rejected) {
+            log.warn("No se pudo programar la publicación del evento tras el commit; la recoge el Job [eventId={}, type={}]",
+                    event.id(), event.type());
+        }
     }
 
     /**

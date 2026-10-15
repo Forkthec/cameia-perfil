@@ -15,9 +15,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * El largo de cada columna de texto es el mismo que el límite del dominio: lo que el dominio acepta siempre cabe en
@@ -80,6 +82,26 @@ class ColumnLengthConsistencyIT {
                 "nombre_normalizado", SkillName.MAX_LENGTH);
 
         assertColumnLengths("habilidad_perfil", expected);
+    }
+
+    @Test
+    @DisplayName("La base acepta un resumen de 2000 caracteres y rechaza uno de 2001")
+    void summaryColumn_shouldReject2001Characters_whenWritten() throws Exception {
+        Flyway.configure().dataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword()).load().migrate();
+        var insert = "INSERT INTO perfil_profesional (id, firebase_uid, resumen, creado_en, actualizado_en) "
+                + "VALUES (gen_random_uuid(), ?, repeat('a', ?), now(), now())";
+
+        try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+             var statement = connection.prepareStatement(insert)) {
+            statement.setString(1, "uid-col-2000");
+            statement.setInt(2, ProfessionalSummary.MAX_LENGTH);
+            assertThat(statement.executeUpdate()).isEqualTo(1);
+
+            statement.setString(1, "uid-col-2001");
+            statement.setInt(2, ProfessionalSummary.MAX_LENGTH + 1);
+            assertThatThrownBy(statement::executeUpdate).isInstanceOfSatisfying(SQLException.class,
+                    error -> assertThat(error.getSQLState()).isEqualTo("22001"));
+        }
     }
 
     /** Migra la base y compara el largo de cada columna con el límite del dominio. */

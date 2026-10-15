@@ -34,6 +34,8 @@ import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillName;
 import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
+import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
+import co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
@@ -45,6 +47,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -56,11 +60,16 @@ import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -75,6 +84,7 @@ class ProfileAppServiceTest {
 
     @Mock ProfessionalProfileRepository repository;
     @Mock ProfessionalRoleRepository roleRepository;
+    @Mock ProfileEventsAppService events;
 
     /** Réplica en memoria: las pruebas deciden qué Usuarios tienen fecha de nacimiento. */
     final InMemoryBirthDateReplica replica = spy(new InMemoryBirthDateReplica());
@@ -86,7 +96,7 @@ class ProfileAppServiceTest {
         replica.saveIfAbsent(new FirebaseUid(SVC_UID), LocalDate.of(1990, 1, 1));
         replica.saveIfAbsent(new FirebaseUid(COMPLETE_UID), LocalDate.of(1990, 1, 1));
         service = new ProfileAppService(repository, roleRepository,
-                Clock.fixed(Instant.parse("2026-10-15T12:00:00Z"), ZoneOffset.UTC), replica);
+                Clock.fixed(Instant.parse("2026-10-15T12:00:00Z"), ZoneOffset.UTC), replica, events);
     }
 
     @Test
@@ -156,7 +166,7 @@ class ProfileAppServiceTest {
     @DisplayName("El mes actual sale del reloj en UTC: el 31 de octubre a las 23:59:59 octubre se acepta y noviembre no")
     void addWorkExperience_shouldUseUtcClockMonth_whenStartIsCurrentMonth() {
         var lateOctober = new ProfileAppService(repository, roleRepository,
-                Clock.fixed(Instant.parse("2026-10-31T23:59:59Z"), ZoneOffset.UTC), replica);
+                Clock.fixed(Instant.parse("2026-10-31T23:59:59Z"), ZoneOffset.UTC), replica, events);
         var profile = freshProfile();
         when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
 
@@ -1017,6 +1027,106 @@ class ProfileAppServiceTest {
 
         assertThat(appender.list).extracting(ch.qos.logback.classic.spi.ILoggingEvent::getFormattedMessage)
                 .noneMatch(message -> message.contains("2008"));
+    }
+
+    // ── anuncio del evento del perfil ──────────────────────────────────────
+
+    /** Perfil en Borrador con nombre, resumen, una experiencia, una formación, una habilidad y un rol, para las once escrituras. */
+    private ProfessionalProfile draftWithOneOfEverything() {
+        var profile = freshProfile();
+        profile.updateName(new ProfileName("Analista de datos"));
+        profile.updateSummary(new ProfessionalSummary("Analista con tres años de experiencia en SQL y Python."));
+        var bounds = new DateBounds(YearMonth.of(2026, 10), YearMonth.of(1990, 1));
+        profile.addWorkExperience(WorkExperience.create(new WorkExperienceDraft("ACME", "Analista", null,
+                YearMonth.of(2022, 1), null, EmploymentStatus.CURRENT), bounds));
+        profile.addEducation(Education.create(new EducationDraft("Universidad X", "Ingeniería",
+                EducationLevel.UNDERGRADUATE, YearMonth.of(2018, 1), null, false), bounds));
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), SkillName.of("Java"), SkillLevel.ADVANCED, DataProvenance.MANUAL));
+        profile.addTargetRole(new TargetRole(UUID.randomUUID(),
+                UUID.fromString("a0000001-0000-0000-0000-000000000002"), "Desarrollador Backend", DataProvenance.MANUAL));
+        return profile;
+    }
+
+    private void stubLockedProfileAndCatalog(ProfessionalProfile profile) {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(profile));
+        lenient().when(roleRepository.findById(any())).thenReturn(Optional.of(new ProfessionalRole(
+                UUID.fromString("a0000001-0000-0000-0000-000000000003"), "Data Engineer", "Datos", true)));
+    }
+
+    /** Las once escrituras que Entrevista debe ver; cada una recibe el servicio y el perfil sobre el que se prueba. */
+    static Stream<Arguments> successfulWrites() {
+        var id = UUID.randomUUID();
+        var otherRole = UUID.fromString("a0000001-0000-0000-0000-000000000003");
+        return Stream.of(
+                write("updateProfileInfo", (s, p) -> s.updateProfileInfo(
+                        new UpdateProfileInfoCommand(id, SVC_UID, "Analista senior", null, null))),
+                write("addWorkExperience", (s, p) -> s.addWorkExperience(new AddWorkExperienceCommand(
+                        id, SVC_UID, "Globex", "QA", null, "2023-01", null, "CURRENT"))),
+                write("removeWorkExperience", (s, p) -> s.removeWorkExperience(id, SVC_UID, p.getWorkExperiences().get(0).getId())),
+                write("addEducation", (s, p) -> s.addEducation(new AddEducationCommand(id, SVC_UID, "Unicauca", "Maestría",
+                        "POSTGRADUATE", "2024-01", null, true))),
+                write("removeEducation", (s, p) -> s.removeEducation(id, SVC_UID, p.getEducations().get(0).getId())),
+                write("addSkill", (s, p) -> s.addSkill(new AddSkillCommand(id, SVC_UID, "SQL", "BASIC"))),
+                write("removeSkill", (s, p) -> s.removeSkill(id, SVC_UID, p.getProfileSkills().get(0).getId())),
+                write("addTargetRole", (s, p) -> s.addTargetRole(new AddTargetRoleCommand(id, SVC_UID, otherRole))),
+                write("updateTargetRole", (s, p) -> s.updateTargetRole(
+                        new UpdateTargetRoleCommand(id, SVC_UID, p.getTargetRoles().get(0).getId(), otherRole))),
+                write("removeTargetRole", (s, p) -> s.removeTargetRole(id, SVC_UID, p.getTargetRoles().get(0).getId())),
+                write("completeProfile", (s, p) -> s.completeProfile(id, SVC_UID)));
+    }
+
+    private static Arguments write(String name, BiConsumer<ProfileAppService, ProfessionalProfile> call) {
+        return Arguments.of(name, call);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("successfulWrites")
+    @DisplayName("Cada una de las once escrituras guarda el perfil y después lo anuncia, una sola vez")
+    void writes_shouldAnnounceAfterSave_whenWriteSucceeds(String name, BiConsumer<ProfileAppService, ProfessionalProfile> call) {
+        var profile = draftWithOneOfEverything();
+        stubLockedProfileAndCatalog(profile);
+
+        call.accept(service, profile);
+
+        var order = inOrder(repository, events);
+        order.verify(repository).save(profile);
+        order.verify(events).announceIfCompleted(profile);
+        verify(events, times(1)).announceIfCompleted(profile);
+    }
+
+    @Test
+    @DisplayName("La expectativa salarial no viaja en el evento: guardar basta")
+    void updateSalaryExpectation_shouldNotAnnounce_whenSaved() {
+        var profile = draftWithOneOfEverything();
+        stubLockedProfileAndCatalog(profile);
+
+        service.updateSalaryExpectation(new UpdateSalaryExpectationCommand(UUID.randomUUID(), SVC_UID, new BigDecimal("3500000")));
+
+        verify(repository).save(profile);
+        verify(events, never()).announceIfCompleted(any());
+    }
+
+    static Stream<Arguments> rejectedWrites() {
+        var id = UUID.randomUUID();
+        return Stream.of(
+                Arguments.of("habilidad en blanco", false,
+                        (Consumer<ProfileAppService>) s -> s.addSkill(new AddSkillCommand(id, SVC_UID, "   ", "BASIC"))),
+                Arguments.of("finalizar un borrador incompleto", true,
+                        (Consumer<ProfileAppService>) s -> s.completeProfile(id, SVC_UID)),
+                Arguments.of("perfil ajeno", false,
+                        (Consumer<ProfileAppService>) s -> s.addSkill(new AddSkillCommand(id, "otro-uid", "Go", "BASIC"))));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("rejectedWrites")
+    @DisplayName("Una escritura rechazada no guarda ni anuncia nada")
+    void writes_shouldNotAnnounce_whenWriteIsRejected(String name, boolean freshDraft, Consumer<ProfileAppService> call) {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(freshDraft ? freshProfile() : draftWithOneOfEverything()));
+
+        assertThatThrownBy(() -> call.accept(service)).isInstanceOf(RuntimeException.class);
+
+        verify(events, never()).announceIfCompleted(any());
+        verify(repository, never()).save(any());
     }
 
     private static ProfessionalProfile freshProfile() {
