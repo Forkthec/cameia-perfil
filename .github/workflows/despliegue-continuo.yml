@@ -89,13 +89,13 @@ jobs:
       # de la base y la URL de la cola vienen de secretos gestionados, nunca en texto
       # plano.
       #
-      # --no-cpu-throttling: con min-instances=1 la instancia existe, pero por defecto
-      # Cloud Run solo le asigna CPU mientras atiende una petición HTTP. El consumidor
-      # de la cola corre en segundo plano, fuera de cualquier petición, y sin CPU
-      # procesa los mensajes con decenas de segundos de retraso. Esta opción mantiene
-      # la CPU asignada todo el tiempo y cambia la facturación de la instancia a tiempo
-      # completo, es decir, más costo; por eso el gasto se vigila con una alerta de
-      # costos.
+      # CPU solo durante las peticiones: el servicio recibe CPU únicamente mientras
+      # atiende una petición HTTP, para contener el costo. El consumidor de la cola
+      # corre en segundo plano y, fuera de las peticiones, procesa los mensajes con
+      # retraso (de segundos hasta la siguiente petición). No se pierden: quedan en la
+      # cola hasta procesarse y el procesamiento es idempotente. Si se necesita entrega
+      # inmediata, agregar --no-cpu-throttling, que mantiene la CPU asignada todo el
+      # tiempo y factura la instancia a tiempo completo.
       #
       # Sin --allow-unauthenticated: la identidad que ejecuta este despliegue no tiene
       # permiso para cambiar quién puede invocar el servicio, y no se le da ese permiso
@@ -116,7 +116,6 @@ jobs:
             --ingress=internal \
             --min-instances=1 \
             --max-instances=2 \
-            --no-cpu-throttling \
             --service-account="cameia-perfil-run@cameia-e245f.iam.gserviceaccount.com" \
             --network="${{ env.VPC_NETWORK }}" \
             --subnet="${{ env.VPC_SUBNET }}" \
