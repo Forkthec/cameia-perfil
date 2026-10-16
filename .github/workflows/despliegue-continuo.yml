@@ -95,7 +95,9 @@ jobs:
       # retraso (de segundos hasta la siguiente petición). No se pierden: quedan en la
       # cola hasta procesarse y el procesamiento es idempotente. Si se necesita entrega
       # inmediata, agregar --no-cpu-throttling, que mantiene la CPU asignada todo el
-      # tiempo y factura la instancia a tiempo completo.
+      # tiempo y factura la instancia a tiempo completo. La opción se indica de forma
+      # explícita porque gcloud run deploy conserva los ajustes de la revisión anterior
+      # que no se mencionan.
       #
       # Sin --allow-unauthenticated: la identidad que ejecuta este despliegue no tiene
       # permiso para cambiar quién puede invocar el servicio, y no se le da ese permiso
@@ -116,6 +118,7 @@ jobs:
             --ingress=internal \
             --min-instances=1 \
             --max-instances=2 \
+            --cpu-throttling \
             --service-account="cameia-perfil-run@cameia-e245f.iam.gserviceaccount.com" \
             --network="${{ env.VPC_NETWORK }}" \
             --subnet="${{ env.VPC_SUBNET }}" \
