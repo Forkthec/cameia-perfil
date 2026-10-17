@@ -3,7 +3,10 @@ package co.edu.unicauca.cameia.perfil.domain.port;
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileSummary;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -61,4 +64,14 @@ public interface ProfessionalProfileRepository {
      * @return el perfil, o vacío si no tiene
      */
     Optional<ProfessionalProfile> findLatestByFirebaseUid(FirebaseUid firebaseUid);
+
+    /**
+     * Perfiles de un usuario con sus roles objetivo, del primero creado al último (a igual instante, por id),
+     * en una sola lectura. No carga experiencia, formación ni habilidades.
+     *
+     * @param owner  dueño de los perfiles, tomado de la identidad del Gateway
+     * @param status estado a filtrar, o {@code null} para todos
+     * @return la lista, vacía si no hay perfiles
+     */
+    List<ProfileSummary> findSummariesByOwner(FirebaseUid owner, ProfileStatus status);
 }
