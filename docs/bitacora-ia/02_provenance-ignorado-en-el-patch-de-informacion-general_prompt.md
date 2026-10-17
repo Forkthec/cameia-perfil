@@ -1,7 +1,7 @@
 # Entrada 13 · Qué hace el PATCH de información general con un provenance que llega en el cuerpo
 
 - **Fecha:** 2026-10-06 · **Herramienta:** Claude Code (Sonnet 5.5) · **Integrante:** Paula Andrea Muñoz Delgado
-- **Salida asociada:** [`../salidas/13_provenance-ignorado-en-el-patch-de-informacion-general.md`](../salidas/13_provenance-ignorado-en-el-patch-de-informacion-general.md)
+- **Salida asociada:** [`../../specs/CM-54-informacion-general-resumen/spec.md`](../../specs/CM-54-informacion-general-resumen/spec.md)
 
 ## Prompt
 
