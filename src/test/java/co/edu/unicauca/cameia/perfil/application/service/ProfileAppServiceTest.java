@@ -9,6 +9,7 @@ import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand
 import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
 import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileStatusInvalidException;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException.FieldError;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
@@ -27,7 +28,9 @@ import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.InMemoryBirthDateReplica;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileSkill;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRole;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
@@ -58,6 +61,7 @@ import java.time.Instant;
 import java.time.Clock;
 import java.math.BigDecimal;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -74,6 +78,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -105,6 +110,43 @@ class ProfileAppServiceTest {
         assertThatThrownBy(() -> service.getProfile(UUID.randomUUID(), "a".repeat(129)))
                 .isInstanceOf(IdentityRequiredException.class);
         verify(repository, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("La lista devuelve lo que entrega el repositorio, para el dueño de la identidad y sin filtro")
+    void listProfiles_shouldReturnRepositoryResult() {
+        var summaries = List.of(new ProfileSummary(ProfileId.generate(), "Analista", ProfileStatus.COMPLETED,
+                Instant.parse("2026-10-01T10:00:00Z"), List.of()));
+        when(repository.findSummariesByOwner(new FirebaseUid("uid-a"), null)).thenReturn(summaries);
+
+        assertThat(service.listProfiles("uid-a", null)).isSameAs(summaries);
+    }
+
+    @Test
+    @DisplayName("Con un estado exacto la lista se pide filtrada por ese estado")
+    void listProfiles_shouldPassStatus_whenGiven() {
+        when(repository.findSummariesByOwner(new FirebaseUid("uid-a"), ProfileStatus.COMPLETED)).thenReturn(List.of());
+
+        assertThat(service.listProfiles("uid-a", "COMPLETED")).isEmpty();
+
+        verify(repository).findSummariesByOwner(new FirebaseUid("uid-a"), ProfileStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("Sin identidad la respuesta es 401 aunque el filtro también sea inválido, y no se lee nada")
+    void listProfiles_shouldCheckIdentityBeforeStatus() {
+        assertThatThrownBy(() -> service.listProfiles(null, "x")).isInstanceOf(IdentityRequiredException.class);
+
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    @DisplayName("Un estado desconocido se rechaza sin consultar el repositorio")
+    void listProfiles_shouldThrowStatusInvalid_whenUnknown() {
+        assertThatThrownBy(() -> service.listProfiles("uid-a", "ARCHIVED"))
+                .isInstanceOf(ProfileStatusInvalidException.class);
+
+        verifyNoInteractions(repository);
     }
 
     @Test

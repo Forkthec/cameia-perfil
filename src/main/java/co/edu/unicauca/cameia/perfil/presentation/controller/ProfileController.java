@@ -16,12 +16,14 @@ import co.edu.unicauca.cameia.perfil.presentation.dto.AddSkillRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddTargetRoleRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateTargetRoleRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.AddWorkExperienceRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.ProfileListResponse;
 import co.edu.unicauca.cameia.perfil.presentation.dto.ProfileResponse;
 import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateProfileInfoRequest;
 import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateSalaryExpectationRequest;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -29,6 +31,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -39,6 +42,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -199,6 +203,41 @@ class ProfileController {
               "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
             }""";
 
+    private static final String LIST_EXAMPLE = """
+            {
+              "profiles": [
+                {
+                  "id": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+                  "name": "Analista de datos",
+                  "status": "COMPLETED",
+                  "targetRoles": [
+                    {"professionalRoleId": "a0000002-0000-0000-0000-000000000002", "roleTitle": "Analista de Datos"}
+                  ]
+                },
+                {"id": "7b1d4a52-3c0b-4e8a-9b14-2f5d8c6e0a31", "name": null, "status": "IN_PROGRESS", "targetRoles": []}
+              ]
+            }""";
+
+    private static final String PROFILE_STATUS_INVALID_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Estado no válido",
+              "status": 422,
+              "detail": "Selecciona una opción.",
+              "code": "PROFILE_STATUS_INVALID_VALUE",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String IDENTITY_REQUIRED_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Identidad requerida",
+              "status": 401,
+              "detail": "Tu sesión expiró. Inicia sesión de nuevo.",
+              "code": "IDENTITY_REQUIRED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
     private static final String PLAN_LIMIT_EXAMPLE = """
             {
               "type": "about:blank",
@@ -253,6 +292,34 @@ class ProfileController {
     ProfileController(ProfileAppService profileAppService, ProfileCreationAppService profileCreationAppService) {
         this.profileAppService = profileAppService;
         this.profileCreationAppService = profileCreationAppService;
+    }
+
+    @Operation(summary = "Listar los perfiles del usuario",
+            description = "Devuelve los perfiles de quien llama, del primero creado al último, con su nombre, estado y roles objetivo. "
+                    + "Sin filtro devuelve todos los estados; con status, solo ese. Cualquier otro parámetro se ignora.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Perfiles del usuario; la lista vacía si no tiene ninguno",
+                    headers = @Header(name = "Cache-Control", description = "Siempre no-store",
+                            schema = @Schema(type = "string", example = "no-store")),
+                    content = @Content(schema = @Schema(implementation = ProfileListResponse.class),
+                            examples = @ExampleObject(value = LIST_EXAMPLE))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = IDENTITY_REQUIRED_EXAMPLE))),
+            @ApiResponse(responseCode = "406", description = "El cliente no acepta JSON (code MEDIA_TYPE_NOT_ACCEPTABLE)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "El estado pedido no es PENDING, IN_PROGRESS, IN_REVIEW ni COMPLETED, "
+                    + "o llegó vacío, repetido o en minúsculas (code PROFILE_STATUS_INVALID_VALUE)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = PROFILE_STATUS_INVALID_EXAMPLE)))
+    })
+    @GetMapping
+    ResponseEntity<ProfileListResponse> listProfiles(
+            @Parameter(description = "Estado a filtrar: PENDING, IN_PROGRESS, IN_REVIEW o COMPLETED", example = "COMPLETED")
+            @RequestParam(value = "status", required = false) String status,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(ProfileListResponse.from(profileAppService.listProfiles(uid, status)));
     }
 
     @Operation(summary = "Crear perfil profesional")
