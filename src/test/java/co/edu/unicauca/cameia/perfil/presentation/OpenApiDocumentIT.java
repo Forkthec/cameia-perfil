@@ -55,6 +55,32 @@ class OpenApiDocumentIT {
     }
 
     @Test
+    @DisplayName("El OpenAPI describe la lista de perfiles: respuestas 200, 401, 406 y 422, el filtro y el esquema")
+    void apiDocs_shouldDescribeListProfiles_whenRequested() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var body = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString()).body();
+
+        var operation = "$.paths['/api/v1/profiles'].get";
+        assertThat(JsonPath.<java.util.Map<String, Object>>read(body, operation + ".responses").keySet())
+                .contains("200", "401", "406", "422");
+        assertThat(JsonPath.<String>read(body, operation + ".responses.200.headers['Cache-Control'].description"))
+                .isNotBlank();
+        assertThat(JsonPath.<java.util.List<String>>read(body, operation + ".parameters[?(@.name=='status')].description"))
+                .singleElement().asString().contains("COMPLETED");
+        assertThat(JsonPath.<java.util.List<Object>>read(body, operation + ".parameters[?(@.name=='X-User-Id')]"))
+                .as("la identidad la pone el Gateway: no se publica como parámetro").isEmpty();
+        assertThat(JsonPath.<java.util.List<Object>>read(body, operation + ".responses.422.content.*").get(0).toString())
+                .contains("PROFILE_STATUS_INVALID_VALUE", "Selecciona una opción.");
+        var schema = "$.components.schemas.ProfileListResponse";
+        assertThat(JsonPath.<String>read(body, schema + ".properties.profiles.items.$ref")).endsWith("ProfileListItem");
+        assertThat(JsonPath.<java.util.Map<String, Object>>read(body, "$.components.schemas.ProfileListItem.properties").keySet())
+                .containsExactlyInAnyOrder("id", "name", "status", "targetRoles");
+        assertThat(JsonPath.<java.util.Map<String, Object>>read(body, "$.components.schemas.ProfileListTargetRole.properties").keySet())
+                .containsExactlyInAnyOrder("professionalRoleId", "roleTitle");
+    }
+
+    @Test
     @DisplayName("El PATCH del rol objetivo describe su campo igual que el POST: uuid, ejemplo y obligatorio")
     void apiDocs_shouldDescribeUpdateTargetRoleBody_whenRequested() throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
