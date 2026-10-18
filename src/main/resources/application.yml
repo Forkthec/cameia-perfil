@@ -34,6 +34,11 @@ spring:
     # application/problem+json (reglas de codigo, seccion 7.1, propuesta para API-TBD-14).
     problemdetails:
       enabled: true
+    # Perfil no recibe formularios. El filtro de Spring los lee antes de que exista un manejador
+    # de errores y un formulario mal codificado terminaba en un 500 sin formato.
+    formcontent:
+      filter:
+        enabled: false
 
   rabbitmq:
     # El editor espera la confirmación del broker (correlated) y recibe el mensaje devuelto si ninguna cola lo recibe.
