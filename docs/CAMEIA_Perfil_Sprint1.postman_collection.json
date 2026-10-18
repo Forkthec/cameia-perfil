@@ -11094,6 +11094,411 @@
           }
         }
       ]
+    },
+    {
+      "name": "Errores de protocolo",
+      "item": [
+        {
+          "name": "P-01 PATCH con formulario mal codificado: 415",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 415', () => pm.response.to.have.status(415));",
+                  "pm.test('Content-Type problem+json con charset UTF-8', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json;charset=UTF-8'));",
+                  "const b = pm.response.json();",
+                  "pm.test('code MEDIA_TYPE_NOT_ALLOWED', () => pm.expect(b.code).to.eql('MEDIA_TYPE_NOT_ALLOWED'));",
+                  "pm.test('requestId presente y igual al encabezado', () => { pm.expect(b.requestId).to.be.a('string').and.not.empty; pm.expect(pm.response.headers.get('X-Request-Id')).to.eql(b.requestId); });",
+                  "pm.test('Sin trazas, SQL ni nombres de clase', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL|org[.]apache/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "uid-cm335-a"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/11111111-1111-1111-1111-111111111111",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "11111111-1111-1111-1111-111111111111"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "a=%zz"
+            }
+          }
+        },
+        {
+          "name": "P-02 Consulta mal codificada (lang=%zz): 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Content-Type problem+json con charset UTF-8', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json;charset=UTF-8'));",
+                  "const b = pm.response.json();",
+                  "pm.test('code REQUEST_QUERY_INVALID_FORMAT', () => pm.expect(b.code).to.eql('REQUEST_QUERY_INVALID_FORMAT'));",
+                  "pm.test('requestId presente y igual al encabezado', () => { pm.expect(b.requestId).to.be.a('string').and.not.empty; pm.expect(pm.response.headers.get('X-Request-Id')).to.eql(b.requestId); });",
+                  "pm.test('Sin trazas, SQL ni nombres de clase', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL|org[.]apache/));",
+                  "pm.test('Mensaje fijo y sin lista errors', () => { pm.expect(b.detail).to.eql('Revisa los datos enviados.'); pm.expect(b).to.not.have.property('errors'); });",
+                  "pm.test('No repite el valor recibido', () => pm.expect(pm.response.text()).to.not.include('zz'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/professional-roles?lang=%zz",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "professional-roles"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "%zz"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "P-03 POST con formulario mal codificado: 415",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 415', () => pm.response.to.have.status(415));",
+                  "pm.test('Content-Type problem+json con charset UTF-8', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json;charset=UTF-8'));",
+                  "const b = pm.response.json();",
+                  "pm.test('code MEDIA_TYPE_NOT_ALLOWED', () => pm.expect(b.code).to.eql('MEDIA_TYPE_NOT_ALLOWED'));",
+                  "pm.test('requestId presente y igual al encabezado', () => { pm.expect(b.requestId).to.be.a('string').and.not.empty; pm.expect(pm.response.headers.get('X-Request-Id')).to.eql(b.requestId); });",
+                  "pm.test('Sin trazas, SQL ni nombres de clase', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL|org[.]apache/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "uid-cm335-a"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/11111111-1111-1111-1111-111111111111/skills",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "11111111-1111-1111-1111-111111111111",
+                "skills"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "a=%zz"
+            }
+          }
+        },
+        {
+          "name": "P-04 Escape que no es UTF-8 (lang=%C3): 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Content-Type problem+json con charset UTF-8', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json;charset=UTF-8'));",
+                  "const b = pm.response.json();",
+                  "pm.test('code REQUEST_QUERY_INVALID_FORMAT', () => pm.expect(b.code).to.eql('REQUEST_QUERY_INVALID_FORMAT'));",
+                  "pm.test('requestId presente y igual al encabezado', () => { pm.expect(b.requestId).to.be.a('string').and.not.empty; pm.expect(pm.response.headers.get('X-Request-Id')).to.eql(b.requestId); });",
+                  "pm.test('Sin trazas, SQL ni nombres de clase', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL|org[.]apache/));",
+                  "pm.test('Mensaje fijo y sin lista errors', () => { pm.expect(b.detail).to.eql('Revisa los datos enviados.'); pm.expect(b).to.not.have.property('errors'); });",
+                  "pm.test('No repite el valor recibido', () => pm.expect(pm.response.text()).to.not.include('zz'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/professional-roles?lang=%C3",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "professional-roles"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "%C3"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "P-05 Multipart sin boundary: 415",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 415', () => pm.response.to.have.status(415));",
+                  "pm.test('Content-Type problem+json con charset UTF-8', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json;charset=UTF-8'));",
+                  "const b = pm.response.json();",
+                  "pm.test('code REQUEST_MULTIPART_INVALID_FORMAT', () => pm.expect(b.code).to.eql('REQUEST_MULTIPART_INVALID_FORMAT'));",
+                  "pm.test('requestId presente y igual al encabezado', () => { pm.expect(b.requestId).to.be.a('string').and.not.empty; pm.expect(pm.response.headers.get('X-Request-Id')).to.eql(b.requestId); });",
+                  "pm.test('Sin trazas, SQL ni nombres de clase', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL|org[.]apache/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "uid-cm335-a"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/11111111-1111-1111-1111-111111111111/skills",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "11111111-1111-1111-1111-111111111111",
+                "skills"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "x"
+            }
+          }
+        },
+        {
+          "name": "P-06 TRACE: 405 con la forma común",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 405', () => pm.response.to.have.status(405));",
+                  "pm.test('Content-Type problem+json con charset UTF-8', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json;charset=UTF-8'));",
+                  "const b = pm.response.json();",
+                  "pm.test('code METHOD_NOT_ALLOWED', () => pm.expect(b.code).to.eql('METHOD_NOT_ALLOWED'));",
+                  "pm.test('requestId presente y igual al encabezado', () => { pm.expect(b.requestId).to.be.a('string').and.not.empty; pm.expect(pm.response.headers.get('X-Request-Id')).to.eql(b.requestId); });",
+                  "pm.test('Sin trazas, SQL ni nombres de clase', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL|org[.]apache/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "TRACE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/professional-roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "professional-roles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "P-07 GET /error directo: 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Content-Type problem+json con charset UTF-8', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json;charset=UTF-8'));",
+                  "const b = pm.response.json();",
+                  "pm.test('code ROUTE_NOT_FOUND', () => pm.expect(b.code).to.eql('ROUTE_NOT_FOUND'));",
+                  "pm.test('requestId presente y igual al encabezado', () => { pm.expect(b.requestId).to.be.a('string').and.not.empty; pm.expect(pm.response.headers.get('X-Request-Id')).to.eql(b.requestId); });",
+                  "pm.test('Sin trazas, SQL ni nombres de clase', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL|org[.]apache/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/error",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "error"
+              ]
+            }
+          }
+        },
+        {
+          "name": "P-08 Accept ilegible (;;;): 406",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 406', () => pm.response.to.have.status(406));",
+                  "pm.test('Content-Type problem+json con charset UTF-8', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json;charset=UTF-8'));",
+                  "const b = pm.response.json();",
+                  "pm.test('code MEDIA_TYPE_NOT_ACCEPTABLE', () => pm.expect(b.code).to.eql('MEDIA_TYPE_NOT_ACCEPTABLE'));",
+                  "pm.test('requestId presente y igual al encabezado', () => { pm.expect(b.requestId).to.be.a('string').and.not.empty; pm.expect(pm.response.headers.get('X-Request-Id')).to.eql(b.requestId); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": ";;;"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "uid-cm335-a"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "P-09 Multipart de más de 1 MiB: 413",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Parte de ~1,1 MiB: pasa el tope de 1 MiB por parte y se rechaza sin guardar nada.",
+                  "const relleno = 'x'.repeat(1150000);",
+                  "pm.request.body.update({ mode: 'raw', raw: '--cm335\\r\\nContent-Disposition: form-data; name=\"f\"; filename=\"f.bin\"\\r\\nContent-Type: application/octet-stream\\r\\n\\r\\n' + relleno + '\\r\\n--cm335--\\r\\n' });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 413', () => pm.response.to.have.status(413));",
+                  "pm.test('Content-Type problem+json con charset UTF-8', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json;charset=UTF-8'));",
+                  "const b = pm.response.json();",
+                  "pm.test('code REQUEST_BODY_TOO_LARGE', () => pm.expect(b.code).to.eql('REQUEST_BODY_TOO_LARGE'));",
+                  "pm.test('requestId presente y igual al encabezado', () => { pm.expect(b.requestId).to.be.a('string').and.not.empty; pm.expect(pm.response.headers.get('X-Request-Id')).to.eql(b.requestId); });",
+                  "pm.test('No cita el límite ni lo enviado', () => pm.expect(pm.response.text()).to.not.include('xxxx').and.not.include('1048576'));",
+                  "pm.test('Responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data; boundary=cm335"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "uid-cm335-a"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "x"
+            }
+          }
+        }
+      ]
     }
   ],
   "event": [
