@@ -45,8 +45,8 @@ Cada rechazo se registra en nivel `WARN` con `code`, `requestId` y `firebaseUid`
 | `SKILL_LIMIT_REACHED` | 409 | `POST …/skills` | — | «Ya tienes el máximo de 20 habilidades.» | `SkillLimitReachedException` (el perfil ya tenía 20; se comprueba antes que el duplicado) | `ProfessionalProfileTest.addSkill_shouldRejectTwentyFirst_whenProfileHasTwenty`, `ProfileControllerTest.addSkill_shouldReturn409_whenLimitReached` |
 | `SKILL_NOT_ALLOWED` | 409 | `DELETE …/skills/{skillId}` | — | «No puedes quedarte sin habilidades con el perfil activo. Agrega otra antes de eliminar esta.» (CA-2.5.12) | `SkillNotAllowedException` (única habilidad de un perfil `COMPLETED`) | `ProfessionalProfileTest.removeSkill_shouldRejectLast_whenProfileIsCompleted`, `ProfileControllerTest.removeSkill_shouldReturn409_whenLastSkillOfActiveProfile` |
 | `ROUTE_NOT_FOUND` | 404 | Cualquier ruta que no existe | — | «No existe la ruta solicitada.» | `ApiExceptionHandler` (`NoResourceFoundException`, `NoHandlerFoundException`) | `ProfileControllerTest.frameworkError_shouldReturnCommonShape_whenRequestIsRejected`, `ResponseCharsetIT.unknownRoute_shouldReturn404WithUtf8_whenRequested` |
-| `METHOD_NOT_ALLOWED` | 405 | Cualquier ruta con un método que no admite; conserva el encabezado `Allow` | — | «Método no permitido.» | `ApiExceptionHandler` (`HttpRequestMethodNotSupportedException`) | `ProfileControllerTest.frameworkError_shouldReturnCommonShape_whenRequestIsRejected`, `ProfileControllerTest.deleteProfiles_shouldKeepAllowHeader_whenMethodNotAllowed` |
-| `MEDIA_TYPE_NOT_ALLOWED` | 415 | Los endpoints con cuerpo, con un `Content-Type` distinto de `application/json` | — | «Tipo de contenido no admitido.» | `ApiExceptionHandler` (`HttpMediaTypeNotSupportedException`) | `ProfileControllerTest.frameworkError_shouldReturnCommonShape_whenRequestIsRejected` |
+| `METHOD_NOT_ALLOWED` | 405 | Cualquier ruta con un método que no admite, incluido `TRACE`; conserva el encabezado `Allow` | — | «Método no permitido.» | `ApiExceptionHandler` (`HttpRequestMethodNotSupportedException`) | `ProfileControllerTest.frameworkError_shouldReturnCommonShape_whenRequestIsRejected`, `ProfileControllerTest.deleteProfiles_shouldKeepAllowHeader_whenMethodNotAllowed` |
+| `MEDIA_TYPE_NOT_ALLOWED` | 415 | Los endpoints con cuerpo, con un `Content-Type` distinto de `application/json`; también un formulario mal codificado en un `POST`, `PUT`, `PATCH` o `DELETE` | — | «Tipo de contenido no admitido.» | `ApiExceptionHandler` (`HttpMediaTypeNotSupportedException`) | `ProfileControllerTest.frameworkError_shouldReturnCommonShape_whenRequestIsRejected` |
 | `PROFILE_ID_INVALID_FORMAT` | 422 | Todo endpoint con `{id}` | — | «El identificador del perfil no es válido.» | `ApiExceptionHandler` (`MethodArgumentTypeMismatchException` de `id`) | `ProfileControllerTest.frameworkError_shouldReturnCommonShape_whenRequestIsRejected` |
 | `WORK_EXPERIENCE_ID_INVALID_FORMAT` | 422 | `DELETE …/work-experiences/{expId}` | — | «El identificador de la experiencia no es válido.» | `ApiExceptionHandler` (`expId`) | `ErrorCatalogTest.everyErrorCode_shouldBeResponseOrField_whenCatalogLoaded` |
 | `EDUCATION_ID_INVALID_FORMAT` | 422 | `DELETE …/educations/{eduId}` | — | «El identificador de la formación no es válido.» | `ApiExceptionHandler` (`eduId`) | `ErrorCatalogTest.everyErrorCode_shouldBeResponseOrField_whenCatalogLoaded` |
@@ -172,9 +172,35 @@ Toda respuesta de error lleva `code` y ninguna devuelve el texto de Spring. Las 
 
 - **400** (parámetro obligatorio ausente, error de enlace, validación de un parámetro del método): es un dato del cliente y responde 422 `REQUEST_INVALID_VALUE`, con el origen en `WARN`.
 - **5xx** (cuerpo que no se pudo escribir, conversión no soportada): 500 `INTERNAL_ERROR`.
-- **Cualquier otro estado** (por ejemplo, un 409 o un 413 que ningún endpoint produce hoy): no se disfraza de error del cliente. Responde 500 `INTERNAL_ERROR` y se registra en `ERROR` con el estado y el origen, para darle su código en el catálogo.
+- **Cualquier otro estado** (por ejemplo, un 409 que ningún endpoint produce hoy): no se disfraza de error del cliente. Responde 500 `INTERNAL_ERROR` y se registra en `ERROR` con el estado y el origen, para darle su código en el catálogo.
+
+- **Errores del contenedor** (por ejemplo un `TRACE`, o un error en un filtro): el contenedor los reporta a la ruta `/error`, que `ContainerErrorController` responde con la forma común según el estado original (404 `ROUTE_NOT_FOUND`, 405 `METHOD_NOT_ALLOWED`, 406 `MEDIA_TYPE_NOT_ACCEPTABLE`, 415 `MEDIA_TYPE_NOT_ALLOWED`, 400 `REQUEST_BODY_INVALID_FORMAT` (422, por ejemplo un cuerpo troceado con un trozo mal formado), 413 `REQUEST_BODY_TOO_LARGE`, otro `INTERNAL_ERROR` registrado en `ERROR` con el estado y el origen). Una petición directa a `/error` responde 404 `ROUTE_NOT_FOUND`; la ruta no aparece en OpenAPI. `instance` lleva la ruta original de la petición, no `/error`. Una petición se registra una sola vez: si el manejador ya la registró, el controlador del contenedor reutiliza su `requestId` y no escribe otra línea.
 
 `ApiExceptionHandlerTest.springExceptions_shouldAllBeKnown_whenFrameworkIsUpgraded` lista cada excepción que resuelve Spring MVC con la respuesta decidida; si una versión nueva de Spring agrega otra, la prueba falla antes de que llegue a producción.
+
+## Rechazos que ocurren antes de la aplicación
+
+Tomcat rechaza estas peticiones con un 400 y una página HTML antes de que la aplicación las vea, así que no pueden tener `code` ni la forma común. Detrás del Gateway, el cliente solo las recibe si el Gateway las deja pasar.
+
+| Petición | Respuesta de Perfil | Quién la produce | Detrás del Gateway | Destino |
+|---|---|---|---|---|
+| `%zz`, `%00` o `%2F` en la **ruta** (por ejemplo `GET /api/v1/profiles/%2Fprofessional-roles`) | 400 con página HTML | Tomcat | `%zz` lo rechaza el Gateway con 400 y cuerpo vacío; `%00` pasa y el cliente recibe la página HTML de Tomcat | Sin cambio posible en Perfil ni tarea pendiente aquí: Tomcat rechaza antes de la aplicación y no hay punto de extensión que lo intercepte; el Gateway atiende estos rechazos en su tabla de rechazos de protocolo |
+| URL de unos 9000 bytes o más | 400 con página HTML | Tomcat | El Gateway responde antes 414 con cuerpo vacío | Igual que la fila anterior |
+| Encabezados cuyo total pasa unos 8 KB (24 de 350 bytes) o más de 100 encabezados en total | 400 con página HTML | Tomcat | El Gateway responde antes 431 con cuerpo vacío | Igual que la fila anterior |
+| `X-User-Id` con los bytes `0x00` a `0x08`, `0x0A` a `0x1F` o `0x7F` | 400 con página HTML | Tomcat | El Gateway ignora el `X-User-Id` del cliente y usa el `uid` del token | Igual que la fila anterior |
+| `CONNECT` | 501 con página HTML | Tomcat | El Gateway no lo enruta hasta Perfil: lo responde él mismo con un 404 JSON `NOT_FOUND` (medido) | Límite de Tomcat, sin tarea |
+
+Un `X-User-Id` con TAB o con los controles C1 (`0x80` a `0x9F`) sí llega a la aplicación y responde 401 `IDENTITY_REQUIRED`.
+
+## Respuestas que difieren del estándar
+
+Se conservan porque su corrección es de otra tarea o porque cambiarlas empeora el servicio; cada una tiene su destino.
+
+| Respuesta actual | Qué pide el estándar | Destino |
+|---|---|---|
+| `POST /api/v1/profiles` y `POST …/completion` ignoran el cuerpo: con un formulario `%zz` o con `text/plain` responden como si no lo hubiera (201, o la respuesta propia de la ruta). Con `multipart` sí responden 415 o 413, porque Spring lo lee antes de elegir el controlador | Rechazar un cuerpo que la ruta no usa | Se conserva: no leer el cuerpo es correcto y rechazarlo exigiría leerlo en rutas que no lo necesitan. Destino: sin tarea; si una ruta empieza a leer el cuerpo, valida su tipo con `consumes` |
+| Sin límite de tamaño del cuerpo JSON: un cuerpo de 30 MB se acepta y se procesa (422 `VALIDATION_FAILED`). Solo `multipart` tiene tope: 1 MiB por parte y 10 MiB por petición (413 `REQUEST_BODY_TOO_LARGE`) | OWASP API4: un tope de tamaño para la petición | Destino: el tope de tamaño del cuerpo que ya se pidió a Vela (pregunta 14 de la spec de CM-36), en el Gateway o en Cloud Run; no es exclusivo de Perfil |
+| 422 cuando el cuerpo no se puede interpretar | 400 para un cuerpo ilegible | Se conserva (decisión de contrato, [ADR 0002](adr/0002-validacion-en-422.md)) |
 
 ## Cómo se agrega un código
 
