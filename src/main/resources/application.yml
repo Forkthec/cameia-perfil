@@ -63,6 +63,11 @@ spring:
           max-interval: 2s
 
   servlet:
+    multipart:
+      # Topes declarados para que no dependan del valor por defecto de Spring: 1 MiB por parte y 10 MiB por
+      # petición. Ninguna ruta consume multipart; pasar un tope responde 413 REQUEST_BODY_TOO_LARGE.
+      max-file-size: 1MB
+      max-request-size: 10MB
     encoding:
       # Toda respuesta declara charset=UTF-8 en Content-Type, tambien las de exito, para que
       # ningun cliente adivine la codificacion de los textos con tildes.

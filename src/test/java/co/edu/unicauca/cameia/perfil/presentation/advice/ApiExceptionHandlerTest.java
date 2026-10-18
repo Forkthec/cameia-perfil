@@ -25,6 +25,7 @@ import co.edu.unicauca.cameia.perfil.domain.exception.SkillNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.TargetRoleNotFoundException;
 import co.edu.unicauca.cameia.perfil.domain.exception.UnsupportedLanguageException;
 import co.edu.unicauca.cameia.perfil.domain.exception.WorkExperienceNotFoundException;
+import org.apache.tomcat.util.http.InvalidParameterException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -53,7 +55,7 @@ import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.beans.ConversionNotSupportedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -69,6 +71,7 @@ import org.springframework.web.context.request.async.AsyncRequestNotUsableExcept
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
@@ -85,6 +88,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -99,7 +103,7 @@ class ApiExceptionHandlerTest {
 
     @RestController
     static class ThrowingController {
-        @GetMapping("/boom")
+        @RequestMapping("/boom")
         String boom() throws Exception {
             throw toThrow.get();
         }
@@ -371,6 +375,146 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("Un parámetro de consulta mal codificado responde 422 REQUEST_QUERY_INVALID_FORMAT sin errors")
+    void invalidParameter_shouldReturn422QueryInvalid_whenGet() throws Exception {
+        toThrow = () -> new InvalidParameterException("Parameter [lang] with value [%zz]");
+
+        mockMvc.perform(get("/boom"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("REQUEST_QUERY_INVALID_FORMAT"))
+                .andExpect(jsonPath("$.title").value("Consulta no válida"))
+                .andExpect(jsonPath("$.detail").value("Revisa los datos enviados."))
+                .andExpect(jsonPath("$.errors").doesNotExist())
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
+        assertThat(logs.list).anySatisfy(event -> {
+            assertThat(event.getLevel()).isEqualTo(Level.WARN);
+            assertThat(event.getFormattedMessage()).contains("REQUEST_QUERY_INVALID_FORMAT");
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
+    @DisplayName("Un formulario mal codificado en un método con cuerpo responde 415")
+    void invalidParameter_shouldReturn415_whenFormBody(String method) throws Exception {
+        toThrow = () -> new InvalidParameterException("x");
+
+        mockMvc.perform(request(HttpMethod.valueOf(method), "/boom").contentType("application/x-www-form-urlencoded"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("MEDIA_TYPE_NOT_ALLOWED"));
+    }
+
+    @Test
+    @DisplayName("El tipo de formulario con mayúsculas y charset también responde 415")
+    void invalidParameter_shouldReturn415_whenFormContentTypeHasCharsetAndUppercase() throws Exception {
+        toThrow = () -> new InvalidParameterException("x");
+
+        mockMvc.perform(request(HttpMethod.POST, "/boom")
+                        .header("Content-Type", "Application/X-WWW-Form-Urlencoded; charset=UTF-8"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("MEDIA_TYPE_NOT_ALLOWED"));
+    }
+
+    @Test
+    @DisplayName("La respuesta y el registro nunca repiten el mensaje de la excepción de Tomcat")
+    void invalidParameter_shouldNotEchoMessage() throws Exception {
+        toThrow = () -> new InvalidParameterException("Parameter [a] with value [%zz]");
+
+        var result = mockMvc.perform(get("/boom")).andReturn();
+
+        assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8)).doesNotContain("%zz");
+        assertThat(logs.list).noneSatisfy(event -> assertThat(event.getFormattedMessage()).contains("%zz"));
+    }
+
+    @Test
+    @DisplayName("Otra IllegalStateException sigue siendo un 500 genérico")
+    void illegalState_shouldReturn500_whenNotInvalidParameter() throws Exception {
+        toThrow = () -> new IllegalStateException("x");
+
+        mockMvc.perform(get("/boom"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
+    }
+
+    @Test
+    @DisplayName("Un multipart roto con Content-Type multipart responde 415 sin el mensaje de la excepción")
+    void multipart_shouldReturn415_whenMultipartContentType() throws Exception {
+        toThrow = () -> new MultipartException("no boundary SECRETO");
+
+        var result = mockMvc.perform(request(HttpMethod.POST, "/boom").contentType("multipart/form-data"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("REQUEST_MULTIPART_INVALID_FORMAT"))
+                .andExpect(jsonPath("$.detail").value("Tipo de contenido no admitido."))
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8)).doesNotContain("SECRETO");
+    }
+
+    @Test
+    @DisplayName("Un multipart que pasa el tope de tamaño responde 413 REQUEST_BODY_TOO_LARGE en WARN, sin citar el límite")
+    void multipart_shouldReturn413_whenSizeLimitIsExceeded() throws Exception {
+        toThrow = () -> new MaxUploadSizeExceededException(1_048_576L);
+
+        var result = mockMvc.perform(request(HttpMethod.POST, "/boom").contentType("multipart/form-data; boundary=B"))
+                .andExpect(status().isContentTooLarge())
+                .andExpect(jsonPath("$.code").value("REQUEST_BODY_TOO_LARGE"))
+                .andExpect(jsonPath("$.title").value("Cuerpo demasiado grande"))
+                .andExpect(jsonPath("$.detail").value("Cuerpo de la petición demasiado grande."))
+                .andExpect(jsonPath("$.requestId").isNotEmpty())
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8)).doesNotContain("1048576");
+        assertThat(logs.list).extracting(ILoggingEvent::getLevel).containsExactly(Level.WARN);
+        assertThat(logs.list.getFirst().getFormattedMessage()).contains("REQUEST_BODY_TOO_LARGE");
+    }
+
+    @Test
+    @DisplayName("Sin petición de servlet, un multipart sobre el tope también responde 413")
+    void multipart_shouldReturn413_whenSizeLimitIsExceededAndRequestIsNotServlet() {
+        var response = new ApiExceptionHandler().handleMaxUploadSizeExceededException(
+                new MaxUploadSizeExceededException(-1), new HttpHeaders(), HttpStatus.CONTENT_TOO_LARGE, mock(WebRequest.class));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(413);
+        assertThat(((ProblemDetail) response.getBody()).getProperties()).containsEntry("code", ErrorCode.REQUEST_BODY_TOO_LARGE);
+    }
+
+    @Test
+    @DisplayName("Una MultipartException con otro Content-Type es un fallo imprevisto")
+    void multipart_shouldReturn500_whenNotMultipartContentType() throws Exception {
+        toThrow = () -> new MultipartException("x");
+
+        mockMvc.perform(request(HttpMethod.POST, "/boom").contentType("application/json"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
+    }
+
+    @Test
+    @DisplayName("Sin petición de servlet, un parámetro mal codificado se trata como consulta")
+    void invalidParameter_shouldReturn422QueryInvalid_whenRequestIsNotServlet() {
+        var response = new ApiExceptionHandler().handleUnexpected(new InvalidParameterException("x"), mock(WebRequest.class));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(422);
+        assertThat(((ProblemDetail) response.getBody()).getProperties()).containsEntry("code", ErrorCode.REQUEST_QUERY_INVALID_FORMAT);
+    }
+
+    @Test
+    @DisplayName("Sin petición de servlet, una MultipartException es un fallo imprevisto")
+    void multipart_shouldReturn500_whenRequestIsNotServlet() {
+        var response = new ApiExceptionHandler().handleMultipart(new MultipartException("x"), mock(WebRequest.class));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(500);
+    }
+
+    @Test
+    @DisplayName("Una MultipartException sin Content-Type es un fallo imprevisto")
+    void multipart_shouldReturn500_whenNoContentType() throws Exception {
+        toThrow = () -> new MultipartException("x");
+
+        mockMvc.perform(request(HttpMethod.POST, "/boom"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
+    }
+
+    @Test
     @DisplayName("Un fallo no controlado responde un 500 genérico sin detalle")
     void unexpectedException_shouldReturnGeneric500_whenThrown() throws Exception {
         toThrow = () -> new RuntimeException("SELECT * FROM secreto");
@@ -488,7 +632,7 @@ class ApiExceptionHandlerTest {
                 NoResourceFoundException.class,                        // 404 ROUTE_NOT_FOUND
                 AsyncRequestTimeoutException.class,                    // 503 → 500 INTERNAL_ERROR
                 ErrorResponseException.class,                          // según su estado (prueba anterior)
-                MaxUploadSizeExceededException.class,                  // 413 → 500 INTERNAL_ERROR (sin cargas en el MVP)
+                MaxUploadSizeExceededException.class,                  // 413 REQUEST_BODY_TOO_LARGE, en WARN
                 ConversionNotSupportedException.class,                 // 500 INTERNAL_ERROR
                 TypeMismatchException.class,                           // 422 código del identificador o REQUEST_INVALID_VALUE
                 HttpMessageNotReadableException.class,                 // 422 REQUEST_BODY_INVALID_FORMAT

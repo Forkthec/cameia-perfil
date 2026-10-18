@@ -7,6 +7,12 @@ public enum ErrorCode {
     VALIDATION_FAILED,
     /** El cuerpo de la petición no se pudo leer como JSON o tiene un tipo incorrecto. */
     REQUEST_BODY_INVALID_FORMAT,
+    /** Un parámetro de la consulta no está bien codificado y no se pudo leer. */
+    REQUEST_QUERY_INVALID_FORMAT,
+    /** Un multipart de la petición no se pudo leer (por ejemplo, sin boundary). */
+    REQUEST_MULTIPART_INVALID_FORMAT,
+    /** Un multipart de la petición pasa el tamaño admitido (1 MiB por parte o 10 MiB en total). */
+    REQUEST_BODY_TOO_LARGE,
     /** Un valor rechazado por un objeto de valor, sin campo asociado. */
     REQUEST_INVALID_VALUE,
     /** Falta la identidad del usuario, o no es válida. */

@@ -306,10 +306,9 @@ class ProfileController {
             @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
                             examples = @ExampleObject(value = IDENTITY_REQUIRED_EXAMPLE))),
-            @ApiResponse(responseCode = "406", description = "El cliente no acepta JSON (code MEDIA_TYPE_NOT_ACCEPTABLE)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "El estado pedido no es PENDING, IN_PROGRESS, IN_REVIEW ni COMPLETED, "
-                    + "o llegó vacío, repetido o en minúsculas (code PROFILE_STATUS_INVALID_VALUE)",
+                    + "o llegó vacío, repetido o en minúsculas (code PROFILE_STATUS_INVALID_VALUE), "
+                    + "o la consulta está mal codificada, por ejemplo status=%zz (code REQUEST_QUERY_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
                             examples = @ExampleObject(value = PROFILE_STATUS_INVALID_EXAMPLE)))
     })
@@ -381,8 +380,6 @@ class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "409", description = "El perfil está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se guardó nada",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "415", description = "El cuerpo no es JSON (code MEDIA_TYPE_NOT_ALLOWED)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFILE_NAME_REQUIRED, "
                     + "PROFILE_NAME_INVALID_CHARACTERS, PROFILE_NAME_TOO_LONG, SUMMARY_NOT_ALLOWED (borrar el resumen de un perfil activo), "
                     + "SUMMARY_INVALID_CHARACTERS, SUMMARY_TOO_LONG, PREFERRED_MODALITY_INVALID_VALUE). Cuerpo ilegible "
@@ -414,8 +411,6 @@ class ProfileController {
                     + "o está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se agregó nada",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
                             examples = @ExampleObject(name = "Máximo alcanzado", value = WORK_EXPERIENCE_LIMIT_EXAMPLE))),
-            @ApiResponse(responseCode = "415", description = "El cuerpo no es JSON (code MEDIA_TYPE_NOT_ALLOWED)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: COMPANY_REQUIRED, "
                     + "COMPANY_TOO_LONG, COMPANY_INVALID_CHARACTERS, POSITION_REQUIRED, POSITION_TOO_LONG, POSITION_INVALID_CHARACTERS, "
                     + "DESCRIPTION_TOO_LONG, DESCRIPTION_INVALID_CHARACTERS, START_DATE_INVALID_FORMAT, START_DATE_IN_THE_FUTURE, "
@@ -475,8 +470,6 @@ class ProfileController {
                     + "o está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se agregó nada",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
                             examples = @ExampleObject(name = "Máximo alcanzado", value = EDUCATION_LIMIT_EXAMPLE))),
-            @ApiResponse(responseCode = "415", description = "El cuerpo no es JSON (code MEDIA_TYPE_NOT_ALLOWED)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: INSTITUTION_REQUIRED, "
                     + "INSTITUTION_TOO_LONG, INSTITUTION_INVALID_CHARACTERS, DEGREE_REQUIRED, DEGREE_TOO_LONG, DEGREE_INVALID_CHARACTERS, "
                     + "EDUCATION_LEVEL_REQUIRED, EDUCATION_LEVEL_INVALID_VALUE, START_DATE_REQUIRED, START_DATE_INVALID_FORMAT, "
@@ -549,9 +542,7 @@ class ProfileController {
                     + "o está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se agregó nada",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
                             examples = {@ExampleObject(name = "Máximo alcanzado", value = SKILL_LIMIT_EXAMPLE),
-                                    @ExampleObject(name = "Habilidad repetida", value = SKILL_DUPLICATE_EXAMPLE)})),
-            @ApiResponse(responseCode = "415", description = "El cuerpo no es JSON (code MEDIA_TYPE_NOT_ALLOWED)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+                                    @ExampleObject(name = "Habilidad repetida", value = SKILL_DUPLICATE_EXAMPLE)}))
     })
     @PostMapping("/{id}/skills")
     ResponseEntity<ProfileResponse> addSkill(@PathVariable UUID id,

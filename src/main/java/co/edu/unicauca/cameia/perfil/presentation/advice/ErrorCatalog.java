@@ -8,6 +8,7 @@ import java.util.Map;
 
 import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.*;
 import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.CONTENT_TOO_LARGE;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
@@ -56,6 +57,12 @@ final class ErrorCatalog {
             entry(VALIDATION_FAILED, UNPROCESSABLE_CONTENT, "Datos no válidos", "Revisa los campos marcados."),
             entry(REQUEST_BODY_INVALID_FORMAT, UNPROCESSABLE_CONTENT, "Datos no válidos",
                     "Revisa el formato de los datos enviados."),
+            entry(REQUEST_QUERY_INVALID_FORMAT, UNPROCESSABLE_CONTENT, "Consulta no válida",
+                    "Revisa los datos enviados."),
+            entry(REQUEST_MULTIPART_INVALID_FORMAT, UNSUPPORTED_MEDIA_TYPE, "Tipo de contenido no admitido",
+                    "Tipo de contenido no admitido."),
+            entry(REQUEST_BODY_TOO_LARGE, CONTENT_TOO_LARGE, "Cuerpo demasiado grande",
+                    "Cuerpo de la petición demasiado grande."),
             entry(REQUEST_INVALID_VALUE, UNPROCESSABLE_CONTENT, "Valor no válido", "Revisa los datos enviados."),
             entry(IDENTITY_REQUIRED, UNAUTHORIZED, "Identidad requerida", "Tu sesión expiró. Inicia sesión de nuevo."),
             entry(ROUTE_NOT_FOUND, NOT_FOUND, "Ruta no encontrada", "No existe la ruta solicitada."),

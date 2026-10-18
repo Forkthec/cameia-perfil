@@ -26,14 +26,18 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 
 import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.REQUEST_ID_HEADER;
 import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.firebaseUid;
@@ -46,7 +50,8 @@ import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses
  * Única frontera donde las excepciones se traducen a HTTP: decide el código de cada excepción.
  *
  * <p>Usa ProblemDetail de RFC 9457. Toda respuesta de error lleva {@code code} y {@code requestId},
- * y el encabezado {@code X-Request-Id}. Un fallo no controlado responde un mensaje genérico.</p>
+ * y el encabezado {@code X-Request-Id}. Un fallo no controlado responde un mensaje genérico,
+ * salvo el rechazo de un parámetro mal codificado, que es un dato del cliente.</p>
  */
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
@@ -79,8 +84,41 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return reject(problem, request);
     }
 
+    /**
+     * Perfil no recibe multipart: uno roto es un tipo de contenido no admitido, no un fallo del servicio.
+     * Si el {@code Content-Type} no es multipart, la excepción es imprevista y sigue su camino.
+     */
+    @ExceptionHandler(MultipartException.class)
+    ResponseEntity<Object> handleMultipart(MultipartException ex, WebRequest request) {
+        var servlet = request instanceof ServletWebRequest web ? web.getRequest() : null;
+        var type = servlet != null ? servlet.getContentType() : null;
+        if (type != null && type.toLowerCase(Locale.ROOT).startsWith("multipart/")) {
+            return reject(ErrorCode.REQUEST_MULTIPART_INVALID_FORMAT, null, request);
+        }
+        return handleUnexpected(ex, request);
+    }
+
+    /**
+     * Un multipart que pasa el tope de tamaño (1 MiB por parte, 10 MiB por petición) es un dato del cliente: 413 con su
+     * código propio y {@code WARN}. Se sobrescribe el manejador heredado para que no pase por el respaldo del framework,
+     * que lo registraría en {@code ERROR} y lo mostraría como otra causa. El mensaje no cita el límite ni lo recibido.
+     */
+    @Override
+    protected ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        return reject(ErrorCode.REQUEST_BODY_TOO_LARGE, null, request);
+    }
+
     @ExceptionHandler(Exception.class)
     ResponseEntity<Object> handleUnexpected(Exception ex, WebRequest request) {
+        if (BadParameterEncoding.matches(ex)) {
+            // Un parámetro mal codificado es un dato del cliente, no un fallo del servicio. Si venía de un
+            // formulario es un tipo de contenido no admitido; si venía de la consulta, una consulta no válida.
+            var servlet = request instanceof ServletWebRequest web ? web.getRequest() : null;
+            var form = servlet != null
+                    && BadParameterEncoding.fromFormBody(servlet.getMethod(), servlet.getContentType());
+            return reject(form ? ErrorCode.MEDIA_TYPE_NOT_ALLOWED : ErrorCode.REQUEST_QUERY_INVALID_FORMAT, null, request);
+        }
         var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
         // Sin los mensajes de la cadena: pueden traer datos del perfil (valores de columnas, SQL con parámetros).
         log.error("Fallo no controlado: requestId={} firebaseUid={} sqlState={}",

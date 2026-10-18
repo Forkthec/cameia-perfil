@@ -352,3 +352,19 @@ Correr: levantar el jar empaquetado y la base de `docker compose`; `newman run d
 4. Lista de verificación de la spec (V-01 a V-15), fila por fila.
 5. `ejecucion/evidencia/CM-335/resumen.md`: lo hecho por tarjeta, cobertura por clase, hallazgos, líneas o ramas sin cubrir, commits y la tabla regla R1–R14 → evidencia con salida real. No marcar «cumple» lo que no se ejecutó.
 6. Sin push ni PR: se pregunta a Paula con el resumen.
+
+---
+
+## Resultados de la ejecución (18-oct-2026)
+
+| Tarjeta | Antes del arreglo | Después | Commit |
+|---|---|---|---|
+| T0 | Línea base `clean verify` en `bbe74c6`: 322 pruebas de integración, 0 fallos, 0 omitidas | — | — |
+| T1 | 4 de 6 pruebas de `ProtocolErrorsEndToEndIT` fallan (500 sin `code`); las 2 de control pasan | 6 de 6 | filtro de formularios apagado |
+| T2 | 16 de 26 fallan (formulario en `POST`, consultas `%zz`/`%C3`/`%FF`, `status`, parámetro largo, 20 repeticiones, 50 en paralelo, registro, 2 multipart) | 26 de 26; unitarias 97 en verde | 415 o 422 a formulario, consulta y multipart |
+| T3 | `trace_…` y `error_…` fallan (el cuerpo es el de Spring por defecto) | `ContainerErrorControllerTest` 13 de 13; `ProtocolErrorsEndToEndIT` 28 de 28; `OpenApiDocumentIT` 12 de 12 | forma común a los errores del contenedor |
+| T4 | 7 casos de `FirebaseUidTest` fallan (la identidad con caracteres de control se aceptaba) | `FirebaseUidTest` 23 de 23; TAB, `0x85` y `0x9f` por HTTP: 401 | caracteres de control en la identidad |
+| T5 | — | Newman, carpeta «Errores de protocolo» (7 peticiones): 39 aserciones, 0 fallos | colección de Postman |
+| T6 | — | `ErrorCodeDocumentationTest` en verde | catálogo, ADR 0008 y bitácora |
+
+Desviaciones de la tarjeta T5: P-01 y P-03 usan un identificador de perfil fijo en vez de crear el perfil de `uid-cm335-a`, porque el 415 se decide antes de ejecutar el caso de uso y así la carpeta no depende de otra; la URL de las peticiones con consulta lleva el arreglo `query` de Postman, sin el cual Newman descarta `?lang=%zz` y responde 200. Se agregaron P-04 (`%C3`), P-05 (multipart sin `boundary`), P-06 (`TRACE`) y P-07 (`GET /error`).
