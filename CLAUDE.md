@@ -115,6 +115,7 @@ El servicio solo debe aceptar tráfico del API Gateway; la autenticidad la garan
 | Método | Ruta (bajo `/api/v1/profiles`) | Qué hace |
 |---|---|---|
 | `POST` | (la raíz, `/api/v1/profiles`) | Crea el perfil del usuario |
+| `GET` | (la raíz, `/api/v1/profiles`) | Lista los perfiles del usuario, del más antiguo al más reciente, con sus roles objetivo; `?status=IN_PROGRESS\|COMPLETED` filtra (422 si el valor no es de la lista); sin paginación y sin caché |
 | `GET` | `/{id}` | Lee un perfil |
 | `PATCH` | `/{id}` | Edita nombre, titular y resumen |
 | `POST`, `DELETE` | `/{id}/work-experiences`, `/{id}/work-experiences/{expId}` | Agrega o quita experiencia laboral |
@@ -201,6 +202,6 @@ Las specs nuevas viven en `specs/CM-NNN-Descripcion/` con `Descripcion` en Pasca
 | El cupo de perfiles es fijo en 1 (Plan Free), a la espera de la réplica del plan | Backend y Product Owner | Perfiles múltiples según el plan |
 | Swagger UI y OpenAPI sin bandera de apagado ni perfil `prod` | Backend (CM-283) | Cerrar la documentación en producción |
 | Cobertura por debajo de la meta del estándar | Backend (CM-283) | Cumplir el 70 % de la rúbrica y la meta del 90 % |
-| Lecturas que consume Entrevista (`GET /api/v1/profiles?status=COMPLETED`, con paginación, y las sugerencias de roles): no existen en el código | Backend, con Entrevista | Integración con Entrevista |
+| Las sugerencias de roles que consume Entrevista no existen en el código | Backend, con Entrevista | Integración con Entrevista |
 | Extracción de CV, sugerencias y asistente de redacción con IA: sin implementar (`Resume`, `QuotaGuard`, adaptadores de LLM) | Backend y Product Owner | Todo lo que dependa de IA |
 | El Job `profile-events-relay` no está programado en staging | DevOps, por una tarea de Vela | Reintentar en staging lo que falle tras el commit |

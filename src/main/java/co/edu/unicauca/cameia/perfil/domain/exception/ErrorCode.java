@@ -44,6 +44,8 @@ public enum ErrorCode {
     SKILL_ALREADY_EXISTS,
     /** El idioma pedido al catálogo de roles profesionales no está disponible. */
     PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE,
+    /** El filtro de estado de la lista no es un estado del perfil. */
+    PROFILE_STATUS_INVALID_VALUE,
     /** No existe la ruta solicitada. */
     ROUTE_NOT_FOUND,
     /** El método HTTP no está permitido en la ruta. */

@@ -6,6 +6,7 @@ import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileSkill;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
@@ -23,6 +24,7 @@ import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.WorkExper
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -150,6 +152,18 @@ final class ProfessionalProfileMapping {
                 e.getCreatedAt(),
                 e.getUpdatedAt(),
                 roles, exps, edus, skills);
+    }
+
+    /**
+     * Toma de la entidad solo lo que muestra la lista de perfiles. Los roles se ordenan aquí, por creación y
+     * luego por id, para no depender del orden que Hibernate da a una colección traída con {@code join fetch}.
+     */
+    static ProfileSummary toProfileSummary(ProfessionalProfileEntity e) {
+        List<ProfileSummary.TargetRoleSummary> roles = e.getTargetRoles().stream()
+                .sorted(Comparator.comparing(TargetRoleEntity::getCreatedAt).thenComparing(TargetRoleEntity::getId))
+                .map(r -> new ProfileSummary.TargetRoleSummary(r.getRolProfesionalId(), r.getRoleTitle()))
+                .toList();
+        return new ProfileSummary(ProfileId.of(e.getId()), e.getName(), e.getStatus(), e.getCreatedAt(), roles);
     }
 
     private static WorkExperience toWorkExpDomain(WorkExperienceEntity e) {

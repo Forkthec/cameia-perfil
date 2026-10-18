@@ -9,6 +9,10 @@ import co.edu.unicauca.cameia.perfil.domain.exception.ProfileCreationInProgressE
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateSkillException;
 import co.edu.unicauca.cameia.perfil.domain.exception.DuplicateTargetRoleException;
 import co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileStatusInvalidException;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileSummary;
 import co.edu.unicauca.cameia.perfil.domain.exception.IncompleteProfileException;
 import co.edu.unicauca.cameia.perfil.domain.model.CompletionRequirement;
 import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
@@ -41,6 +45,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +56,10 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -77,6 +86,126 @@ class ProfileControllerTest {
                 .standaloneSetup(new ProfileController(profileAppService, profileCreationAppService))
                 .setControllerAdvice(new ApiExceptionHandler())
                 .build();
+    }
+
+    private static ProfileSummary summaryWithOneRole() {
+        return new ProfileSummary(ProfileId.of(UUID.fromString("3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10")), "Analista de datos",
+                ProfileStatus.COMPLETED, Instant.parse("2026-10-01T10:00:00Z"),
+                List.of(new ProfileSummary.TargetRoleSummary(
+                        UUID.fromString("a0000002-0000-0000-0000-000000000002"), "Analista de Datos")));
+    }
+
+    @Test
+    @DisplayName("La lista trae por perfil exactamente id, name, status y targetRoles, y por rol professionalRoleId y roleTitle")
+    void listProfiles_shouldReturnContractShape() throws Exception {
+        when(profileAppService.listProfiles("uid-a", null)).thenReturn(List.of(summaryWithOneRole()));
+
+        mockMvc.perform(get("/api/v1/profiles").header("X-User-Id", "uid-a"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(1)))
+                .andExpect(jsonPath("$.profiles[0].*", containsInAnyOrder(
+                        "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10", "Analista de datos", "COMPLETED", List.of(Map.of(
+                                "professionalRoleId", "a0000002-0000-0000-0000-000000000002",
+                                "roleTitle", "Analista de Datos")))))
+                .andExpect(jsonPath("$.profiles[0].id").value("3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"))
+                .andExpect(jsonPath("$.profiles[0].name").value("Analista de datos"))
+                .andExpect(jsonPath("$.profiles[0].status").value("COMPLETED"))
+                .andExpect(jsonPath("$.profiles[0].targetRoles[0].*", containsInAnyOrder(
+                        "a0000002-0000-0000-0000-000000000002", "Analista de Datos")))
+                .andExpect(jsonPath("$.profiles[0].targetRoles[0].professionalRoleId")
+                        .value("a0000002-0000-0000-0000-000000000002"))
+                .andExpect(jsonPath("$.profiles[0].targetRoles[0].roleTitle").value("Analista de Datos"));
+    }
+
+    @Test
+    @DisplayName("Sin perfiles la respuesta es un objeto con la lista vacía")
+    void listProfiles_shouldReturnEmptyArray_whenNoProfiles() throws Exception {
+        when(profileAppService.listProfiles("uid-a", null)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/profiles").header("X-User-Id", "uid-a"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"profiles\":[]}", true));
+    }
+
+    @Test
+    @DisplayName("Un perfil sin nombre ni roles sale con name nulo y targetRoles vacío")
+    void listProfiles_shouldReturnNullNameAndEmptyRoles_whenProfileIsNew() throws Exception {
+        when(profileAppService.listProfiles("uid-a", null)).thenReturn(List.of(new ProfileSummary(
+                ProfileId.generate(), null, ProfileStatus.IN_PROGRESS, Instant.parse("2026-10-01T10:00:00Z"), List.of())));
+
+        mockMvc.perform(get("/api/v1/profiles").header("X-User-Id", "uid-a"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.profiles[0].name").value(nullValue()))
+                .andExpect(jsonPath("$.profiles[0]", hasKey("name")))
+                .andExpect(jsonPath("$.profiles[0].targetRoles", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("La respuesta lleva Cache-Control: no-store")
+    void listProfiles_shouldSendNoStore() throws Exception {
+        when(profileAppService.listProfiles("uid-a", null)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/profiles").header("X-User-Id", "uid-a"))
+                .andExpect(header().string("Cache-Control", "no-store"));
+    }
+
+    @Test
+    @DisplayName("El filtro de estado llega tal cual al servicio")
+    void listProfiles_shouldPassStatusToService() throws Exception {
+        when(profileAppService.listProfiles("uid-a", "COMPLETED")).thenReturn(List.of(summaryWithOneRole()));
+
+        mockMvc.perform(get("/api/v1/profiles").param("status", "COMPLETED").header("X-User-Id", "uid-a"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.profiles", hasSize(1)));
+    }
+
+    @Test
+    @DisplayName("Un estado inválido responde 422 con su código, sin lista errors y sin repetir el valor")
+    void listProfiles_shouldReturn422_whenStatusInvalid() throws Exception {
+        when(profileAppService.listProfiles("uid-a", "VALOR-SECRETO")).thenThrow(new ProfileStatusInvalidException());
+
+        mockMvc.perform(get("/api/v1/profiles").param("status", "VALOR-SECRETO").header("X-User-Id", "uid-a"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("PROFILE_STATUS_INVALID_VALUE"))
+                .andExpect(jsonPath("$.title").value("Estado no válido"))
+                .andExpect(jsonPath("$.detail").value("Selecciona una opción."))
+                .andExpect(jsonPath("$.requestId").isNotEmpty())
+                .andExpect(jsonPath("$.errors").doesNotExist())
+                .andExpect(content().string(not(containsString("VALOR-SECRETO"))));
+    }
+
+    @Test
+    @DisplayName("Sin identidad la lista responde 401 IDENTITY_REQUIRED")
+    void listProfiles_shouldReturn401_whenIdentityMissing() throws Exception {
+        when(profileAppService.listProfiles(null, null)).thenThrow(new IdentityRequiredException());
+
+        mockMvc.perform(get("/api/v1/profiles"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("IDENTITY_REQUIRED"))
+                .andExpect(jsonPath("$.detail").value("Tu sesión expiró. Inicia sesión de nuevo."));
+    }
+
+    @Test
+    @DisplayName("Una identidad de 129 caracteres responde 401 IDENTITY_REQUIRED")
+    void listProfiles_shouldReturn401_whenIdentityTooLong() throws Exception {
+        var uid = "a".repeat(129);
+        when(profileAppService.listProfiles(uid, null)).thenThrow(new IdentityRequiredException());
+
+        mockMvc.perform(get("/api/v1/profiles").header("X-User-Id", uid))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("IDENTITY_REQUIRED"));
+    }
+
+    @Test
+    @DisplayName("Cualquier otro parámetro se ignora: el servicio recibe solo la identidad del encabezado")
+    void listProfiles_shouldIgnoreUnknownParameters() throws Exception {
+        when(profileAppService.listProfiles("uid-a", null)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/profiles").param("firebaseUid", "uid-otro").param("ownerId", "uid-otro")
+                        .header("X-User-Id", "uid-a"))
+                .andExpect(status().isOk());
+
+        verify(profileAppService).listProfiles("uid-a", null);
     }
 
     @Test

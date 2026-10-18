@@ -24,6 +24,8 @@ import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileSkill;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatusFilter;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.SalaryExpectation;
@@ -42,6 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -75,6 +78,24 @@ public class ProfileAppService {
         this.clock = clock;
         this.birthDateReplica = birthDateReplica;
         this.events = events;
+    }
+
+    /**
+     * Lista los perfiles de quien llama, con sus roles objetivo, del primero creado al último.
+     *
+     * <p>La identidad se revisa antes que el filtro: sin identidad la respuesta es 401 aunque el filtro también
+     * sea inválido. El dueño sale siempre del Gateway; ningún parámetro de la consulta lo cambia.</p>
+     *
+     * @param uid    valor de {@code X-User-Id}
+     * @param status valor de {@code ?status=}, o {@code null}
+     * @return los perfiles; vacía si no hay
+     * @throws co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException     si la identidad falta o no es válida
+     * @throws co.edu.unicauca.cameia.perfil.domain.exception.ProfileStatusInvalidException si el filtro no es un estado
+     */
+    public List<ProfileSummary> listProfiles(String uid, String status) {
+        var owner = FirebaseUid.required(uid);
+        var filter = ProfileStatusFilter.parse(status).orElse(null);
+        return repository.findSummariesByOwner(owner, filter);
     }
 
     /**

@@ -7,6 +7,8 @@ import co.edu.unicauca.cameia.perfil.domain.exception.ProfileUpdateInProgressExc
 import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatus;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileSummary;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.ProfessionalProfileEntity;
 import jakarta.persistence.EntityManager;
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -163,5 +166,17 @@ class ProfessionalProfileRepositoryAdapter implements ProfessionalProfileReposit
     @Transactional(readOnly = true)
     public Optional<ProfessionalProfile> findLatestByFirebaseUid(FirebaseUid firebaseUid) {
         return jpa.findFirstByFirebaseUidOrderByCreatedAtDesc(firebaseUid.value()).map(ProfessionalProfileMapping::toDomain);
+    }
+
+    /**
+     * Lee los perfiles del dueño con sus roles en una sola sentencia; el mapeo toma solo lo que muestra la lista.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProfileSummary> findSummariesByOwner(FirebaseUid owner, ProfileStatus status) {
+        var entities = status == null
+                ? jpa.findWithTargetRolesByFirebaseUid(owner.value())
+                : jpa.findWithTargetRolesByFirebaseUidAndStatus(owner.value(), status);
+        return entities.stream().map(ProfessionalProfileMapping::toProfileSummary).toList();
     }
 }

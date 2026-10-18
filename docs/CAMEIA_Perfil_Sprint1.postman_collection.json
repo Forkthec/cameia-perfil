@@ -84,7 +84,11 @@
     {
       "key": "role_d",
       "value": ""
-    }
+    },
+    {"key": "cm201_a", "value": ""},
+    {"key": "cm201_b", "value": ""},
+    {"key": "cm201_profile", "value": ""},
+    {"key": "des02_uid", "value": ""}
   ],
   "item": [
     {
@@ -10217,6 +10221,874 @@
                   "value": "{{rabbitPassword}}",
                   "type": "string"
                 }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HU-4.2 — Lista de perfiles",
+      "item": [
+        {
+          "name": "L-01 Sin perfiles: 200 con la lista vacía",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('cm201_a', 'uid-cm201-a-' + pm.variables.replaceIn('{{$guid}}'));",
+                  "pm.collectionVariables.set('cm201_b', 'uid-cm201-b-' + pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "H.typeOk('application/json');",
+                  "H.fast();",
+                  "pm.test('Cache-Control no-store', () => pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL/));",
+                  "const b = pm.response.json();",
+                  "pm.test('Solo la clave profiles', () => pm.expect(Object.keys(b)).to.eql(['profiles']));",
+                  "pm.test('profiles vacía', () => pm.expect(b.profiles).to.eql([]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-02a Crea el perfil de A",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "H.replicate(pm.collectionVariables.get('cm201_a'), '1990-01-01', 400);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('cm201_profile', pm.response.json().id);",
+                  "H.replicated();"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-02 Borrador: 1 elemento IN_PROGRESS con name nulo y 4 claves",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "H.typeOk('application/json');",
+                  "H.fast();",
+                  "pm.test('Cache-Control no-store', () => pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL/));",
+                  "const b = pm.response.json();",
+                  "pm.test('Solo la clave profiles', () => pm.expect(Object.keys(b)).to.eql(['profiles']));",
+                  "pm.test('Un elemento', () => pm.expect(b.profiles.length).to.eql(1));",
+                  "const p = b.profiles[0];",
+                  "pm.test('Exactamente id, name, status y targetRoles', () => pm.expect(Object.keys(p).sort()).to.eql(['id','name','status','targetRoles']));",
+                  "pm.test('IN_PROGRESS, name nulo y sin roles', () => { pm.expect(p.id).to.eql(pm.collectionVariables.get('cm201_profile')); pm.expect(p.status).to.eql('IN_PROGRESS'); pm.expect(p.name).to.eql(null); pm.expect(p.targetRoles).to.eql([]); });",
+                  "pm.test('Tiempo menor a 2000 ms', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-03a Nombre y resumen",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{cm201_profile}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{cm201_profile}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Analista de datos\", \"summary\": \"Analista con tres años en banca.\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "L-03b Formación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{cm201_profile}}/educations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{cm201_profile}}",
+                "educations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"institution\": \"Universidad del Cauca\", \"degree\": \"Ingeniería de Sistemas\", \"level\": \"UNDERGRADUATE\", \"startDate\": \"2018-01\", \"inProgress\": false}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "L-03c Habilidad",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{cm201_profile}}/skills",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{cm201_profile}}",
+                "skills"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"skillName\": \"Python\", \"level\": \"INTERMEDIATE\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "L-03d Rol objetivo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{cm201_profile}}/target-roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{cm201_profile}}",
+                "target-roles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"professionalRoleId\": \"a0000002-0000-0000-0000-000000000002\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "L-03e Finaliza el perfil",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles/{{cm201_profile}}/completion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles",
+                "{{cm201_profile}}",
+                "completion"
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-03 Activo: 1 elemento COMPLETED con su rol",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "H.typeOk('application/json');",
+                  "H.fast();",
+                  "pm.test('Cache-Control no-store', () => pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL/));",
+                  "const b = pm.response.json();",
+                  "pm.test('Solo la clave profiles', () => pm.expect(Object.keys(b)).to.eql(['profiles']));",
+                  "const p = b.profiles[0];",
+                  "pm.test('COMPLETED con el nombre', () => { pm.expect(b.profiles.length).to.eql(1); pm.expect(p.status).to.eql('COMPLETED'); pm.expect(p.name).to.eql('Analista de datos'); });",
+                  "pm.test('Rol con professionalRoleId y roleTitle', () => { pm.expect(p.targetRoles.length).to.eql(1); pm.expect(Object.keys(p.targetRoles[0]).sort()).to.eql(['professionalRoleId','roleTitle']); pm.expect(p.targetRoles[0].professionalRoleId).to.eql('a0000002-0000-0000-0000-000000000002'); pm.expect(p.targetRoles[0].roleTitle).to.be.a('string').and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-04 ?status=COMPLETED: 1 elemento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "H.typeOk('application/json');",
+                  "H.fast();",
+                  "pm.test('Cache-Control no-store', () => pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL/));",
+                  "const b = pm.response.json();",
+                  "pm.test('Solo la clave profiles', () => pm.expect(Object.keys(b)).to.eql(['profiles']));",
+                  "pm.test('Un elemento COMPLETED', () => { pm.expect(b.profiles.length).to.eql(1); pm.expect(b.profiles[0].status).to.eql('COMPLETED'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles?status=COMPLETED",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "COMPLETED"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-05 ?status=IN_PROGRESS: lista vacía",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "H.typeOk('application/json');",
+                  "H.fast();",
+                  "pm.test('Cache-Control no-store', () => pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL/));",
+                  "const b = pm.response.json();",
+                  "pm.test('Solo la clave profiles', () => pm.expect(Object.keys(b)).to.eql(['profiles']));",
+                  "pm.test('profiles vacía', () => pm.expect(b.profiles).to.eql([]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles?status=IN_PROGRESS",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "IN_PROGRESS"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-06 ?status=completed: 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "H.problem(422, 'PROFILE_STATUS_INVALID_VALUE', 'Selecciona una opción.');",
+                  "pm.test('Sin lista errors', () => pm.expect(pm.response.json()).to.not.have.property('errors'));",
+                  "pm.test('Título del catálogo', () => pm.expect(pm.response.json().title).to.eql('Estado no válido'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles?status=completed",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "completed"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-07 ?status= vacío: 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "H.problem(422, 'PROFILE_STATUS_INVALID_VALUE', 'Selecciona una opción.');",
+                  "pm.test('Sin lista errors', () => pm.expect(pm.response.json()).to.not.have.property('errors'));",
+                  "pm.test('Título del catálogo', () => pm.expect(pm.response.json().title).to.eql('Estado no válido'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles?status=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-08 Identificador ajeno en la consulta se ignora",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "H.typeOk('application/json');",
+                  "H.fast();",
+                  "pm.test('Cache-Control no-store', () => pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL/));",
+                  "const b = pm.response.json();",
+                  "pm.test('Solo la clave profiles', () => pm.expect(Object.keys(b)).to.eql(['profiles']));",
+                  "pm.test('B no ve los perfiles de A', () => pm.expect(b.profiles).to.eql([]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles?firebaseUid={{cm201_a}}&uid={{cm201_a}}&ownerId={{cm201_a}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ],
+              "query": [
+                {
+                  "key": "firebaseUid",
+                  "value": "{{cm201_a}}"
+                },
+                {
+                  "key": "uid",
+                  "value": "{{cm201_a}}"
+                },
+                {
+                  "key": "ownerId",
+                  "value": "{{cm201_a}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-09 Sin X-User-Id: 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "H.problem(401, 'IDENTITY_REQUIRED', 'Tu sesión expiró. Inicia sesión de nuevo.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-10 X-User-Id de 129 caracteres: 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "H.problem(401, 'IDENTITY_REQUIRED', 'Tu sesión expiró. Inicia sesión de nuevo.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-11 Accept application/xml: 406",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 406', () => pm.response.to.have.status(406));",
+                  "pm.test('code MEDIA_TYPE_NOT_ACCEPTABLE', () => pm.expect(pm.response.json().code).to.eql('MEDIA_TYPE_NOT_ACCEPTABLE'));",
+                  "pm.test('requestId presente', () => pm.expect(pm.response.json().requestId).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{cm201_a}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/xml"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "DES-02 — HU-4.2",
+      "item": [
+        {
+          "name": "L-12a Crea el perfil de la medición",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('des02_uid', 'uid-des-cm201-' + pm.variables.replaceIn('{{$guid}}'));",
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "H.replicate(pm.collectionVariables.get('des02_uid'), '1990-01-01', 400);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "H.replicated();"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{des02_uid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "L-12 GET /profiles de la medición",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const H = eval(pm.globals.get('hu24Helpers'));",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "H.typeOk('application/json');",
+                  "H.fast();",
+                  "pm.test('Cache-Control no-store', () => pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'));",
+                  "pm.test('Sin trazas ni nombres internos', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL/));",
+                  "const b = pm.response.json();",
+                  "pm.test('Solo la clave profiles', () => pm.expect(Object.keys(b)).to.eql(['profiles']));",
+                  "pm.test('Un perfil', () => pm.expect(b.profiles.length).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{des02_uid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profiles"
               ]
             }
           }

@@ -87,6 +87,7 @@ final class ErrorCatalog {
             entry(PROFILE_INCOMPLETE, UNPROCESSABLE_CONTENT, "Finalización incompleta", null),
             entry(PROFESSIONAL_ROLE_NOT_FOUND, NOT_FOUND, "Rol profesional no encontrado", null),
             entry(PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE, UNPROCESSABLE_CONTENT, "Idioma no disponible", null),
+            entry(PROFILE_STATUS_INVALID_VALUE, UNPROCESSABLE_CONTENT, "Estado no válido", null),
             entry(TARGET_ROLE_LIMIT_REACHED, CONFLICT, "Máximo de roles objetivo alcanzado", null),
             entry(TARGET_ROLE_ALREADY_EXISTS, CONFLICT, "Rol objetivo duplicado", null),
             entry(TARGET_ROLE_NOT_ALLOWED, CONFLICT, "No se puede eliminar el último rol objetivo", null),
