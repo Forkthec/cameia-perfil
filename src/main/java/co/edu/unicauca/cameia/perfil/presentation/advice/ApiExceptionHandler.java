@@ -39,8 +39,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 
-import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.REQUEST_ID_HEADER;
 import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.firebaseUid;
+import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.markLogged;
 import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.problem;
 import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.requestId;
 import static co.edu.unicauca.cameia.perfil.presentation.advice.ProblemResponses.respond;
@@ -119,8 +119,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                     && BadParameterEncoding.fromFormBody(servlet.getMethod(), servlet.getContentType());
             return reject(form ? ErrorCode.MEDIA_TYPE_NOT_ALLOWED : ErrorCode.REQUEST_QUERY_INVALID_FORMAT, null, request);
         }
-        var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
+        var requestId = requestId(request);
         // Sin los mensajes de la cadena: pueden traer datos del perfil (valores de columnas, SQL con parámetros).
+        markLogged(request);
         log.error("Fallo no controlado: requestId={} firebaseUid={} sqlState={}",
                 requestId, firebaseUid(request), RedactedException.sqlState(ex), RedactedException.of(ex));
         return respond(problem(ErrorCode.INTERNAL_ERROR, null), requestId);
@@ -209,6 +210,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             return withHeaders(invalidValue(ex, request), response.getHeaders());
         }
         if (!statusCode.is5xxServerError()) {
+            markLogged(request);
             log.error("Rechazo del framework sin código en el catálogo: estado={} origen={}",
                     statusCode.value(), RedactedException.origin(ex));
         }
@@ -217,7 +219,8 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     /** Un 400 del framework sin código propio: responde el valor no válido y deja el origen en el log. */
     private ResponseEntity<Object> invalidValue(Exception ex, WebRequest request) {
-        var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
+        var requestId = requestId(request);
+        markLogged(request);
         log.warn("Rechazo del framework sin código propio: code={} requestId={} firebaseUid={} origen={}",
                 ErrorCode.REQUEST_INVALID_VALUE, requestId, firebaseUid(request), RedactedException.origin(ex));
         return respond(problem(ErrorCode.REQUEST_INVALID_VALUE, null), requestId);
@@ -230,7 +233,8 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     /** Registra el rechazo con su código, el identificador de la petición y la identidad, y lo responde. */
     private ResponseEntity<Object> reject(ProblemDetail problem, WebRequest request) {
-        var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
+        var requestId = requestId(request);
+        markLogged(request);
         // Un 5xx significa que alguien debe actuar (por ejemplo, una réplica que nunca llegó); los 4xx son resultados esperables del cliente.
         if (problem.getStatus() >= 500) {
             log.error("Rechazo de negocio con estado de servidor: code={} requestId={} firebaseUid={}",

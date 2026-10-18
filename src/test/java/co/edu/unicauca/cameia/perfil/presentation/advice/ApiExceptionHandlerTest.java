@@ -468,6 +468,19 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("Un rechazo deja la petición marcada como registrada y conserva su requestId para el despacho de error")
+    void reject_shouldMarkRequestAsLogged_whenAnyErrorIsAnswered() throws Exception {
+        toThrow = () -> new MaxUploadSizeExceededException(1L);
+
+        var result = mockMvc.perform(request(HttpMethod.POST, "/boom").contentType("multipart/form-data; boundary=B"))
+                .andReturn();
+
+        var web = new org.springframework.web.context.request.ServletWebRequest(result.getRequest());
+        assertThat(ProblemResponses.alreadyLogged(web)).isTrue();
+        assertThat(ProblemResponses.requestId(web)).isEqualTo(result.getResponse().getHeader("X-Request-Id"));
+    }
+
+    @Test
     @DisplayName("Sin petición de servlet, un multipart sobre el tope también responde 413")
     void multipart_shouldReturn413_whenSizeLimitIsExceededAndRequestIsNotServlet() {
         var response = new ApiExceptionHandler().handleMaxUploadSizeExceededException(

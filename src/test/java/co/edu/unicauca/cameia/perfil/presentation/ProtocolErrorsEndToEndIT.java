@@ -191,6 +191,38 @@ class ProtocolErrorsEndToEndIT {
     }
 
     @Test
+    @DisplayName("Un cuerpo troceado con un trozo mal formado responde 422 REQUEST_BODY_INVALID_FORMAT con la ruta original y un solo registro")
+    void post_shouldAnswerOnceWithBodyInvalidFormat_whenChunkedBodyIsMalformed(CapturedOutput output) throws Exception {
+        var requestId = "cm335-chunk-" + System.nanoTime();
+
+        var reply = new RawHttpClient(port).send("POST", PROFILE + "/skills",
+                List.of("Content-Type: application/json", "Transfer-Encoding: chunked", "X-User-Id: " + UID,
+                        "X-Request-Id: " + requestId), "zz\r\nabc\r\n0\r\n\r\n");
+
+        assertCommonProblem(reply, 422, "REQUEST_BODY_INVALID_FORMAT");
+        var json = mapper.readTree(reply.body());
+        assertThat(json.get("detail").asString()).isEqualTo("Revisa el formato de los datos enviados.");
+        assertThat(json.get("instance").asString()).isEqualTo(PROFILE + "/skills");
+        assertThat(json.get("requestId").asString()).isEqualTo(requestId);
+        assertThat(linesWith(output, requestId)).singleElement().satisfies(line -> assertThat(line)
+                .contains(" WARN ", "code=REQUEST_BODY_INVALID_FORMAT", "firebaseUid=" + UID));
+    }
+
+    @Test
+    @DisplayName("Sin X-Request-Id, un cuerpo troceado mal formado responde con el identificador que quedó en el único registro")
+    void post_shouldKeepGeneratedRequestId_whenChunkedBodyIsMalformedWithoutRequestIdHeader(CapturedOutput output)
+            throws Exception {
+        var reply = new RawHttpClient(port).send("POST", PROFILE + "/skills",
+                List.of("Content-Type: application/json", "Transfer-Encoding: chunked", "X-User-Id: " + UID),
+                "zz\r\nabc\r\n0\r\n\r\n");
+
+        assertCommonProblem(reply, 422, "REQUEST_BODY_INVALID_FORMAT");
+        var requestId = mapper.readTree(reply.body()).get("requestId").asString();
+        assertThat(linesWith(output, requestId)).singleElement().satisfies(line -> assertThat(line)
+                .contains(" WARN ", "code=REQUEST_BODY_INVALID_FORMAT"));
+    }
+
+    @Test
     @DisplayName("Un multipart de 0,5 MB bien formado conserva su respuesta de siempre: 415 de tipo no admitido")
     void post_shouldKeepMediaTypeAnswer_whenMultipartIsHalfMegabyte() throws Exception {
         var reply = new RawHttpClient(port).send("POST", PROFILE + "/skills", multipartHeaders(null),
