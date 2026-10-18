@@ -55,6 +55,20 @@ class FirebaseUidTest {
         assertThatThrownBy(() -> FirebaseUid.required("a".repeat(129))).isInstanceOf(IdentityRequiredException.class);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"uid\t1", "\u0085", "\u009f", "a\u0000", "\n", "\u007f", "\u0001x", "uid-1\r"})
+    @DisplayName("La identidad con un carácter de control (TAB, saltos, DEL o controles C1) se rechaza como identidad requerida")
+    void required_shouldThrow_whenControlCharacter(String raw) {
+        assertThatThrownBy(() -> FirebaseUid.required(raw)).isInstanceOf(IdentityRequiredException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"uid-123_ABC", "uid-ñ", "uid con espacio", " x"})
+    @DisplayName("La identidad imprimible, con tildes o con espacio interno, se acepta")
+    void required_shouldAccept_whenPrintable(String raw) {
+        assertThat(FirebaseUid.required(raw).value()).isEqualTo(raw);
+    }
+
     @Test
     @DisplayName("La identidad del Gateway de 128 caracteres es válida")
     void required_shouldReturnUid_whenLengthIsMax() {
