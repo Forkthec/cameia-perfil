@@ -115,7 +115,7 @@ El servicio solo debe aceptar tráfico del API Gateway; la autenticidad la garan
 | Método | Ruta (bajo `/api/v1/profiles`) | Qué hace |
 |---|---|---|
 | `POST` | (la raíz, `/api/v1/profiles`) | Crea el perfil del usuario |
-| `GET` | (la raíz, `/api/v1/profiles`) | Lista los perfiles del usuario, del más antiguo al más reciente, con sus roles objetivo; `?status=IN_PROGRESS\|COMPLETED` filtra (422 si el valor no es de la lista); sin paginación y sin caché |
+| `GET` | (la raíz, `/api/v1/profiles`) | Lista los perfiles del usuario, del más antiguo al más reciente, con sus roles objetivo; `?status=PENDING\|IN_PROGRESS\|IN_REVIEW\|COMPLETED` filtra (422 `PROFILE_STATUS_INVALID_VALUE` si el valor no es uno de los cuatro, en mayúsculas y exacto; 422 `REQUEST_QUERY_INVALID_FORMAT` si la consulta está mal codificada); sin paginación y sin caché |
 | `GET` | `/{id}` | Lee un perfil |
 | `PATCH` | `/{id}` | Edita nombre, titular y resumen |
 | `POST`, `DELETE` | `/{id}/work-experiences`, `/{id}/work-experiences/{expId}` | Agrega o quita experiencia laboral |

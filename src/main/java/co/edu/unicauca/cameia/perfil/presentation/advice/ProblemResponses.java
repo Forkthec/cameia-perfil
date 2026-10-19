@@ -28,6 +28,11 @@ final class ProblemResponses {
     static final String IDENTITY_HEADER = "X-User-Id";
     private static final String NO_UID = "-";
 
+    // Atributos de la petición: el despacho de error del contenedor reutiliza la misma petición, y con ellos
+    // responde con el identificador que ya quedó en el registro y no escribe el mismo fallo otra vez.
+    private static final String REQUEST_ID_ATTRIBUTE = ProblemResponses.class.getName() + ".requestId";
+    private static final String LOGGED_ATTRIBUTE = ProblemResponses.class.getName() + ".logged";
+
     private static final MediaType PROBLEM_JSON_UTF8 =
             new MediaType("application", "problem+json", StandardCharsets.UTF_8);
     // Solo se repite un identificador corto y sin caracteres de control ni de marcado.
@@ -88,6 +93,40 @@ final class ProblemResponses {
     static String requestId(String received) {
         return received != null && REQUEST_ID_FORMAT.matcher(received).matches()
                 ? received : UUID.randomUUID().toString();
+    }
+
+    /**
+     * Devuelve el identificador de la petición y lo deja en ella: la primera vez toma el encabezado (o genera uno)
+     * y las siguientes, por ejemplo el despacho de error del contenedor, devuelven el mismo.
+     *
+     * @param request petición en curso
+     * @return un identificador seguro para devolver y registrar, el mismo durante toda la petición
+     */
+    static String requestId(WebRequest request) {
+        if (request.getAttribute(REQUEST_ID_ATTRIBUTE, WebRequest.SCOPE_REQUEST) instanceof String resolved) {
+            return resolved;
+        }
+        var requestId = requestId(request.getHeader(REQUEST_ID_HEADER));
+        request.setAttribute(REQUEST_ID_ATTRIBUTE, requestId, WebRequest.SCOPE_REQUEST);
+        return requestId;
+    }
+
+    /**
+     * Marca que el error de esta petición ya se registró.
+     *
+     * @param request petición en curso
+     */
+    static void markLogged(WebRequest request) {
+        request.setAttribute(LOGGED_ATTRIBUTE, Boolean.TRUE, WebRequest.SCOPE_REQUEST);
+    }
+
+    /**
+     * @param request petición en curso
+     * @return {@code true} si el error de esta petición ya se registró; el despacho de error del contenedor no
+     *         escribe entonces otra línea
+     */
+    static boolean alreadyLogged(WebRequest request) {
+        return request.getAttribute(LOGGED_ATTRIBUTE, WebRequest.SCOPE_REQUEST) != null;
     }
 
     /**

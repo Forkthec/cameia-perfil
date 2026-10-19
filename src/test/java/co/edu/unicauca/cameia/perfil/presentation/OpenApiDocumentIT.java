@@ -81,6 +81,49 @@ class OpenApiDocumentIT {
     }
 
     @Test
+    @DisplayName("El OpenAPI documenta el 422 de consulta mal codificada en el catálogo de roles y en la lista de perfiles")
+    void apiDocs_shouldDocumentQueryInvalidFormat_whenRequested() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var body = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString()).body();
+
+        for (var path : java.util.List.of("/api/v1/profiles/professional-roles", "/api/v1/profiles")) {
+            assertThat(JsonPath.<String>read(body, "$.paths['" + path + "'].get.responses.422.description"))
+                    .as(path).contains("REQUEST_QUERY_INVALID_FORMAT");
+        }
+    }
+
+    @Test
+    @DisplayName("Las 15 operaciones publicadas documentan el 406, el 415 (con multipart) y el 413 de protocolo")
+    void apiDocs_shouldDocumentProtocolErrorsInEveryOperation_whenRequested() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var body = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString()).body();
+
+        var operations = JsonPath.<java.util.List<java.util.Map<String, Object>>>read(body, "$.paths.*.*");
+        assertThat(operations).as("operaciones publicadas (la expectativa salarial no se publica)").hasSize(15);
+        for (var operation : operations) {
+            @SuppressWarnings("unchecked")
+            var responses = (java.util.Map<String, java.util.Map<String, Object>>) operation.get("responses");
+            assertThat(responses.get("406").get("description").toString()).contains("MEDIA_TYPE_NOT_ACCEPTABLE");
+            assertThat(responses.get("415").get("description").toString())
+                    .contains("MEDIA_TYPE_NOT_ALLOWED", "REQUEST_MULTIPART_INVALID_FORMAT");
+            assertThat(responses.get("413").get("description").toString())
+                    .contains("REQUEST_BODY_TOO_LARGE", "1 MiB por parte", "10 MiB por petición");
+        }
+    }
+
+    @Test
+    @DisplayName("La ruta /error del contenedor no aparece en el OpenAPI")
+    void apiDocs_shouldNotListErrorRoute_whenRequested() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var body = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString()).body();
+
+        assertThat(JsonPath.<java.util.Map<String, Object>>read(body, "$.paths").keySet()).doesNotContain("/error");
+    }
+
+    @Test
     @DisplayName("El PATCH del rol objetivo describe su campo igual que el POST: uuid, ejemplo y obligatorio")
     void apiDocs_shouldDescribeUpdateTargetRoleBody_whenRequested() throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();

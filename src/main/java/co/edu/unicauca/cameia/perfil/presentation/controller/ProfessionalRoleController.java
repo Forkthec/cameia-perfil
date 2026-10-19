@@ -37,7 +37,8 @@ class ProfessionalRoleController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista de roles profesionales",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProfessionalRoleResponse.class)))),
-            @ApiResponse(responseCode = "422", description = "Idioma no disponible; solo 'es' o 'en' (code PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE)",
+            @ApiResponse(responseCode = "422", description = "Idioma no disponible; solo 'es' o 'en' (code PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE), "
+                    + "o consulta mal codificada, por ejemplo lang=%zz (code REQUEST_QUERY_INVALID_FORMAT)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @GetMapping

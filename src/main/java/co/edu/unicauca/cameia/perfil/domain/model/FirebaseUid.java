@@ -20,11 +20,18 @@ public record FirebaseUid(String value) {
      *
      * @param raw valor del encabezado {@code X-User-Id}
      * @return la identidad del Usuario
-     * @throws IdentityRequiredException si falta, está en blanco o mide más de 128 caracteres
+     * @throws IdentityRequiredException si falta, está en blanco, mide más de 128 caracteres o trae caracteres de control
      */
     public static FirebaseUid required(String raw) {
-        if (raw == null || raw.isBlank() || raw.length() > MAX_LENGTH) throw new IdentityRequiredException();
+        if (raw == null || raw.isBlank() || raw.length() > MAX_LENGTH || hasControlCharacter(raw)) {
+            throw new IdentityRequiredException();
+        }
         return new FirebaseUid(raw);
+    }
+
+    /** Un carácter de control (TAB, saltos de línea, DEL y los controles C1) nunca es parte de un UID de Firebase. */
+    private static boolean hasControlCharacter(String raw) {
+        return raw.chars().anyMatch(Character::isISOControl);
     }
 
     public FirebaseUid {
