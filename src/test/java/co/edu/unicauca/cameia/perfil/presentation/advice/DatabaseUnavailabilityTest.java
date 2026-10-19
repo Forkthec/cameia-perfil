@@ -71,6 +71,29 @@ class DatabaseUnavailabilityTest {
         assertThat(DatabaseUnavailability.matches(new SQLException("x", sqlState))).isTrue();
     }
 
+    static Stream<Arguments> outageTypes() {
+        return Stream.of(
+                Arguments.of("TransientDataAccessResourceException",
+                        new org.springframework.dao.TransientDataAccessResourceException("x")),
+                Arguments.of("JDBCConnectionException", new JDBCConnectionException("x", new SQLException("x"))),
+                Arguments.of("SQLNonTransientConnectionException",
+                        new java.sql.SQLNonTransientConnectionException("x")),
+                Arguments.of("SQLTimeoutException", new java.sql.SQLTimeoutException("x")));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("outageTypes")
+    @DisplayName("Cada tipo de excepción de conexión o de tiempo agotado se reconoce por sí solo")
+    void matches_shouldBeTrue_whenExceptionTypeIsOutage(String type, Throwable error) {
+        assertThat(DatabaseUnavailability.matches(error)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Un SQLException sin SQLState no es indisponibilidad")
+    void matches_shouldBeFalse_whenSqlExceptionHasNoState() {
+        assertThat(DatabaseUnavailability.matches(new SQLException("x"))).isFalse();
+    }
+
     @Test
     @DisplayName("Una consulta que pasa su tiempo máximo se reconoce")
     void matches_shouldBeTrue_whenQueryTimesOut() {
