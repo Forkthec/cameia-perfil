@@ -13,6 +13,10 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cameia_perfil}
     username: ${SPRING_DATASOURCE_USERNAME:cameia_perfil}
     password: ${SPRING_DATASOURCE_PASSWORD:}
+    # Espera máxima por una conexión del pool. Con el valor por defecto (30 s), igual al tiempo del
+    # Gateway, una base caída hacía esperar 30 s y el cliente nunca veía el 503.
+    hikari:
+      connection-timeout: 5000
 
   jpa:
     hibernate:
@@ -105,3 +109,11 @@ logging:
     # Los consumidores de eventos de cuenta ya registran cada fallo una sola vez, con su código y sin datos personales,
     # y el mensaje de una excepción de persistencia puede traer los valores de las columnas.
     org.springframework.amqp.listener.ConditionalRejectingErrorHandler: ERROR
+    # Una base de datos caída hace que Hibernate y Spring registren el mismo fallo por su cuenta, antes de que
+    # ApiExceptionHandler lo registre una sola vez con su código y sin datos personales. El mensaje de PostgreSQL y el
+    # SQL que citan pueden traer los valores de las columnas, y ninguna de las líneas lleva el identificador de la
+    # petición. Hibernate (SQLState y mensaje de cada conexión cortada) baja a ERROR; el aviso "Application exception
+    # overridden by rollback exception" de Spring se emite en ERROR, así que se apaga. Los avisos del pool de conexiones
+    # se conservan: son texto fijo sin datos y señalan conexiones caducadas aunque la base esté viva.
+    org.hibernate.orm.jdbc.error: ERROR
+    org.springframework.transaction.interceptor.TransactionInterceptor: "OFF"
