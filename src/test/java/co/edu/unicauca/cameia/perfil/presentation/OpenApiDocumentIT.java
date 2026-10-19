@@ -114,6 +114,38 @@ class OpenApiDocumentIT {
     }
 
     @Test
+    @DisplayName("Las 15 operaciones documentan el 503 DATABASE_UNAVAILABLE con su ejemplo y conservan el 503 de la fecha de nacimiento")
+    void apiDocs_shouldDocumentDatabaseUnavailableInEveryOperation_whenRequested() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
+
+        var body = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString()).body();
+
+        java.util.Map<String, java.util.Map<String, java.util.Map<String, Object>>> paths = JsonPath.read(body, "$.paths");
+        var checked = 0;
+        for (var path : paths.entrySet()) {
+            for (var operation : path.getValue().entrySet()) {
+                var label = operation.getKey().toUpperCase() + " " + path.getKey();
+                var description = JsonPath.<String>read(operation.getValue(), "$.responses['503'].description");
+                assertThat(description).as(label).contains("DATABASE_UNAVAILABLE");
+                assertThat(JsonPath.<Object>read(operation.getValue(),
+                        "$.responses['503'].content['application/problem+json'].examples.baseNoDisponible.value.code"))
+                        .as(label).isEqualTo("DATABASE_UNAVAILABLE");
+                if (operation.getKey().equals("post")
+                        && (path.getKey().endsWith("/work-experiences") || path.getKey().endsWith("/educations"))) {
+                    assertThat(description).as(label).contains("BIRTH_DATE_UNAVAILABLE");
+                    // El ejemplo de la fecha de nacimiento lo declara el controlador con el tipo de contenido por defecto.
+                    assertThat(JsonPath.<Object>read(operation.getValue(),
+                            "$.responses['503'].content['*/*'].examples"
+                                    + "['Fecha de nacimiento no disponible'].value.code"))
+                            .as(label).isEqualTo("BIRTH_DATE_UNAVAILABLE");
+                }
+                checked++;
+            }
+        }
+        assertThat(checked).isEqualTo(15);
+    }
+
+    @Test
     @DisplayName("La ruta /error del contenedor no aparece en el OpenAPI")
     void apiDocs_shouldNotListErrorRoute_whenRequested() throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build();
