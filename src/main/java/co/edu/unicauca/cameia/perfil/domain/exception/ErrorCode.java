@@ -32,6 +32,8 @@ public enum ErrorCode {
     PROFILE_UPDATE_IN_PROGRESS,
     /** La fecha de nacimiento del usuario aún no se replicó desde cuentas; se puede reintentar. */
     BIRTH_DATE_UNAVAILABLE,
+    /** La base de datos no está disponible; la persona puede reintentar. */
+    DATABASE_UNAVAILABLE,
     /** El perfil ya está finalizado y no admite más cambios de estado. */
     PROFILE_ALREADY_COMPLETED,
     /** El perfil no cumple los requisitos mínimos para finalizar. */

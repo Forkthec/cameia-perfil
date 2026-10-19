@@ -54,6 +54,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -72,6 +73,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -930,6 +932,19 @@ class ProfileAppServiceTest {
                 .isInstanceOf(BirthDateUnavailableException.class);
 
         assertThat(profile.getWorkExperiences()).isEmpty();
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Si la base falla al leer la fecha de nacimiento, el error de la base sube tal cual y no se guarda nada")
+    void addWorkExperience_shouldPropagateDatabaseFailure_whenReplicaFails() {
+        when(repository.findByIdForUpdate(any())).thenReturn(Optional.of(ProfessionalProfile.create(new FirebaseUid(SVC_UID))));
+        doThrow(new DataAccessResourceFailureException("host=10.0.0.5 password=x")).when(replica).findBirthDate(any());
+
+        assertThatThrownBy(() -> service.addWorkExperience(new AddWorkExperienceCommand(
+                UUID.randomUUID(), SVC_UID, "ACME", "Dev", null, "2020-01", null, "CURRENT")))
+                .isInstanceOf(DataAccessResourceFailureException.class)
+                .isNotInstanceOf(BirthDateUnavailableException.class);
         verify(repository, never()).save(any());
     }
 

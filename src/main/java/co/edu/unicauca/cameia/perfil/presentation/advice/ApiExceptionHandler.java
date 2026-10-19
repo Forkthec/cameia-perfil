@@ -109,6 +109,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return reject(ErrorCode.REQUEST_BODY_TOO_LARGE, null, request);
     }
 
+    /**
+     * Respaldo de todo lo que ningún otro manejador recoge. Un parámetro mal codificado es un dato del cliente
+     * (4xx); una base de datos no disponible es un fallo pasajero que la persona puede reintentar
+     * ({@code 503 DATABASE_UNAVAILABLE}); cualquier otra cosa es un fallo imprevisto ({@code 500 INTERNAL_ERROR}).
+     */
     @ExceptionHandler(Exception.class)
     ResponseEntity<Object> handleUnexpected(Exception ex, WebRequest request) {
         if (BadParameterEncoding.matches(ex)) {
@@ -118,6 +123,16 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             var form = servlet != null
                     && BadParameterEncoding.fromFormBody(servlet.getMethod(), servlet.getContentType());
             return reject(form ? ErrorCode.MEDIA_TYPE_NOT_ALLOWED : ErrorCode.REQUEST_QUERY_INVALID_FORMAT, null, request);
+        }
+        if (DatabaseUnavailability.matches(ex)) {
+            // La base no responde: fallo pasajero del servicio que la persona puede reintentar. El mensaje de la
+            // excepción (puede citar el servidor o el usuario de la base) no llega al cliente ni al registro.
+            var requestId = requestId(request);
+            markLogged(request);
+            log.error("Base de datos no disponible: code={} requestId={} firebaseUid={} sqlState={}",
+                    ErrorCode.DATABASE_UNAVAILABLE, requestId, firebaseUid(request),
+                    DatabaseUnavailability.sqlState(ex), RedactedException.of(ex));
+            return respond(problem(ErrorCode.DATABASE_UNAVAILABLE, null), requestId);
         }
         var requestId = requestId(request);
         // Sin los mensajes de la cadena: pueden traer datos del perfil (valores de columnas, SQL con parámetros).
