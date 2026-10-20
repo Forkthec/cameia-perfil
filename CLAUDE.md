@@ -111,6 +111,7 @@ El servicio solo debe aceptar tráfico del API Gateway; la autenticidad la garan
 - Los errores son `ProblemDetail` (RFC 9457) con `Content-Type: application/problem+json`, activado con `spring.mvc.problemdetails.enabled`. El formato y las reglas están en la [sección 6 del estándar](docs/estandar-backend.md#6-errores) y lo que el servicio emite hoy, en [docs/errores.md](docs/errores.md).
 - La finalización incompleta del perfil responde la forma común con `code` `PROFILE_INCOMPLETE` y, además, `missingRequirements`.
 - Los mensajes de las excepciones de negocio llegan al usuario tal cual; un fallo técnico no debe exponer su detalle.
+- Una base de datos no disponible (caída, conexión cortada, pool agotado o consulta que la base corta por su tiempo máximo) responde 503 `DATABASE_UNAVAILABLE` ([ADR 0009](docs/adr/0009-base-de-datos-no-disponible.md)).
 
 | Método | Ruta (bajo `/api/v1/profiles`) | Qué hace |
 |---|---|---|

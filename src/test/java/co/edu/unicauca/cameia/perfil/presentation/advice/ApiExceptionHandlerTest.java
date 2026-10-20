@@ -36,6 +36,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.core.MethodParameter;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -525,6 +527,69 @@ class ApiExceptionHandlerTest {
         mockMvc.perform(request(HttpMethod.POST, "/boom"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
+    }
+
+    @Test
+    @DisplayName("Una base de datos no disponible responde 503 DATABASE_UNAVAILABLE sin citar el mensaje de la excepción")
+    void databaseUnavailable_shouldReturn503_whenAvailabilityProblem() throws Exception {
+        toThrow = () -> new DataAccessResourceFailureException("host=10.0.0.5 password=x");
+
+        var result = mockMvc.perform(get("/boom"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Content-Type", "application/problem+json;charset=UTF-8"))
+                .andExpect(jsonPath("$.code").value("DATABASE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.title").value("Servicio no disponible"))
+                .andExpect(jsonPath("$.detail").value("Ocurrió un error. Inténtalo de nuevo."))
+                .andExpect(jsonPath("$.requestId").isNotEmpty())
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .doesNotContain("10.0.0.5").doesNotContain("password");
+    }
+
+    @Test
+    @DisplayName("Una base de datos no disponible se registra una sola vez en ERROR con su código, SQLState y requestId, sin el mensaje")
+    void databaseUnavailable_shouldLogOnce_whenAvailabilityProblem() throws Exception {
+        toThrow = () -> new DataAccessResourceFailureException("host=10.0.0.5 password=x");
+
+        var result = mockMvc.perform(get("/boom")).andExpect(status().isServiceUnavailable()).andReturn();
+        var requestId = result.getResponse().getHeader("X-Request-Id");
+
+        assertThat(logs.list).filteredOn(event -> event.getLevel() == Level.ERROR).singleElement().satisfies(event -> {
+            assertThat(event.getFormattedMessage()).contains("code=DATABASE_UNAVAILABLE").contains("sqlState=")
+                    .contains("requestId=" + requestId).doesNotContain("10.0.0.5").doesNotContain("password");
+            assertThat(event.getThrowableProxy().getMessage()).doesNotContain("10.0.0.5").doesNotContain("password");
+        });
+    }
+
+    @ParameterizedTest
+    @MethodSource("notAvailabilityProblems")
+    @DisplayName("Un fallo que no es de disponibilidad de la base sigue siendo el 500 genérico")
+    void databaseUnavailable_shouldKeepGeneric500_whenNotAvailabilityProblem(Exception error) throws Exception {
+        toThrow = () -> error;
+
+        mockMvc.perform(get("/boom"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
+    }
+
+    static Stream<Exception> notAvailabilityProblems() {
+        return Stream.of(new IllegalStateException("x"),
+                new DataIntegrityViolationException("x", new SQLException("x", "23502")));
+    }
+
+    @Test
+    @DisplayName("Una indisponibilidad que solo viaja entre las excepciones suprimidas responde 503")
+    void databaseUnavailable_shouldReturn503_whenCauseIsOnlySuppressed() throws Exception {
+        toThrow = () -> {
+            var error = new RuntimeException("x");
+            error.addSuppressed(new SQLException("x", "08006"));
+            return error;
+        };
+
+        mockMvc.perform(get("/boom"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("DATABASE_UNAVAILABLE"));
     }
 
     @Test

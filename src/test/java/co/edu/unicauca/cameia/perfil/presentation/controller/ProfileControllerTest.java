@@ -289,16 +289,26 @@ class ProfileControllerTest {
     }
 
     @Test
-    @DisplayName("Si la base de datos falla, crear un perfil responde el 500 genérico sin detalle")
-    void postProfiles_shouldReturnGeneric500_whenDatabaseFails() throws Exception {
+    @DisplayName("Si la base de datos no está disponible, crear un perfil responde 503 DATABASE_UNAVAILABLE sin detalle")
+    void postProfiles_shouldReturn503_whenDatabaseFails() throws Exception {
         when(profileCreationAppService.createProfile(any())).thenThrow(new DataAccessResourceFailureException("conexión"));
 
         var result = mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-ana-001"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("DATABASE_UNAVAILABLE"))
                 .andReturn();
 
         assertThat(result.getResponse().getContentAsString()).doesNotContain("conexión");
+    }
+
+    @Test
+    @DisplayName("Si falla algo imprevisto, crear un perfil sigue respondiendo el 500 genérico")
+    void postProfiles_shouldReturnGeneric500_whenUnexpectedFailure() throws Exception {
+        when(profileCreationAppService.createProfile(any())).thenThrow(new IllegalStateException("x"));
+
+        mockMvc.perform(post("/api/v1/profiles").header("X-User-Id", "uid-ana-001"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
     }
 
     @Test

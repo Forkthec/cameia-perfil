@@ -90,6 +90,7 @@ final class ErrorCatalog {
             entry(PROFILE_CREATION_IN_PROGRESS, CONFLICT, "Creación en proceso", null),
             entry(PROFILE_UPDATE_IN_PROGRESS, CONFLICT, "Perfil ocupado", null),
             entry(BIRTH_DATE_UNAVAILABLE, SERVICE_UNAVAILABLE, "Servicio no disponible", null),
+            entry(DATABASE_UNAVAILABLE, SERVICE_UNAVAILABLE, "Servicio no disponible", "Ocurrió un error. Inténtalo de nuevo."),
             entry(PROFILE_ALREADY_COMPLETED, CONFLICT, "Perfil ya completado", null),
             entry(PROFILE_INCOMPLETE, UNPROCESSABLE_CONTENT, "Finalización incompleta", null),
             entry(PROFESSIONAL_ROLE_NOT_FOUND, NOT_FOUND, "Rol profesional no encontrado", null),

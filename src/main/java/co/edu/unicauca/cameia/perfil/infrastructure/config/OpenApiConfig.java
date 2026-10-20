@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
+import io.swagger.v3.oas.models.responses.ApiResponses;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +25,8 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class OpenApiConfig {
+
+    private static final String PROBLEM_JSON = "application/problem+json";
 
     @Bean
     public OpenAPI cameiaPerfilOpenApi() {
@@ -44,10 +47,10 @@ public class OpenApiConfig {
     /**
      * Documenta en todas las operaciones los rechazos de protocolo que ocurren antes de la lógica de cada ruta:
      * 406 (el {@code Accept} no se puede cumplir o no se interpreta), 415 (tipo de contenido no admitido, formulario
-     * mal codificado o multipart ilegible) y 413 (multipart sobre el tope). Así ninguna operación depende de que se
-     * recuerde repetir las tres respuestas.
+     * mal codificado o multipart ilegible) y 413 (multipart sobre el tope), y el 503 de la base de datos no
+     * disponible. Así ninguna operación depende de que se recuerde repetir las cuatro respuestas.
      *
-     * @return el personalizador que agrega las tres respuestas, con la forma común de error de Perfil
+     * @return el personalizador que agrega las cuatro respuestas, con la forma común de error de Perfil
      */
     @Bean
     OperationCustomizer protocolErrorResponses() {
@@ -66,8 +69,35 @@ public class OpenApiConfig {
                     "REQUEST_BODY_TOO_LARGE: un multipart supera el tamaño admitido (1 MiB por parte y 10 MiB por petición)",
                     "cuerpoDemasiadoGrande", 413, "Cuerpo demasiado grande", "Cuerpo de la petición demasiado grande.",
                     "REQUEST_BODY_TOO_LARGE"));
+            addDatabaseUnavailable(operation.getResponses());
             return operation;
         };
+    }
+
+    /**
+     * Agrega a la operación el 503 de la base de datos sin pisar el que ya traiga (el de la fecha de nacimiento en
+     * experiencia laboral y educación): conserva su contenido, le antepone la descripción de la base y le suma el
+     * ejemplo, de modo que ambos códigos quedan visibles.
+     */
+    private static void addDatabaseUnavailable(ApiResponses responses) {
+        var database = protocolError("DATABASE_UNAVAILABLE: la base de datos no está disponible; la persona puede reintentar",
+                "baseNoDisponible", 503, "Servicio no disponible", "Ocurrió un error. Inténtalo de nuevo.",
+                "DATABASE_UNAVAILABLE");
+        var existing = responses.get("503");
+        if (existing == null) {
+            responses.addApiResponse("503", database);
+            return;
+        }
+        existing.setDescription(database.getDescription() + " · " + existing.getDescription());
+        var databaseMedia = database.getContent().get(PROBLEM_JSON);
+        if (existing.getContent() == null) {
+            existing.setContent(database.getContent());
+        } else if (existing.getContent().get(PROBLEM_JSON) == null) {
+            existing.getContent().addMediaType(PROBLEM_JSON, databaseMedia);
+        } else {
+            existing.getContent().get(PROBLEM_JSON).addExamples("baseNoDisponible",
+                    databaseMedia.getExamples().get("baseNoDisponible"));
+        }
     }
 
     private static ApiResponse protocolError(String description, String exampleName, int status, String title,
@@ -77,6 +107,6 @@ public class OpenApiConfig {
         var media = new MediaType().schema(new Schema<>().$ref("#/components/schemas/ApiError"))
                 .addExamples(exampleName, example);
         return new ApiResponse().description(description)
-                .content(new Content().addMediaType("application/problem+json", media));
+                .content(new Content().addMediaType(PROBLEM_JSON, media));
     }
 }
