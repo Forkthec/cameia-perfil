@@ -63,7 +63,9 @@ El servicio no tiene `infrastructure/client` ni `persistence/mapper`: el mapeo e
 | Infraestructura | `ProfessionalProfileRepositoryAdapter`, `ProfessionalRoleRepositoryAdapter` | Implementan los puertos sobre Spring Data |
 | Infraestructura | `AccountEventsRabbitConfig`, `AccountEventsRetryConfig`, `AccountCreatedListener`, `AccountDeletedListener`, `AccountEventsErrorHandler`, `AccountEventsRecoverer` | Consumen `cuenta.creada` y `cuenta.eliminada` para mantener la réplica de la fecha de nacimiento, con Inbox, reintentos y una cola de fallidos por cola |
 | Aplicación | `ProfileEventsAppService`, `OutboxRelayAppService` | Anuncian `perfil.profesional-actualizado` con tabla de salida: el evento se guarda en la transacción del cambio, se intenta tras el commit en un ejecutor aparte y el Job lo reintenta |
-| Infraestructura | `RabbitConfig`, `RabbitEventPublisher`, `RelayExecutorConfig`, `ProfileEventsRelayJobRunner` | Exchange, colas (incluida la de Entrevista), publicación con confirmación, ejecutor acotado del intento posterior al commit y Job de relevo |
+| Aplicación | `RoleCatalogEventsAppService` | Anota en la tabla de salida la instantánea del catálogo de roles (`perfil.catalogo-roles-actualizado`, 46 roles con sus dos idiomas y su estado) salvo que ya haya una sin publicar |
+| Infraestructura | `RabbitConfig`, `RabbitEventPublisher`, `RelayExecutorConfig`, `ProfileEventsRelayJobRunner` | Exchange, colas (las dos de Entrevista: perfil y catálogo de roles), publicación con confirmación, ejecutor acotado del intento posterior al commit y Job de relevo |
+| Infraestructura | `RoleCatalogStartupAnnouncer` | Al terminar de arrancar pide anotar el catálogo de roles; un fallo es un `ERROR` en el log y no tumba el arranque. Se apaga con `perfil.events.announce-role-catalog-on-startup=false` (la tarea de relevo ya lo trae apagado) |
 | Infraestructura | `SubscriptionUpdatedListener`, `ConsumptionRecordedListener` | Consumidores de suscripción y de consumo: esqueletos (ver sección 10) |
 
 **Persistencia en tres piezas.** Un `JpaRepository` suelto no es el repositorio del dominio. El puerto vive en `domain/port` con el vocabulario del dominio; el `JpaRepository` y el adaptador viven en `infrastructure/persistence/repository` (el adaptador implementa el puerto y es el único que conoce las dos orillas). `application.service` inyecta el puerto, nunca el adaptador ni el `JpaRepository`.
@@ -145,6 +147,7 @@ Base PostgreSQL propia `cameia_perfil` y migraciones Flyway en `src/main/resourc
 | `V7__alinear_educacion.sql` | Alinea `educacion` con las reglas de HU-2.4: largos de 150, restricciones con nombre e índice de la clave foránea; elimina `area_estudio` porque el campo salió del contrato |
 | `V8__alinear_habilidad_perfil.sql` | Alinea `habilidad_perfil` con las reglas de HU-2.5: nombre de 60, clave de comparación para no repetir una habilidad dentro de un perfil, restricciones con nombre e índice de la clave foránea |
 | `V9__evento_saliente.sql` | Crea la tabla de salida de eventos de Perfil: el evento se guarda en la misma transacción que el cambio y se publica después |
+| `V10__evento_catalogo_roles.sql` | Amplía los tipos permitidos de la tabla de salida con `perfil.catalogo-roles-actualizado` (el catálogo no pertenece a un perfil: su `agregado_id` es el UUID nulo) |
 
 No hay claves foráneas hacia otros servicios. Las tablas y columnas van en `snake_case` español y las fechas en `TIMESTAMPTZ`; el resto de las reglas de esquema están en la [sección 7 del estándar](docs/estandar-backend.md#7-base-de-datos). Todo cambio de esquema es una migración nueva.
 
@@ -205,4 +208,3 @@ Las specs nuevas viven en `specs/CM-NNN-Descripcion/` con `Descripcion` en Pasca
 | Cobertura por debajo de la meta del estándar | Backend (CM-283) | Cumplir el 70 % de la rúbrica y la meta del 90 % |
 | Las sugerencias de roles que consume Entrevista no existen en el código | Backend, con Entrevista | Integración con Entrevista |
 | Extracción de CV, sugerencias y asistente de redacción con IA: sin implementar (`Resume`, `QuotaGuard`, adaptadores de LLM) | Backend y Product Owner | Todo lo que dependa de IA |
-| El Job `profile-events-relay` no está programado en staging | DevOps, por una tarea de Vela | Reintentar en staging lo que falle tras el commit |
