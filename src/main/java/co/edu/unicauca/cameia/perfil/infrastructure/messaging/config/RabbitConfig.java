@@ -1,6 +1,7 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.messaging.config;
 
 import co.edu.unicauca.cameia.perfil.domain.event.ProfileUpdated;
+import co.edu.unicauca.cameia.perfil.domain.event.RoleCatalogUpdated;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
@@ -46,6 +47,12 @@ public class RabbitConfig {
     /** Cola donde Entrevista recibe los cambios del perfil. */
     public static final String INTERVIEW_PROFILE_QUEUE = "entrevista.perfil-profesional-actualizado";
 
+    /** Clave de enrutamiento de la instantánea del catálogo de roles. */
+    public static final String ROLE_CATALOG_KEY = RoleCatalogUpdated.TYPE;
+
+    /** Cola donde Entrevista recibe la instantánea del catálogo de roles. */
+    public static final String INTERVIEW_ROLE_CATALOG_QUEUE = "entrevista.catalogo-roles-actualizado";
+
     /** Exchange de fallidos de Entrevista; lo declara Entrevista junto con su cola de fallidos. */
     public static final String INTERVIEW_DEAD_LETTER_EXCHANGE = "entrevista.dlx";
 
@@ -79,6 +86,33 @@ public class RabbitConfig {
     @Bean
     Binding interviewProfileBinding(TopicExchange perfilExchange, Queue interviewProfileQueue) {
         return BindingBuilder.bind(interviewProfileQueue).to(perfilExchange).with(PROFILE_UPDATED_KEY);
+    }
+
+    /**
+     * Cola de Entrevista para la instantánea del catálogo de roles, declarada también aquí con los mismos argumentos que
+     * usa Entrevista.
+     *
+     * <p>Sin la cola el broker devolvería el mensaje (el publicador usa {@code mandatory}) y el evento quedaría pendiente
+     * para siempre; con ella, la instantánea espera hasta que Entrevista esté desplegada.</p>
+     *
+     * @return cola durable cuyos rechazos van a {@value #INTERVIEW_DEAD_LETTER_EXCHANGE}
+     */
+    @Bean
+    Queue interviewRoleCatalogQueue() {
+        return QueueBuilder.durable(INTERVIEW_ROLE_CATALOG_QUEUE).deadLetterExchange(INTERVIEW_DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(INTERVIEW_ROLE_CATALOG_QUEUE).build();
+    }
+
+    /**
+     * Liga la instantánea del catálogo a la cola de Entrevista.
+     *
+     * @param perfilExchange            exchange de los eventos de Perfil
+     * @param interviewRoleCatalogQueue cola de Entrevista para el catálogo
+     * @return el enlace con la clave {@value #ROLE_CATALOG_KEY}
+     */
+    @Bean
+    Binding interviewRoleCatalogBinding(TopicExchange perfilExchange, Queue interviewRoleCatalogQueue) {
+        return BindingBuilder.bind(interviewRoleCatalogQueue).to(perfilExchange).with(ROLE_CATALOG_KEY);
     }
 
     /**

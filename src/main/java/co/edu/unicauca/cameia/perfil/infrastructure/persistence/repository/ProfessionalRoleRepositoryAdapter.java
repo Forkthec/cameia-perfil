@@ -1,8 +1,10 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence.repository;
 
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRole;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRoleNames;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.ProfessionalRoleEntity;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,14 @@ class ProfessionalRoleRepositoryAdapter implements ProfessionalRoleRepository {
             return jpa.findAllOrderedEn(ACTIVE).stream().map(e -> toDomain(e, "en")).toList();
         }
         return jpa.findAllOrderedEs(ACTIVE).stream().map(e -> toDomain(e, "es")).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProfessionalRoleNames> findAllWithBothLanguages() {
+        return jpa.findAll(Sort.by("nombre", "id")).stream()
+                .map(e -> new ProfessionalRoleNames(e.getId(), e.getNombre(), e.getNombreEn(), ACTIVE.equals(e.getEstado())))
+                .toList();
     }
 
     private ProfessionalRole toDomain(ProfessionalRoleEntity e, String lang) {

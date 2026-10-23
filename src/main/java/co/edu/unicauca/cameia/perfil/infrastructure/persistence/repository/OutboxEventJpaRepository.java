@@ -76,6 +76,25 @@ interface OutboxEventJpaRepository extends JpaRepository<OutboxEventEntity, UUID
     Integer incrementAttempts(@Param("id") UUID id);
 
     /**
+     * Dice si hay un evento del tipo dado sin publicar.
+     *
+     * @param type tipo del evento
+     * @return {@code true} si existe al menos uno pendiente
+     */
+    @Query(value = "SELECT EXISTS (SELECT 1 FROM evento_saliente WHERE tipo = :type AND fecha_publicacion IS NULL)",
+            nativeQuery = true)
+    boolean existsPendingOfType(@Param("type") String type);
+
+    /**
+     * Intenta tomar el candado consultivo de la transacción para el tipo dado, sin esperar.
+     *
+     * @param type tipo del evento; su resumen numérico identifica el candado
+     * @return {@code true} si lo obtuvo; el candado se suelta al terminar la transacción
+     */
+    @Query(value = "SELECT pg_try_advisory_xact_lock(hashtext(:type))", nativeQuery = true)
+    boolean tryAdvisoryLock(@Param("type") String type);
+
+    /**
      * Cuenta los pendientes.
      *
      * @return cantidad de eventos sin publicar
