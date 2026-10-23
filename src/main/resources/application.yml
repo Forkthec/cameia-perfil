@@ -77,6 +77,13 @@ spring:
       # ningun cliente adivine la codificacion de los textos con tildes.
       force-response: true
 
+perfil:
+  events:
+    # Al terminar de arrancar, Perfil anota en la tabla de salida la instantánea del catálogo de roles (si no hay otra sin
+    # publicar) para que Entrevista mantenga su copia. El catálogo solo cambia con un despliegue, así que cada arranque lo
+    # cubre. En false no se anota nada.
+    announce-role-catalog-on-startup: true
+
 server:
   # PROVISIONAL. El puerto real es DEV-IN-05 y lo coordina quien arma la matriz
   # ruta -> servicio del Gateway. 8082 sale de la plantilla del Gateway

@@ -1,11 +1,13 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
 import co.edu.unicauca.cameia.perfil.domain.model.Education;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRoleNames;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
 import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
 import co.edu.unicauca.cameia.perfil.domain.model.SkillName;
 import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.ProfessionalProfileEntity;
+import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.ProfessionalRoleEntity;
 import jakarta.persistence.Column;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.DisplayName;
@@ -68,6 +70,25 @@ class ColumnLengthConsistencyIT {
     void profileEntityColumnLengths_shouldMatchDomainLimits_whenAnnotationsAreRead() throws Exception {
         assertThat(columnLength("name")).isEqualTo(ProfileName.MAX_LENGTH);
         assertThat(columnLength("summary")).isEqualTo(ProfessionalSummary.MAX_LENGTH);
+    }
+
+    @Test
+    @DisplayName("Los largos de los nombres del rol en la base son el límite del dominio")
+    void roleColumnLengths_shouldMatchDomainLimit_whenSchemaIsMigrated() throws Exception {
+        var expected = Map.of(
+                "nombre", ProfessionalRoleNames.MAX_NAME_LENGTH,
+                "nombre_en", ProfessionalRoleNames.MAX_NAME_LENGTH);
+
+        assertColumnLengths("rol_profesional", expected);
+    }
+
+    @Test
+    @DisplayName("El largo declarado en la entidad del rol para sus nombres es el del dominio")
+    void roleEntityColumnLengths_shouldMatchDomainLimit_whenAnnotationsAreRead() throws Exception {
+        for (var attribute : new String[] {"nombre", "nombreEn"}) {
+            var length = ProfessionalRoleEntity.class.getDeclaredField(attribute).getAnnotation(Column.class).length();
+            assertThat(length).as(attribute).isEqualTo(ProfessionalRoleNames.MAX_NAME_LENGTH);
+        }
     }
 
     private static int columnLength(String attribute) throws NoSuchFieldException {

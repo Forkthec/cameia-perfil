@@ -1,6 +1,7 @@
 package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 
 import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRole;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRoleNames;
 import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -99,5 +100,45 @@ class ProfessionalRoleRepositoryAdapterIT {
 
         assertThat(backend).isPresent();
         assertThat(backend.get().nombre()).isEqualTo("Backend Developer");
+    }
+
+    @Test
+    @DisplayName("El catálogo para anunciar trae los 46 roles con los dos idiomas")
+    void findAllWithBothLanguages_shouldReturnEveryRoleWithBothNames_whenCatalogIsSeeded() {
+        var all = roles.findAllWithBothLanguages();
+
+        assertThat(all).hasSize(46).allMatch(ProfessionalRoleNames::active);
+        assertThat(all).extracting(ProfessionalRoleNames::id).doesNotHaveDuplicates();
+        var backend = all.stream().filter(r -> r.id().equals(BACKEND_ID)).findFirst().orElseThrow();
+        assertThat(backend.nameEs()).isEqualTo("Desarrollador Backend");
+        assertThat(backend.nameEn()).isEqualTo("Backend Developer");
+        assertThat(all).extracting(ProfessionalRoleNames::nameEs).isSorted();
+    }
+
+    @Test
+    @DisplayName("El catálogo para anunciar incluye los roles inactivos, marcados como tales")
+    void findAllWithBothLanguages_shouldIncludeInactiveRoles_whenOneIsDeactivated() {
+        jdbc.update("UPDATE rol_profesional SET estado = 'INACTIVE' WHERE id = ?", BACKEND_ID);
+
+        var all = roles.findAllWithBothLanguages();
+
+        assertThat(all).hasSize(46);
+        assertThat(all).filteredOn(r -> r.id().equals(BACKEND_ID)).singleElement().extracting(ProfessionalRoleNames::active)
+                .isEqualTo(false);
+        assertThat(all.stream().filter(ProfessionalRoleNames::active)).hasSize(45);
+    }
+
+    @Test
+    @DisplayName("Un nombre en inglés en blanco se anuncia con el nombre en español")
+    void findAllWithBothLanguages_shouldFallBackToSpanish_whenEnglishNameIsBlank() {
+        jdbc.update("UPDATE rol_profesional SET nombre_en = '   ' WHERE id = ?", BACKEND_ID);
+
+        try {
+            var backend = roles.findAllWithBothLanguages().stream().filter(r -> r.id().equals(BACKEND_ID)).findFirst().orElseThrow();
+
+            assertThat(backend.nameEn()).isEqualTo("Desarrollador Backend");
+        } finally {
+            jdbc.update("UPDATE rol_profesional SET nombre_en = 'Backend Developer' WHERE id = ?", BACKEND_ID);
+        }
     }
 }

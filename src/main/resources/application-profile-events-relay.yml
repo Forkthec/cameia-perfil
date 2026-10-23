@@ -13,3 +13,6 @@ spring:
 perfil:
   events:
     publish-timeout: 5s
+    # La tarea corre de forma periódica: si anotara el catálogo en cada corrida lo publicaría en cada una. Lo anota la API al
+    # arrancar; esta tarea solo publica lo pendiente.
+    announce-role-catalog-on-startup: false

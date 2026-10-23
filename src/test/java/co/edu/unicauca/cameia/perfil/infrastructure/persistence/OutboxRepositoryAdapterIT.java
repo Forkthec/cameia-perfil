@@ -3,6 +3,8 @@ package co.edu.unicauca.cameia.perfil.infrastructure.persistence;
 import co.edu.unicauca.cameia.perfil.domain.event.CorrelationId;
 import co.edu.unicauca.cameia.perfil.domain.event.OutboundEvent;
 import co.edu.unicauca.cameia.perfil.domain.event.ProfileUpdated;
+import co.edu.unicauca.cameia.perfil.domain.event.RoleCatalogUpdated;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRoleNames;
 import co.edu.unicauca.cameia.perfil.domain.port.OutboxRepository;
 import co.edu.unicauca.cameia.perfil.support.ActiveProfiles;
 import org.junit.jupiter.api.AfterEach;
@@ -18,6 +20,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -116,6 +119,88 @@ class OutboxRepositoryAdapterIT {
     void appendProfileUpdated_shouldFail_whenNoTransactionIsActive() {
         assertThatThrownBy(() -> outbox.appendProfileUpdated(profileUpdated())).isInstanceOf(IllegalTransactionStateException.class);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM evento_saliente", Integer.class)).isZero();
+    }
+
+    private RoleCatalogUpdated roleCatalog() {
+        return new RoleCatalogUpdated(UUID.randomUUID(), List.of(
+                new ProfessionalRoleNames(UUID.fromString("a0000001-0000-0000-0000-000000000001"), "Desarrollador Frontend",
+                        "Frontend Developer", true),
+                new ProfessionalRoleNames(UUID.fromString("a0000001-0000-0000-0000-000000000002"), "Desarrollador Backend",
+                        "Backend Developer", false)), Instant.parse("2026-10-24T12:00:00.123Z"),
+                new CorrelationId("perfil-catalogo-0b9f8e7d"));
+    }
+
+    @Test
+    @DisplayName("La instantánea del catálogo se guarda pendiente con el tipo nuevo, el agregado constante y la carga v1")
+    void saveRoleCatalog_shouldStorePendingRowWithContractPayload_whenCalledInTransaction() {
+        var event = roleCatalog();
+
+        var stored = new TransactionTemplate(transactionManager).execute(status -> outbox.saveRoleCatalog(event));
+
+        var row = jdbc.queryForMap("SELECT tipo, version, agregado_id, id_correlacion, fecha_publicacion, intentos, "
+                + "carga->>'actualizadoEn' AS actualizado, jsonb_array_length(carga->'roles') AS roles, "
+                + "carga->'roles'->1->>'estado' AS estado_segundo FROM evento_saliente WHERE id = ?", event.eventId());
+        assertThat(stored.id()).isEqualTo(event.eventId());
+        assertThat(row.get("tipo")).isEqualTo("perfil.catalogo-roles-actualizado");
+        assertThat(((Number) row.get("version")).intValue()).isEqualTo(1);
+        assertThat(row.get("agregado_id")).isEqualTo(new UUID(0L, 0L));
+        assertThat(row.get("id_correlacion")).isEqualTo("perfil-catalogo-0b9f8e7d");
+        assertThat(row.get("fecha_publicacion")).isNull();
+        assertThat(((Number) row.get("intentos")).intValue()).isZero();
+        assertThat(row.get("actualizado")).isEqualTo("2026-10-24T12:00:00.123Z");
+        assertThat(((Number) row.get("roles")).intValue()).isEqualTo(2);
+        assertThat(row.get("estado_segundo")).isEqualTo("INACTIVE");
+    }
+
+    @Test
+    @DisplayName("Guardar la instantánea del catálogo sin una transacción abierta falla y no deja filas")
+    void saveRoleCatalog_shouldFail_whenNoTransactionIsActive() {
+        assertThatThrownBy(() -> outbox.saveRoleCatalog(roleCatalog())).isInstanceOf(IllegalTransactionStateException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM evento_saliente", Integer.class)).isZero();
+    }
+
+    @Test
+    @DisplayName("Hay pendiente del catálogo solo mientras la fila no se publica, y no se confunde con otro tipo")
+    void existsPendingOfType_shouldFollowThePublicationState_whenEventsOfBothTypesExist() {
+        var catalogType = RoleCatalogUpdated.TYPE;
+        assertThat(outbox.existsPendingOfType(catalogType)).isFalse();
+
+        append(event(T0));
+        assertThat(outbox.existsPendingOfType(catalogType)).as("hay uno del perfil, no del catálogo").isFalse();
+        assertThat(outbox.existsPendingOfType(TYPE)).isTrue();
+
+        var catalog = roleCatalog();
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> outbox.saveRoleCatalog(catalog));
+        assertThat(outbox.existsPendingOfType(catalogType)).isTrue();
+
+        outbox.markPublished(catalog.eventId(), catalog.updatedAt().plusSeconds(1));
+        assertThat(outbox.existsPendingOfType(catalogType)).isFalse();
+    }
+
+    @Test
+    @DisplayName("El candado de anuncio lo tiene una sola transacción a la vez y se suelta al terminar")
+    void tryLockAnnouncement_shouldAllowOneTransactionAtATime_whenTwoCompete() {
+        var template = new TransactionTemplate(transactionManager);
+        var separate = new TransactionTemplate(transactionManager);
+        separate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        var type = RoleCatalogUpdated.TYPE;
+
+        var results = template.execute(first -> List.of(
+                outbox.tryLockAnnouncement(type),
+                // Otra transacción, en otra conexión, mientras la primera sigue abierta.
+                separate.execute(second -> outbox.tryLockAnnouncement(type)),
+                separate.execute(second -> outbox.tryLockAnnouncement(TYPE))));
+
+        assertThat(results).as("primera, segunda del mismo tipo, segunda de otro tipo").containsExactly(true, false, true);
+        Boolean afterRelease = template.execute(status -> outbox.tryLockAnnouncement(type));
+        assertThat(afterRelease).as("ya soltado").isTrue();
+    }
+
+    @Test
+    @DisplayName("Pedir el candado sin una transacción abierta falla")
+    void tryLockAnnouncement_shouldFail_whenNoTransactionIsOpen() {
+        assertThatThrownBy(() -> outbox.tryLockAnnouncement(RoleCatalogUpdated.TYPE))
+                .isInstanceOf(IllegalTransactionStateException.class);
     }
 
     @Test
@@ -228,6 +313,7 @@ class OutboxRepositoryAdapterIT {
     static Stream<Arguments> brokenRows() {
         var head = "INSERT INTO evento_saliente (id, tipo, version, agregado_id, carga, id_correlacion, fecha_creacion, fecha_publicacion, intentos) VALUES (?, ";
         return Stream.of(
+                Arguments.of("tipo otro.evento", head + "'otro.evento', 1, ?, '{}'::jsonb, 'c1', now(), NULL, 0)", "ck_evento_saliente_tipo"),
                 Arguments.of("tipo desconocido", head + "'otro.tipo', 1, ?, '{}'::jsonb, 'c1', now(), NULL, 0)", "ck_evento_saliente_tipo"),
                 Arguments.of("versión 0", head + "'perfil.profesional-actualizado', 0, ?, '{}'::jsonb, 'c1', now(), NULL, 0)", "ck_evento_saliente_version"),
                 Arguments.of("correlación con espacio", head + "'perfil.profesional-actualizado', 1, ?, '{}'::jsonb, 'c 1', now(), NULL, 0)",

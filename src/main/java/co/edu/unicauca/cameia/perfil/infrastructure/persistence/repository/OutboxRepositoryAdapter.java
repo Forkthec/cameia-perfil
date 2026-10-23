@@ -2,8 +2,10 @@ package co.edu.unicauca.cameia.perfil.infrastructure.persistence.repository;
 
 import co.edu.unicauca.cameia.perfil.domain.event.OutboundEvent;
 import co.edu.unicauca.cameia.perfil.domain.event.ProfileUpdated;
+import co.edu.unicauca.cameia.perfil.domain.event.RoleCatalogUpdated;
 import co.edu.unicauca.cameia.perfil.domain.port.OutboxRepository;
 import co.edu.unicauca.cameia.perfil.infrastructure.messaging.payload.ProfileUpdatedPayloadV1;
+import co.edu.unicauca.cameia.perfil.infrastructure.messaging.payload.RoleCatalogPayloadV1;
 import co.edu.unicauca.cameia.perfil.infrastructure.persistence.entity.OutboxEventEntity;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
@@ -21,7 +23,8 @@ import java.util.UUID;
  * cada operación que escribe declara su propia transacción: cuando la llama el servicio de perfiles se une a la del
  * cambio, y cuando la llama el relevo abre una corta. Agregar y leer con bloqueo exigen la transacción del llamador.</p>
  *
- * <p>La carga del evento de perfil se arma aquí, porque el contrato JSON es asunto de la infraestructura.</p>
+ * <p>La carga del evento de perfil y la del catálogo de roles se arman aquí, porque el contrato JSON es asunto de la
+ * infraestructura.</p>
  */
 @Repository
 class OutboxRepositoryAdapter implements OutboxRepository {
@@ -51,6 +54,31 @@ class OutboxRepositoryAdapter implements OutboxRepository {
                 event.correlationId().value(), event.updatedAt());
         append(stored);
         return stored;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public OutboundEvent saveRoleCatalog(RoleCatalogUpdated event) {
+        var stored = new OutboundEvent(event.eventId(), RoleCatalogUpdated.TYPE, RoleCatalogUpdated.VERSION,
+                RoleCatalogUpdated.AGGREGATE_ID, JSON.writeValueAsString(RoleCatalogPayloadV1.from(event)),
+                event.correlationId().value(), event.updatedAt());
+        append(stored);
+        return stored;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsPendingOfType(String type) {
+        return repository.existsPendingOfType(type);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public boolean tryLockAnnouncement(String type) {
+        return repository.tryAdvisoryLock(type);
     }
 
     /** {@inheritDoc} */

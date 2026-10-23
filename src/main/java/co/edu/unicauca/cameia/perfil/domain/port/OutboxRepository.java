@@ -2,6 +2,7 @@ package co.edu.unicauca.cameia.perfil.domain.port;
 
 import co.edu.unicauca.cameia.perfil.domain.event.OutboundEvent;
 import co.edu.unicauca.cameia.perfil.domain.event.ProfileUpdated;
+import co.edu.unicauca.cameia.perfil.domain.event.RoleCatalogUpdated;
 
 import java.time.Instant;
 import java.util.List;
@@ -29,6 +30,31 @@ public interface OutboxRepository {
      * @return el evento tal como quedó guardado, listo para el intento posterior al commit
      */
     OutboundEvent appendProfileUpdated(ProfileUpdated event);
+
+    /**
+     * Guarda la instantánea del catálogo de roles como pendiente, con su carga del contrato v1, en la transacción en curso.
+     *
+     * @param event instantánea completa del catálogo
+     * @return el evento tal como quedó guardado, listo para el intento posterior al commit
+     */
+    OutboundEvent saveRoleCatalog(RoleCatalogUpdated event);
+
+    /**
+     * Dice si hay un evento de ese tipo que sigue sin publicar.
+     *
+     * @param type tipo del evento, por ejemplo {@code perfil.catalogo-roles-actualizado}
+     * @return {@code true} si existe al menos uno pendiente
+     */
+    boolean existsPendingOfType(String type);
+
+    /**
+     * Intenta tomar, hasta el fin de la transacción actual, el derecho a anotar un evento de ese tipo. No espera: si otra
+     * instancia ya lo tiene, devuelve {@code false}. El candado se suelta solo al terminar la transacción.
+     *
+     * @param type tipo del evento, por ejemplo {@code perfil.catalogo-roles-actualizado}
+     * @return {@code true} si esta transacción lo obtuvo; exige una transacción abierta
+     */
+    boolean tryLockAnnouncement(String type);
 
     /**
      * Lee los pendientes más antiguos y los bloquea, de modo que otra instancia del relevo salte esas filas.
