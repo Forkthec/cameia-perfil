@@ -1,0 +1,682 @@
+package co.edu.unicauca.cameia.perfil.presentation.controller;
+
+import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
+import co.edu.unicauca.cameia.perfil.application.command.CreateProfileCommand;
+import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
+import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
+import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
+import co.edu.unicauca.cameia.perfil.application.service.ProfileAppService;
+import co.edu.unicauca.cameia.perfil.application.service.ProfileCreationAppService;
+import co.edu.unicauca.cameia.perfil.presentation.dto.AddEducationRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.ApiErrorResponse;
+import co.edu.unicauca.cameia.perfil.presentation.dto.AddSkillRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.AddTargetRoleRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateTargetRoleRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.AddWorkExperienceRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.ProfileListResponse;
+import co.edu.unicauca.cameia.perfil.presentation.dto.ProfileResponse;
+import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateProfileInfoRequest;
+import co.edu.unicauca.cameia.perfil.presentation.dto.UpdateSalaryExpectationRequest;
+import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
+
+/** Endpoints del perfil profesional del Usuario. */
+@Tag(name = "Perfiles", description = "Gestión del perfil profesional del candidato")
+@RestController
+@RequestMapping("/api/v1/profiles")
+class ProfileController {
+
+    private static final String EMPTY_PROFILE_EXAMPLE = """
+            {
+              "id": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+              "status": "IN_PROGRESS",
+              "reviewStatus": "PENDING_REVIEW",
+              "provenance": "MANUAL",
+              "name": null,
+              "summary": null,
+              "salaryExpectation": null,
+              "preferredModality": null,
+              "createdAt": "2026-10-07T15:04:05Z",
+              "updatedAt": "2026-10-07T15:04:05Z",
+              "targetRoles": [],
+              "workExperiences": [],
+              "educations": [],
+              "profileSkills": []
+            }""";
+
+    private static final String WORK_EXPERIENCE_LIMIT_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Máximo de experiencias alcanzado",
+              "status": 409,
+              "detail": "Ya tienes el máximo de 4 experiencias laborales.",
+              "code": "WORK_EXPERIENCE_LIMIT_REACHED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String EDUCATION_LIMIT_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Máximo de formaciones alcanzado",
+              "status": 409,
+              "detail": "Ya tienes el máximo de 5 formaciones académicas.",
+              "code": "EDUCATION_LIMIT_REACHED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String PROFILE_INCOMPLETE_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Finalización incompleta",
+              "status": 422,
+              "detail": "Todavía no cumples estos requisitos:",
+              "code": "PROFILE_INCOMPLETE",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+              "missingRequirements": ["NAME", "SUMMARY", "EDUCATION", "SKILLS", "TARGET_ROLES"],
+              "errors": [
+                {"field": "name", "code": "COMPLETION_NAME_REQUIRED", "message": "Nombre del perfil"},
+                {"field": "summary", "code": "COMPLETION_SUMMARY_REQUIRED", "message": "Resumen profesional"},
+                {"field": "education", "code": "COMPLETION_EDUCATION_REQUIRED", "message": "Formación académica"},
+                {"field": "skills", "code": "COMPLETION_SKILLS_REQUIRED", "message": "Habilidades"},
+                {"field": "targetRoles", "code": "COMPLETION_TARGET_ROLES_REQUIRED", "message": "Roles objetivo"}
+              ]
+            }""";
+
+    private static final String SKILL_LIMIT_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Máximo de habilidades alcanzado",
+              "status": 409,
+              "detail": "Ya tienes el máximo de 20 habilidades.",
+              "code": "SKILL_LIMIT_REACHED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String SKILL_DUPLICATE_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Habilidad duplicada",
+              "status": 409,
+              "detail": "Esa habilidad ya está en tu perfil.",
+              "code": "SKILL_ALREADY_EXISTS",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+              "errors": [{"field": "skillName", "code": "SKILL_ALREADY_EXISTS", "message": "Esa habilidad ya está en tu perfil."}]
+            }""";
+
+    private static final String SKILL_NOT_ALLOWED_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "No se puede eliminar la última habilidad",
+              "status": 409,
+              "detail": "No puedes quedarte sin habilidades con el perfil activo. Agrega otra antes de eliminar esta.",
+              "code": "SKILL_NOT_ALLOWED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String EDUCATION_NOT_ALLOWED_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "No se puede eliminar la última formación",
+              "status": 409,
+              "detail": "No puedes quedarte sin formación académica con el perfil activo. Agrega otra antes de eliminar esta.",
+              "code": "EDUCATION_NOT_ALLOWED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String EDUCATION_INVALID_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Datos no válidos",
+              "status": 422,
+              "detail": "Revisa los campos marcados.",
+              "code": "VALIDATION_FAILED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+              "errors": [
+                {"field": "institution", "code": "INSTITUTION_REQUIRED", "message": "Ingresa la institución."}
+              ]
+            }""";
+
+    private static final String PROFILE_INFO_INVALID_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Datos no válidos",
+              "status": 422,
+              "detail": "Revisa los campos marcados.",
+              "code": "VALIDATION_FAILED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+              "errors": [
+                {"field": "name", "code": "PROFILE_NAME_REQUIRED", "message": "Ingresa un nombre para el perfil."},
+                {"field": "summary", "code": "SUMMARY_TOO_LONG", "message": "El resumen no puede superar los 2000 caracteres."}
+              ]
+            }
+            """;
+
+    private static final String WORK_EXPERIENCE_INVALID_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Datos no válidos",
+              "status": 422,
+              "detail": "Revisa los campos marcados.",
+              "code": "VALIDATION_FAILED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+              "errors": [
+                {"field": "company", "code": "COMPANY_REQUIRED", "message": "Ingresa la empresa."}
+              ]
+            }""";
+
+    private static final String BIRTH_DATE_UNAVAILABLE_DESCRIPTION = "El registro trae fechas y la fecha de nacimiento del Usuario aún no está replicada (code BIRTH_DATE_UNAVAILABLE): no se guardó nada; el cliente puede reintentar en unos segundos. Un registro sin ninguna fecha no la necesita";
+
+    private static final String BIRTH_DATE_UNAVAILABLE_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Servicio no disponible",
+              "status": 503,
+              "detail": "Ocurrió un error. Inténtalo de nuevo.",
+              "code": "BIRTH_DATE_UNAVAILABLE",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String LIST_EXAMPLE = """
+            {
+              "profiles": [
+                {
+                  "id": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10",
+                  "name": "Analista de datos",
+                  "status": "COMPLETED",
+                  "targetRoles": [
+                    {"professionalRoleId": "a0000002-0000-0000-0000-000000000002", "roleTitle": "Analista de Datos"}
+                  ]
+                },
+                {"id": "7b1d4a52-3c0b-4e8a-9b14-2f5d8c6e0a31", "name": null, "status": "IN_PROGRESS", "targetRoles": []}
+              ]
+            }""";
+
+    private static final String PROFILE_STATUS_INVALID_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Estado no válido",
+              "status": 422,
+              "detail": "Selecciona una opción.",
+              "code": "PROFILE_STATUS_INVALID_VALUE",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String IDENTITY_REQUIRED_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Identidad requerida",
+              "status": 401,
+              "detail": "Tu sesión expiró. Inicia sesión de nuevo.",
+              "code": "IDENTITY_REQUIRED",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String PLAN_LIMIT_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Cupo del plan alcanzado",
+              "status": 403,
+              "detail": "Tu Plan Free permite 1 Perfil Profesional.",
+              "code": "PLAN_LIMIT",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    private static final String PROFILE_CREATION_IN_PROGRESS_EXAMPLE = """
+            {
+              "type": "about:blank",
+              "title": "Creación en proceso",
+              "status": 409,
+              "detail": "Estamos creando tu perfil. Inténtalo de nuevo en unos segundos.",
+              "code": "PROFILE_CREATION_IN_PROGRESS",
+              "requestId": "3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10"
+            }""";
+
+    /** Partes comunes de los ejemplos de error: forma común RFC 9457 más {@code code} y {@code requestId}. */
+    private static final String EXAMPLE_HEAD = "{\"type\": \"about:blank\", ";
+    private static final String EXAMPLE_TAIL = ", \"requestId\": \"3f0c2c1e-8a47-4d5b-9a63-5b1d6e2f7a10\"}";
+
+    private static final String REMOVE_TARGET_ROLE_IDENTITY_EXAMPLE = EXAMPLE_HEAD
+            + "\"title\": \"Identidad requerida\", \"status\": 401, \"detail\": \"Tu sesión expiró. Inicia sesión de nuevo.\", "
+            + "\"code\": \"IDENTITY_REQUIRED\"" + EXAMPLE_TAIL;
+
+    private static final String REMOVE_TARGET_ROLE_FORBIDDEN_EXAMPLE = EXAMPLE_HEAD
+            + "\"title\": \"Acceso denegado\", \"status\": 403, \"detail\": \"No encontramos lo que buscabas.\", "
+            + "\"code\": \"PROFILE_NOT_ALLOWED\"" + EXAMPLE_TAIL;
+
+    private static final String REMOVE_TARGET_ROLE_NOT_FOUND_EXAMPLE = EXAMPLE_HEAD
+            + "\"title\": \"Rol objetivo no encontrado\", \"status\": 404, \"detail\": \"No encontramos lo que buscabas.\", "
+            + "\"code\": \"TARGET_ROLE_NOT_FOUND\"" + EXAMPLE_TAIL;
+
+    private static final String LAST_TARGET_ROLE_EXAMPLE = EXAMPLE_HEAD
+            + "\"title\": \"Rol objetivo no permitido\", \"status\": 409, \"detail\": \"No puedes quedarte sin roles objetivo con el perfil activo.\", "
+            + "\"code\": \"TARGET_ROLE_NOT_ALLOWED\"" + EXAMPLE_TAIL;
+
+    private static final String UPDATE_IN_PROGRESS_EXAMPLE = EXAMPLE_HEAD
+            + "\"title\": \"Perfil ocupado\", \"status\": 409, \"detail\": \"Estamos guardando otro cambio de tu perfil. Inténtalo de nuevo en unos segundos.\", "
+            + "\"code\": \"PROFILE_UPDATE_IN_PROGRESS\"" + EXAMPLE_TAIL;
+
+    private static final String TARGET_ROLE_ID_INVALID_EXAMPLE = EXAMPLE_HEAD
+            + "\"title\": \"Identificador no válido\", \"status\": 422, \"detail\": \"El identificador del rol objetivo no es válido.\", "
+            + "\"code\": \"TARGET_ROLE_ID_INVALID_FORMAT\"" + EXAMPLE_TAIL;
+
+    private final ProfileAppService profileAppService;
+    private final ProfileCreationAppService profileCreationAppService;
+
+    ProfileController(ProfileAppService profileAppService, ProfileCreationAppService profileCreationAppService) {
+        this.profileAppService = profileAppService;
+        this.profileCreationAppService = profileCreationAppService;
+    }
+
+    @Operation(summary = "Listar los perfiles del usuario",
+            description = "Devuelve los perfiles de quien llama, del primero creado al último, con su nombre, estado y roles objetivo. "
+                    + "Sin filtro devuelve todos los estados; con status, solo ese. Cualquier otro parámetro se ignora.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Perfiles del usuario; la lista vacía si no tiene ninguno",
+                    headers = @Header(name = "Cache-Control", description = "Siempre no-store",
+                            schema = @Schema(type = "string", example = "no-store")),
+                    content = @Content(schema = @Schema(implementation = ProfileListResponse.class),
+                            examples = @ExampleObject(value = LIST_EXAMPLE))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = IDENTITY_REQUIRED_EXAMPLE))),
+            @ApiResponse(responseCode = "422", description = "El estado pedido no es PENDING, IN_PROGRESS, IN_REVIEW ni COMPLETED, "
+                    + "o llegó vacío, repetido o en minúsculas (code PROFILE_STATUS_INVALID_VALUE), "
+                    + "o la consulta está mal codificada, por ejemplo status=%zz (code REQUEST_QUERY_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = PROFILE_STATUS_INVALID_EXAMPLE)))
+    })
+    @GetMapping
+    ResponseEntity<ProfileListResponse> listProfiles(
+            @Parameter(description = "Estado a filtrar: PENDING, IN_PROGRESS, IN_REVIEW o COMPLETED", example = "COMPLETED")
+            @RequestParam(value = "status", required = false) String status,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(ProfileListResponse.from(profileAppService.listProfiles(uid, status)));
+    }
+
+    @Operation(summary = "Crear perfil profesional")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Perfil vacío creado, en estado IN_PROGRESS. "
+                    + "Una petición repetida mientras la creación está en proceso devuelve el mismo perfil.",
+                    content = @Content(schema = @Schema(implementation = ProfileResponse.class),
+                            examples = @ExampleObject(value = EMPTY_PROFILE_EXAMPLE))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El Usuario ya tenía el máximo de perfiles de su plan; el Plan Free permite uno (code PLAN_LIMIT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = PLAN_LIMIT_EXAMPLE))),
+            @ApiResponse(responseCode = "409", description = "Otra creación del mismo Usuario no terminó en 2 s: no se creó nada y se puede reintentar (code PROFILE_CREATION_IN_PROGRESS)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = PROFILE_CREATION_IN_PROGRESS_EXAMPLE))),
+            @ApiResponse(responseCode = "500", description = "Error interno (code INTERNAL_ERROR); el detalle nunca incluye el mensaje de la excepción",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @PostMapping
+    ResponseEntity<ProfileResponse> createProfile(
+            @Parameter(description = "Firebase UID del usuario autenticado", required = true)
+            @RequestHeader("X-User-Id") String uid) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ProfileResponse.from(profileCreationAppService.createProfile(new CreateProfileCommand(uid))));
+    }
+
+    @Operation(summary = "Obtener perfil profesional por ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Perfil encontrado",
+                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @GetMapping("/{id}")
+    ResponseEntity<ProfileResponse> getProfile(@PathVariable UUID id,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.getProfile(id, uid)));
+    }
+
+    @Operation(summary = "Actualizar información básica del perfil",
+            description = "Un campo ausente o nulo no cambia. Un resumen vacío o con solo espacios lo borra, salvo en un perfil activo. "
+                    + "Los textos se recortan y se guardan tal como se escribieron; la procedencia del cuerpo se ignora. "
+                    + "Se informan a la vez todos los campos inválidos.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Perfil actualizado",
+                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "El perfil está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se guardó nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFILE_NAME_REQUIRED, "
+                    + "PROFILE_NAME_INVALID_CHARACTERS, PROFILE_NAME_TOO_LONG, SUMMARY_NOT_ALLOWED (borrar el resumen de un perfil activo), "
+                    + "SUMMARY_INVALID_CHARACTERS, SUMMARY_TOO_LONG, PREFERRED_MODALITY_INVALID_VALUE). Cuerpo ilegible "
+                    + "(REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Nombre vacío y resumen largo", value = PROFILE_INFO_INVALID_EXAMPLE)))
+    })
+    @PatchMapping("/{id}")
+    ResponseEntity<ProfileResponse> updateProfileInfo(@PathVariable UUID id,
+            @Valid @RequestBody UpdateProfileInfoRequest r,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.updateProfileInfo(
+                new UpdateProfileInfoCommand(id, uid, r.name(), r.summary(), r.preferredModality()))));
+    }
+
+    @Operation(summary = "Agregar experiencia laboral al perfil",
+            description = "Todo lo que se agrega por esta ruta se guarda con procedencia MANUAL; una procedencia en el cuerpo se ignora. "
+                    + "El perfil admite hasta 4 experiencias. Se informan a la vez todos los campos inválidos.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Experiencia laboral agregada",
+                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "El perfil ya tiene 4 experiencias (code WORK_EXPERIENCE_LIMIT_REACHED) "
+                    + "o está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se agregó nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Máximo alcanzado", value = WORK_EXPERIENCE_LIMIT_EXAMPLE))),
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: COMPANY_REQUIRED, "
+                    + "COMPANY_TOO_LONG, COMPANY_INVALID_CHARACTERS, POSITION_REQUIRED, POSITION_TOO_LONG, POSITION_INVALID_CHARACTERS, "
+                    + "DESCRIPTION_TOO_LONG, DESCRIPTION_INVALID_CHARACTERS, START_DATE_INVALID_FORMAT, START_DATE_IN_THE_FUTURE, "
+                    + "END_DATE_INVALID_FORMAT, END_DATE_REQUIRED, END_DATE_NOT_ALLOWED, END_DATE_IN_THE_FUTURE, END_DATE_BEFORE_START_DATE, "
+                    + "START_DATE_BEFORE_MINIMUM_AGE, END_DATE_BEFORE_MINIMUM_AGE, "
+                    + "EMPLOYMENT_STATUS_REQUIRED, EMPLOYMENT_STATUS_INVALID_VALUE). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) "
+                    + "o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Empresa vacía", value = WORK_EXPERIENCE_INVALID_EXAMPLE))),
+            @ApiResponse(responseCode = "503", description = BIRTH_DATE_UNAVAILABLE_DESCRIPTION,
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Fecha de nacimiento no disponible", value = BIRTH_DATE_UNAVAILABLE_EXAMPLE)))
+    })
+    @PostMapping("/{id}/work-experiences")
+    ResponseEntity<ProfileResponse> addWorkExperience(@PathVariable UUID id,
+            @Valid @RequestBody AddWorkExperienceRequest r,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addWorkExperience(
+                new AddWorkExperienceCommand(id, uid, r.company(), r.position(), r.description(),
+                        r.startDate(), r.endDate(), r.employmentStatus()))));
+    }
+
+    @Operation(summary = "Eliminar experiencia laboral del perfil")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Experiencia laboral eliminada, sin cuerpo"),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o experiencia que no es de este perfil (code WORK_EXPERIENCE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "El perfil está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se quitó nada y se puede reintentar",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o WORK_EXPERIENCE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @DeleteMapping("/{id}/work-experiences/{expId}")
+    ResponseEntity<Void> removeWorkExperience(@PathVariable UUID id, @PathVariable UUID expId,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        profileAppService.removeWorkExperience(id, uid, expId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Agregar formación académica al perfil",
+            description = "Todo lo que se agrega por esta ruta se guarda con procedencia MANUAL; una procedencia o un área de estudio "
+                    + "en el cuerpo se ignoran. El perfil admite hasta 5 formaciones. Se informan a la vez todos los campos inválidos.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Formación académica agregada",
+                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "El perfil ya tiene 5 formaciones (code EDUCATION_LIMIT_REACHED) "
+                    + "o está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se agregó nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Máximo alcanzado", value = EDUCATION_LIMIT_EXAMPLE))),
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: INSTITUTION_REQUIRED, "
+                    + "INSTITUTION_TOO_LONG, INSTITUTION_INVALID_CHARACTERS, DEGREE_REQUIRED, DEGREE_TOO_LONG, DEGREE_INVALID_CHARACTERS, "
+                    + "EDUCATION_LEVEL_REQUIRED, EDUCATION_LEVEL_INVALID_VALUE, START_DATE_REQUIRED, START_DATE_INVALID_FORMAT, "
+                    + "START_DATE_IN_THE_FUTURE, END_DATE_INVALID_FORMAT, END_DATE_NOT_ALLOWED, END_DATE_IN_THE_FUTURE, "
+                    + "END_DATE_BEFORE_START_DATE, START_DATE_BEFORE_BIRTH). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) "
+                    + "o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Institución vacía", value = EDUCATION_INVALID_EXAMPLE))),
+            @ApiResponse(responseCode = "503", description = BIRTH_DATE_UNAVAILABLE_DESCRIPTION,
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Fecha de nacimiento no disponible", value = BIRTH_DATE_UNAVAILABLE_EXAMPLE)))
+    })
+    @PostMapping("/{id}/educations")
+    ResponseEntity<ProfileResponse> addEducation(@PathVariable UUID id,
+            @Valid @RequestBody AddEducationRequest r,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addEducation(
+                new AddEducationCommand(id, uid, r.institution(), r.degree(),
+                        r.level(), r.startDate(), r.endDate(), Boolean.TRUE.equals(r.inProgress())))));
+    }
+
+    @Operation(summary = "Eliminar formación académica del perfil",
+            description = "Un perfil en Borrador o en revisión puede quedarse sin formaciones; un perfil activo conserva al menos una.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Formación académica eliminada, sin cuerpo"),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o formación que no es de este perfil (code EDUCATION_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Es la única formación de un perfil activo (code EDUCATION_NOT_ALLOWED) "
+                    + "o el perfil está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se quitó nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Última formación", value = EDUCATION_NOT_ALLOWED_EXAMPLE))),
+            @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o EDUCATION_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @DeleteMapping("/{id}/educations/{eduId}")
+    ResponseEntity<Void> removeEducation(@PathVariable UUID id, @PathVariable UUID eduId,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        profileAppService.removeEducation(id, uid, eduId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Oculto en Swagger: queda fuera del alcance del MVP. */
+    @Hidden
+    @PatchMapping("/{id}/salary-expectation")
+    ResponseEntity<ProfileResponse> updateSalaryExpectation(@PathVariable UUID id,
+            @Valid @RequestBody UpdateSalaryExpectationRequest r,
+            @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.updateSalaryExpectation(
+                new UpdateSalaryExpectationCommand(id, uid, r.amount()))));
+    }
+
+    @Operation(summary = "Agregar habilidad al perfil")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Habilidad agregada",
+                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: SKILL_NAME_REQUIRED, SKILL_NAME_TOO_LONG, SKILL_LEVEL_REQUIRED, SKILL_LEVEL_INVALID_VALUE, SKILL_NAME_INVALID_CHARACTERS). Cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "El perfil ya tiene 20 habilidades (code SKILL_LIMIT_REACHED), "
+                    + "ya tiene esa habilidad sin distinguir mayúsculas, tildes ni espacios (code SKILL_ALREADY_EXISTS, con errors[skillName]) "
+                    + "o está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se agregó nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = {@ExampleObject(name = "Máximo alcanzado", value = SKILL_LIMIT_EXAMPLE),
+                                    @ExampleObject(name = "Habilidad repetida", value = SKILL_DUPLICATE_EXAMPLE)}))
+    })
+    @PostMapping("/{id}/skills")
+    ResponseEntity<ProfileResponse> addSkill(@PathVariable UUID id,
+            @Valid @RequestBody AddSkillRequest r,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addSkill(
+                new AddSkillCommand(id, uid, r.skillName(), r.level()))));
+    }
+
+    @Operation(summary = "Eliminar habilidad del perfil")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Habilidad eliminada, sin cuerpo"),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o habilidad que no es de este perfil (code SKILL_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Es la única habilidad de un perfil activo (code SKILL_NOT_ALLOWED) "
+                    + "o el perfil está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se quitó nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Última habilidad", value = SKILL_NOT_ALLOWED_EXAMPLE))),
+            @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT o SKILL_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @DeleteMapping("/{id}/skills/{skillId}")
+    ResponseEntity<Void> removeSkill(@PathVariable UUID id, @PathVariable UUID skillId,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        profileAppService.removeSkill(id, uid, skillId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Agregar rol objetivo al perfil")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Rol objetivo agregado",
+                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o rol profesional inexistente en el catálogo (code PROFESSIONAL_ROLE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil (code TARGET_ROLE_ALREADY_EXISTS), el perfil ya tiene el máximo de 5 roles objetivo (TARGET_ROLE_LIMIT_REACHED) u otra escritura del perfil está en curso (PROFILE_UPDATE_IN_PROGRESS)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFESSIONAL_ROLE_ID_REQUIRED, PROFESSIONAL_ROLE_DISABLED), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @PostMapping("/{id}/target-roles")
+    ResponseEntity<ProfileResponse> addTargetRole(@PathVariable UUID id,
+            @Valid @RequestBody AddTargetRoleRequest r,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProfileResponse.from(profileAppService.addTargetRole(
+                new AddTargetRoleCommand(id, uid, r.professionalRoleId()))));
+    }
+
+    @Operation(summary = "Actualizar rol objetivo del perfil")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Rol objetivo actualizado",
+                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Campos inválidos (code VALIDATION_FAILED, con errors[]: PROFESSIONAL_ROLE_ID_REQUIRED, PROFESSIONAL_ROLE_DISABLED), cuerpo ilegible (REQUEST_BODY_INVALID_FORMAT) o identificador mal escrito (PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND), rol objetivo inexistente en el perfil (code TARGET_ROLE_NOT_FOUND) o rol profesional inexistente en el catálogo (code PROFESSIONAL_ROLE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Ya existe ese rol objetivo en el perfil (code TARGET_ROLE_ALREADY_EXISTS) u otra escritura del perfil está en curso (PROFILE_UPDATE_IN_PROGRESS)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @PatchMapping("/{id}/target-roles/{roleId}")
+    ResponseEntity<ProfileResponse> updateTargetRole(@PathVariable UUID id, @PathVariable UUID roleId,
+            @Valid @RequestBody UpdateTargetRoleRequest r,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.updateTargetRole(
+                new UpdateTargetRoleCommand(id, uid, roleId, r.professionalRoleId()))));
+    }
+
+    @Operation(summary = "Eliminar rol objetivo del perfil",
+            description = "Elimina el rol objetivo indicado. Esta operación no recibe cuerpo: si el cliente envía uno, se ignora.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Rol objetivo eliminado, sin cuerpo"),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = REMOVE_TARGET_ROLE_IDENTITY_EXAMPLE))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = REMOVE_TARGET_ROLE_FORBIDDEN_EXAMPLE))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND) o rol objetivo que no es de este perfil (code TARGET_ROLE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = REMOVE_TARGET_ROLE_NOT_FOUND_EXAMPLE))),
+            @ApiResponse(responseCode = "409", description = "No se puede eliminar el único rol objetivo de un perfil activo (code TARGET_ROLE_NOT_ALLOWED) u otra escritura en curso (PROFILE_UPDATE_IN_PROGRESS)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = {
+                                    @ExampleObject(name = "Último rol de un perfil activo", value = LAST_TARGET_ROLE_EXAMPLE),
+                                    @ExampleObject(name = "Escritura en curso", value = UPDATE_IN_PROGRESS_EXAMPLE)})),
+            @ApiResponse(responseCode = "422", description = "Identificador mal escrito (code PROFILE_ID_INVALID_FORMAT, TARGET_ROLE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(value = TARGET_ROLE_ID_INVALID_EXAMPLE)))
+    })
+    @DeleteMapping("/{id}/target-roles/{roleId}")
+    ResponseEntity<Void> removeTargetRole(@PathVariable UUID id, @PathVariable UUID roleId,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        profileAppService.removeTargetRole(id, uid, roleId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Marcar perfil como COMPLETED",
+            description = "Valida que el perfil cumpla los cinco requisitos, en este orden: nombre, resumen (de hasta 2000 caracteres), "
+                    + "al menos una formación, al menos una habilidad y al menos un rol objetivo; la experiencia laboral no es requisito. "
+                    + "Si cumple, cambia su estado a COMPLETED. Si no, responde 422 PROFILE_INCOMPLETE con los requisitos que faltan en "
+                    + "missingRequirements y un elemento de errors[] por requisito, en el mismo orden. El cuerpo, si llega, se ignora.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Perfil marcado como COMPLETED",
+                    content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Identidad ausente, en blanco o de más de 128 caracteres (code IDENTITY_REQUIRED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "El perfil pertenece a otro Usuario (code PROFILE_NOT_ALLOWED)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Perfil no encontrado (code PROFILE_NOT_FOUND)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "El perfil ya está activo (code PROFILE_ALREADY_COMPLETED) "
+                    + "o está ocupado con otra escritura (code PROFILE_UPDATE_IN_PROGRESS): no se cambió nada",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "El perfil no cumple los requisitos para finalizar (code PROFILE_INCOMPLETE, "
+                    + "con missingRequirements[] y errors[]) o identificador del perfil mal escrito (PROFILE_ID_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class),
+                            examples = @ExampleObject(name = "Perfil nuevo", value = PROFILE_INCOMPLETE_EXAMPLE))),
+            @ApiResponse(responseCode = "500", description = "Fallo inesperado al guardar (code INTERNAL_ERROR): el perfil no cambia",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @PostMapping("/{id}/completion")
+    ResponseEntity<ProfileResponse> completeProfile(@PathVariable UUID id,
+            @Parameter(hidden = true) @RequestHeader(value = "X-User-Id", required = false) String uid) {
+        return ResponseEntity.ok(ProfileResponse.from(profileAppService.completeProfile(id, uid)));
+    }
+}

@@ -1,0 +1,92 @@
+{
+  "info": {
+    "name": "CAMEIA — cameia-perfil: base de datos no disponible (manual)",
+    "_postman_id": "cameia-perfil-base-no-disponible",
+    "description": "Pruebas manuales del 503 DATABASE_UNAVAILABLE. Exigen detener la base de datos antes de correrlas (docker compose stop db) y volver a encenderla después; por eso no forman parte de la colección principal, que se corre con la base encendida.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8082",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "D-01 Listar perfiles con la base detenida: 503 en menos de 8 s",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 503', () => pm.response.to.have.status(503));",
+              "pm.test('Responde en menos de 8 s', () => pm.expect(pm.response.responseTime).to.be.below(8000));",
+              "pm.test('Content-Type problem+json con charset UTF-8', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json;charset=UTF-8'));",
+              "const b = pm.response.json();",
+              "pm.test('code DATABASE_UNAVAILABLE', () => pm.expect(b.code).to.eql('DATABASE_UNAVAILABLE'));",
+              "pm.test('Mensaje para la persona', () => pm.expect(b.detail).to.eql('Ocurrió un error. Inténtalo de nuevo.'));",
+              "pm.test('requestId presente y igual al encabezado', () => { pm.expect(b.requestId).to.be.a('string').and.not.empty; pm.expect(pm.response.headers.get('X-Request-Id')).to.eql(b.requestId); });",
+              "pm.test('Sin trazas, SQL, hosts ni nombres de clase', () => pm.expect(pm.response.text()).to.not.match(/Exception|at co[.]edu|SQL|org[.]|jdbc|Hikari|postgres/i));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-User-Id",
+            "value": "uid-cm290-newman"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/profiles",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "profiles"
+          ]
+        }
+      }
+    },
+    {
+      "name": "D-02 Catálogo de roles con la base detenida: 503",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 503', () => pm.response.to.have.status(503));",
+              "pm.test('Content-Type problem+json con charset UTF-8', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json;charset=UTF-8'));",
+              "const b = pm.response.json();",
+              "pm.test('code DATABASE_UNAVAILABLE', () => pm.expect(b.code).to.eql('DATABASE_UNAVAILABLE'));",
+              "pm.test('requestId presente y igual al encabezado', () => { pm.expect(b.requestId).to.be.a('string').and.not.empty; pm.expect(pm.response.headers.get('X-Request-Id')).to.eql(b.requestId); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/profiles/professional-roles",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "profiles",
+            "professional-roles"
+          ]
+        }
+      }
+    }
+  ]
+}

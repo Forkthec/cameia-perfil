@@ -1,0 +1,56 @@
+package co.edu.unicauca.cameia.perfil.presentation.controller;
+
+import co.edu.unicauca.cameia.perfil.application.service.ProfessionalRoleAppService;
+import co.edu.unicauca.cameia.perfil.domain.exception.UnsupportedLanguageException;
+import co.edu.unicauca.cameia.perfil.presentation.dto.ApiErrorResponse;
+import co.edu.unicauca.cameia.perfil.presentation.dto.ProfessionalRoleResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Set;
+
+/** Catálogo de roles profesionales TI. Solo lectura, sin autenticación. */
+@Tag(name = "Roles Profesionales", description = "Catálogo de roles TI disponibles para usar como rol objetivo")
+@RestController
+@RequestMapping("/api/v1/profiles/professional-roles")
+class ProfessionalRoleController {
+
+    private static final Set<String> SUPPORTED_LANGS = Set.of("es", "en");
+
+    private final ProfessionalRoleAppService service;
+    ProfessionalRoleController(ProfessionalRoleAppService service) { this.service = service; }
+
+    @Operation(summary = "Listar catálogo de roles profesionales TI",
+            description = "Devuelve solo los roles activos, que son los que se pueden elegir como rol objetivo. Sin coincidencias, la lista vacía.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lista de roles profesionales",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProfessionalRoleResponse.class)))),
+            @ApiResponse(responseCode = "422", description = "Idioma no disponible; solo 'es' o 'en' (code PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE), "
+                    + "o consulta mal codificada, por ejemplo lang=%zz (code REQUEST_QUERY_INVALID_FORMAT)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @GetMapping
+    ResponseEntity<List<ProfessionalRoleResponse>> listAll(
+            @Parameter(description = "Idioma de la respuesta: 'es' (español) o 'en' (inglés). Por defecto 'es'.")
+            @RequestParam(value = "lang", defaultValue = "es") String lang) {
+
+        if (!SUPPORTED_LANGS.contains(lang)) {
+            throw new UnsupportedLanguageException();
+        }
+
+        return ResponseEntity.ok(
+                service.listAllByLang(lang).stream().map(ProfessionalRoleResponse::from).toList());
+    }
+}

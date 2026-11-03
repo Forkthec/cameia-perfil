@@ -1,0 +1,193 @@
+package co.edu.unicauca.cameia.perfil.domain.exception;
+
+/** Códigos estables de error de Perfil: son el contrato con el cliente, no se renombran. */
+public enum ErrorCode {
+
+    /** Falló la validación de uno o más campos de la petición. */
+    VALIDATION_FAILED,
+    /** El cuerpo de la petición no se pudo leer como JSON o tiene un tipo incorrecto. */
+    REQUEST_BODY_INVALID_FORMAT,
+    /** Un parámetro de la consulta no está bien codificado y no se pudo leer. */
+    REQUEST_QUERY_INVALID_FORMAT,
+    /** Un multipart de la petición no se pudo leer (por ejemplo, sin boundary). */
+    REQUEST_MULTIPART_INVALID_FORMAT,
+    /** Un multipart de la petición pasa el tamaño admitido (1 MiB por parte o 10 MiB en total). */
+    REQUEST_BODY_TOO_LARGE,
+    /** Un valor rechazado por un objeto de valor, sin campo asociado. */
+    REQUEST_INVALID_VALUE,
+    /** Falta la identidad del usuario, o no es válida. */
+    IDENTITY_REQUIRED,
+    /** El perfil solicitado no existe. */
+    PROFILE_NOT_FOUND,
+    /** El perfil existe pero pertenece a otro usuario. */
+    PROFILE_NOT_ALLOWED,
+    /**
+     * El Usuario ya tiene el máximo de Perfiles Profesionales que permite su plan; no se creó nada.
+     * Es el código común del cupo del plan en todos los servicios, por eso no sigue la forma sujeto y causa.
+     */
+    PLAN_LIMIT,
+    /** Otra creación del mismo Usuario sigue en curso; no se creó nada. */
+    PROFILE_CREATION_IN_PROGRESS,
+    /** Otra escritura retuvo el perfil más que la espera máxima; no cambió nada. */
+    PROFILE_UPDATE_IN_PROGRESS,
+    /** La fecha de nacimiento del usuario aún no se replicó desde cuentas; se puede reintentar. */
+    BIRTH_DATE_UNAVAILABLE,
+    /** La base de datos no está disponible; la persona puede reintentar. */
+    DATABASE_UNAVAILABLE,
+    /** El perfil ya está finalizado y no admite más cambios de estado. */
+    PROFILE_ALREADY_COMPLETED,
+    /** El perfil no cumple los requisitos mínimos para finalizar. */
+    PROFILE_INCOMPLETE,
+    /** El rol profesional del catálogo no existe. */
+    PROFESSIONAL_ROLE_NOT_FOUND,
+    /** El rol del catálogo existe pero no está activo; no se puede elegir. */
+    PROFESSIONAL_ROLE_DISABLED,
+    /** El perfil ya tiene el máximo de roles objetivo. */
+    TARGET_ROLE_LIMIT_REACHED,
+    /** El rol objetivo ya está agregado al perfil. */
+    TARGET_ROLE_ALREADY_EXISTS,
+    /** No se puede eliminar el último rol objetivo del perfil. */
+    TARGET_ROLE_NOT_ALLOWED,
+    /** La habilidad ya está asociada al perfil. */
+    SKILL_ALREADY_EXISTS,
+    /** El idioma pedido al catálogo de roles profesionales no está disponible. */
+    PROFESSIONAL_ROLE_LANGUAGE_INVALID_VALUE,
+    /** El filtro de estado de la lista no es un estado del perfil. */
+    PROFILE_STATUS_INVALID_VALUE,
+    /** No existe la ruta solicitada. */
+    ROUTE_NOT_FOUND,
+    /** El método HTTP no está permitido en la ruta. */
+    METHOD_NOT_ALLOWED,
+    /** El cuerpo llega en un formato distinto de JSON. */
+    MEDIA_TYPE_NOT_ALLOWED,
+    /** El cliente pide la respuesta en un formato distinto de JSON. */
+    MEDIA_TYPE_NOT_ACCEPTABLE,
+    /** El identificador del perfil en la ruta no es un UUID. */
+    PROFILE_ID_INVALID_FORMAT,
+    /** El identificador de la experiencia laboral en la ruta no es un UUID. */
+    WORK_EXPERIENCE_ID_INVALID_FORMAT,
+    /** El identificador de la formación académica en la ruta no es un UUID. */
+    EDUCATION_ID_INVALID_FORMAT,
+    /** El identificador de la habilidad en la ruta no es un UUID. */
+    SKILL_ID_INVALID_FORMAT,
+    /** El identificador del rol objetivo en la ruta no es un UUID. */
+    TARGET_ROLE_ID_INVALID_FORMAT,
+    /** Error interno no previsto. */
+    INTERNAL_ERROR,
+    /** El rol objetivo no existe en el perfil. */
+    TARGET_ROLE_NOT_FOUND,
+    /** La experiencia laboral no existe en el perfil. */
+    WORK_EXPERIENCE_NOT_FOUND,
+    /** El perfil ya tiene el máximo de experiencias laborales; no se agregó nada. */
+    WORK_EXPERIENCE_LIMIT_REACHED,
+    /** La formación académica no existe en el perfil. */
+    EDUCATION_NOT_FOUND,
+    /** El perfil ya tiene el máximo de formaciones académicas; no se agregó nada. */
+    EDUCATION_LIMIT_REACHED,
+    /** Un perfil activo no puede quedarse sin formación académica; no se eliminó nada. */
+    EDUCATION_NOT_ALLOWED,
+    /** La habilidad no existe en el perfil. */
+    SKILL_NOT_FOUND,
+    /** Falta el nombre del perfil o está en blanco. */
+    PROFILE_NAME_REQUIRED,
+    /** El nombre del perfil supera su largo máximo. */
+    PROFILE_NAME_TOO_LONG,
+    /** Un perfil activo no puede quedarse sin resumen profesional. */
+    SUMMARY_NOT_ALLOWED,
+    /** El resumen profesional supera su largo máximo. */
+    SUMMARY_TOO_LONG,
+    /** La expectativa salarial está fuera del rango permitido. */
+    SALARY_EXPECTATION_OUT_OF_RANGE,
+    /** La modalidad de trabajo preferida no es una de las opciones. */
+    PREFERRED_MODALITY_INVALID_VALUE,
+    /** El estado laboral no es una de las opciones. */
+    EMPLOYMENT_STATUS_INVALID_VALUE,
+    /** El nivel de la formación académica no es una de las opciones. */
+    EDUCATION_LEVEL_INVALID_VALUE,
+    /** El nivel de la habilidad no es una de las opciones. */
+    SKILL_LEVEL_INVALID_VALUE,
+    /** La fecha de inicio no tiene el formato AAAA-MM o no existe. */
+    START_DATE_INVALID_FORMAT,
+    /** La fecha de fin no tiene el formato AAAA-MM o no existe. */
+    END_DATE_INVALID_FORMAT,
+    /** La experiencia terminó y no tiene fecha de fin. */
+    END_DATE_REQUIRED,
+    /** Llega fecha de fin en una experiencia en curso o sin fin conocido, o en una formación en curso. */
+    END_DATE_NOT_ALLOWED,
+    /** La fecha de fin es anterior a la de inicio. */
+    END_DATE_BEFORE_START_DATE,
+    /** La fecha de inicio es posterior al mes actual en UTC. */
+    START_DATE_IN_THE_FUTURE,
+    /** La fecha de fin es posterior al mes actual en UTC. */
+    END_DATE_IN_THE_FUTURE,
+    /** La experiencia empieza antes del mes en que el Usuario cumplió 15 años. */
+    START_DATE_BEFORE_MINIMUM_AGE,
+    /** La experiencia sin inicio termina antes del mes en que el Usuario cumplió 15 años. */
+    END_DATE_BEFORE_MINIMUM_AGE,
+    /** La formación empieza antes del mes de nacimiento del Usuario. */
+    START_DATE_BEFORE_BIRTH,
+    /** La empresa supera su largo máximo. */
+    COMPANY_TOO_LONG,
+    /** El cargo supera su largo máximo. */
+    POSITION_TOO_LONG,
+    /** La institución supera su largo máximo. */
+    INSTITUTION_TOO_LONG,
+    /** El título obtenido supera su largo máximo. */
+    DEGREE_TOO_LONG,
+    /** El nombre de la habilidad supera su largo máximo. */
+    SKILL_NAME_TOO_LONG,
+    /** La descripción de la experiencia supera su largo máximo. */
+    DESCRIPTION_TOO_LONG,
+    /** La empresa tiene un carácter de control que el campo no admite. */
+    COMPANY_INVALID_CHARACTERS,
+    /** El cargo tiene un carácter de control que el campo no admite. */
+    POSITION_INVALID_CHARACTERS,
+    /** La descripción tiene un carácter de control que el campo no admite. */
+    DESCRIPTION_INVALID_CHARACTERS,
+    /** La institución tiene un carácter de control que el campo no admite. */
+    INSTITUTION_INVALID_CHARACTERS,
+    /** El título obtenido tiene un carácter de control que el campo no admite. */
+    DEGREE_INVALID_CHARACTERS,
+    /** Falta la empresa de la experiencia laboral. */
+    COMPANY_REQUIRED,
+    /** Falta el cargo de la experiencia laboral. */
+    POSITION_REQUIRED,
+    /** Falta la fecha de inicio. */
+    START_DATE_REQUIRED,
+    /** Falta el estado laboral. */
+    EMPLOYMENT_STATUS_REQUIRED,
+    /** Falta el nombre de la habilidad. */
+    SKILL_NAME_REQUIRED,
+    /** Falta el nivel de la habilidad. */
+    SKILL_LEVEL_REQUIRED,
+    /** Falta el identificador del rol profesional. */
+    PROFESSIONAL_ROLE_ID_REQUIRED,
+    /** Falta la institución de la formación académica. */
+    INSTITUTION_REQUIRED,
+    /** Falta el título de la formación académica. */
+    DEGREE_REQUIRED,
+    /** Falta el nivel de la formación académica. */
+    EDUCATION_LEVEL_REQUIRED,
+    /** Falta el monto de la expectativa salarial. */
+    SALARY_EXPECTATION_REQUIRED,
+    /** El nombre del perfil tiene un carácter de control. */
+    PROFILE_NAME_INVALID_CHARACTERS,
+    /** El resumen profesional tiene un carácter de control distinto de tabulador, salto de línea y retorno. */
+    SUMMARY_INVALID_CHARACTERS,
+    /** El nombre de la habilidad tiene un carácter de control. */
+    SKILL_NAME_INVALID_CHARACTERS,
+    /** El perfil no puede pasar a Activo: falta el nombre. */
+    COMPLETION_NAME_REQUIRED,
+    /** El perfil no puede pasar a Activo: falta el resumen profesional. */
+    COMPLETION_SUMMARY_REQUIRED,
+    /** El perfil no puede pasar a Activo: falta la formación académica. */
+    COMPLETION_EDUCATION_REQUIRED,
+    /** El perfil no puede pasar a Activo: faltan las habilidades. */
+    COMPLETION_SKILLS_REQUIRED,
+    /** El perfil no puede pasar a Activo: faltan los roles objetivo. */
+    COMPLETION_TARGET_ROLES_REQUIRED,
+    /** El perfil ya tiene el máximo de habilidades; no se agregó ninguna. */
+    SKILL_LIMIT_REACHED,
+    /** Un perfil activo no puede quedarse sin habilidades; no se eliminó nada. */
+    SKILL_NOT_ALLOWED
+}

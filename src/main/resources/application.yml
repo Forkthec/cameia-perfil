@@ -1,0 +1,126 @@
+# Configuracion base del Microservicio de Perfil Profesional.
+#
+# Aqui no va ningun secreto. Todo valor sensible entra por variable de entorno; los que
+# aparecen despues de ':' son valores por defecto de desarrollo local, no credenciales.
+# Ver .env.example para el catalogo de variables.
+
+spring:
+  application:
+    name: ${SPRING_APPLICATION_NAME:cameia-perfil}
+
+  datasource:
+    # Base y rol propios por contexto (propuesta .env.example multirepo, seccion 5).
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cameia_perfil}
+    username: ${SPRING_DATASOURCE_USERNAME:cameia_perfil}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    # Espera máxima por una conexión del pool. Con el valor por defecto (30 s), igual al tiempo del
+    # Gateway, una base caída hacía esperar 30 s y el cliente nunca veía el 503.
+    hikari:
+      connection-timeout: 5000
+
+  jpa:
+    hibernate:
+      # CONFIRMADO por la plantilla .env.example. Nunca 'update' ni 'create':
+      # el esquema lo gobiernan las migraciones de Flyway.
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
+    # La sesion de persistencia no se mantiene abierta durante el render de la respuesta:
+    # evita consultas perezosas disparadas desde la capa de presentacion.
+    open-in-view: false
+
+  flyway:
+    # El esquema lo crean y lo cambian solo las migraciones de db/migration; Flyway las aplica
+    # al arrancar y lleva su historial.
+    enabled: ${SPRING_FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+
+  mvc:
+    # Formato comun de error RFC 9457, que dejo obsoleta a la RFC 7807: mismo media type
+    # application/problem+json (reglas de codigo, seccion 7.1, propuesta para API-TBD-14).
+    problemdetails:
+      enabled: true
+    # Perfil no recibe formularios. El filtro de Spring los lee antes de que exista un manejador
+    # de errores y un formulario mal codificado terminaba en un 500 sin formato.
+    formcontent:
+      filter:
+        enabled: false
+
+  rabbitmq:
+    # El editor espera la confirmación del broker (correlated) y recibe el mensaje devuelto si ninguna cola lo recibe.
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    # Tope del saludo y de la conexión: una petición no puede esperar un broker que no responde (DES-02).
+    connection-timeout: 2s
+    listener:
+      simple:
+        # El ack se envía cuando el consumidor termina, es decir, después del commit de la base de datos.
+        acknowledge-mode: auto
+        # Un mensaje fallido nunca vuelve a su propia cola: agotados los reintentos va a la cola de fallidos.
+        default-requeue-rejected: false
+        prefetch: 10
+        concurrency: 1
+        retry:
+          enabled: true
+          # Reintentos DESPUÉS del primer intento: 2 reintentos = 3 intentos en total (esperas de 1 s y 2 s).
+          max-retries: 2
+          initial-interval: 1s
+          multiplier: 2
+          max-interval: 2s
+
+  servlet:
+    multipart:
+      # Topes declarados para que no dependan del valor por defecto de Spring: 1 MiB por parte y 10 MiB por
+      # petición. Ninguna ruta consume multipart; pasar un tope responde 413 REQUEST_BODY_TOO_LARGE.
+      max-file-size: 1MB
+      max-request-size: 10MB
+    encoding:
+      # Toda respuesta declara charset=UTF-8 en Content-Type, tambien las de exito, para que
+      # ningun cliente adivine la codificacion de los textos con tildes.
+      force-response: true
+
+perfil:
+  events:
+    # Al terminar de arrancar, Perfil anota en la tabla de salida la instantánea del catálogo de roles (si no hay otra sin
+    # publicar) para que Entrevista mantenga su copia. El catálogo solo cambia con un despliegue, así que cada arranque lo
+    # cubre. En false no se anota nada.
+    announce-role-catalog-on-startup: true
+
+server:
+  # PROVISIONAL. El puerto real es DEV-IN-05 y lo coordina quien arma la matriz
+  # ruta -> servicio del Gateway. 8082 sale de la plantilla del Gateway
+  # (03092026_v1_env-example-gateway-spring.md: PERFIL_BASE_URL=http://localhost:8082),
+  # que el documento multirepo marca como ejemplo local, no como decision aprobada.
+  # Cloud Run inyecta PORT; Docker Compose local usa SERVER_PORT. El fallback en cadena
+  # garantiza compatibilidad con ambos entornos sin cambiar docker-compose.yml.
+  port: ${PORT:${SERVER_PORT:8082}}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Exposicion minima. No agregar env, beans, configprops ni heapdump en ambientes
+        # desplegados: filtran configuracion interna (reglas de codigo, seccion 13).
+        include: ${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE:health,info}
+  endpoint:
+    health:
+      probes:
+        # Separa liveness de readiness. Con un unico health que consulte PostgreSQL, una caida
+        # momentanea de la base hace que la plataforma reinicie el contenedor en vez de solo
+        # dejar de mandarle trafico (reglas de codigo, seccion 13, regla 6).
+        enabled: true
+      show-details: when-authorized
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    # El contenedor de RabbitMQ escribe un WARN con la traza y el mensaje de cada causa por cada fallo de un consumidor.
+    # Los consumidores de eventos de cuenta ya registran cada fallo una sola vez, con su código y sin datos personales,
+    # y el mensaje de una excepción de persistencia puede traer los valores de las columnas.
+    org.springframework.amqp.listener.ConditionalRejectingErrorHandler: ERROR
+    # Una base de datos caída hace que Hibernate y Spring registren el mismo fallo por su cuenta, antes de que
+    # ApiExceptionHandler lo registre una sola vez con su código y sin datos personales. El mensaje de PostgreSQL y el
+    # SQL que citan pueden traer los valores de las columnas, y ninguna de las líneas lleva el identificador de la
+    # petición. Hibernate (SQLState y mensaje de cada conexión cortada) baja a ERROR; el aviso "Application exception
+    # overridden by rollback exception" de Spring se emite en ERROR, así que se apaga. Los avisos del pool de conexiones
+    # se conservan: son texto fijo sin datos y señalan conexiones caducadas aunque la base esté viva.
+    org.hibernate.orm.jdbc.error: ERROR
+    org.springframework.transaction.interceptor.TransactionInterceptor: "OFF"

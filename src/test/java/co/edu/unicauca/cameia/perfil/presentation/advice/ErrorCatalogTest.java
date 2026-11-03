@@ -1,0 +1,148 @@
+package co.edu.unicauca.cameia.perfil.presentation.advice;
+
+import co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode;
+import jakarta.validation.Constraint;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.io.File;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+class ErrorCatalogTest {
+
+    private static final String DTO_PACKAGE = "co.edu.unicauca.cameia.perfil.presentation.dto";
+
+    /**
+     * Códigos de campo que rechaza el dominio con {@code InvalidFieldsException}: el mensaje lo pone
+     * la excepción, porque puede llevar un límite. Un código nuevo del dominio se agrega aquí.
+     */
+    private static final Set<ErrorCode> DOMAIN_FIELD_CODES = EnumSet.of(
+            ErrorCode.PROFESSIONAL_ROLE_DISABLED,
+            ErrorCode.SUMMARY_NOT_ALLOWED,
+            ErrorCode.PROFILE_NAME_INVALID_CHARACTERS, ErrorCode.SUMMARY_INVALID_CHARACTERS,
+            ErrorCode.SALARY_EXPECTATION_OUT_OF_RANGE,
+            ErrorCode.EMPLOYMENT_STATUS_INVALID_VALUE, ErrorCode.EDUCATION_LEVEL_INVALID_VALUE,
+            ErrorCode.SKILL_LEVEL_INVALID_VALUE,
+            ErrorCode.START_DATE_INVALID_FORMAT, ErrorCode.END_DATE_INVALID_FORMAT,
+            ErrorCode.END_DATE_REQUIRED, ErrorCode.END_DATE_NOT_ALLOWED, ErrorCode.END_DATE_BEFORE_START_DATE,
+            ErrorCode.SKILL_NAME_INVALID_CHARACTERS,
+            ErrorCode.START_DATE_IN_THE_FUTURE, ErrorCode.END_DATE_IN_THE_FUTURE,
+            ErrorCode.START_DATE_BEFORE_MINIMUM_AGE, ErrorCode.END_DATE_BEFORE_MINIMUM_AGE, ErrorCode.START_DATE_BEFORE_BIRTH,
+            ErrorCode.COMPANY_INVALID_CHARACTERS, ErrorCode.POSITION_INVALID_CHARACTERS,
+            ErrorCode.DESCRIPTION_INVALID_CHARACTERS, ErrorCode.INSTITUTION_INVALID_CHARACTERS,
+            ErrorCode.DEGREE_INVALID_CHARACTERS);
+
+    @Test
+    @DisplayName("Todo código es una respuesta, un campo de Bean Validation o un campo del dominio, uno solo")
+    void everyErrorCode_shouldBeResponseOrField_whenCatalogLoaded() {
+        var responses = ErrorCatalog.RESPONSES.keySet();
+        var fields = ErrorCatalog.FIELD_MESSAGES.keySet();
+        var domainFields = DOMAIN_FIELD_CODES;
+        var completion = ErrorCatalog.COMPLETION_REQUIREMENTS.values().stream()
+                .map(ErrorCatalog.CompletionItem::code).collect(java.util.stream.Collectors.toSet());
+        var all = EnumSet.noneOf(ErrorCode.class);
+        all.addAll(completion);
+        all.addAll(responses);
+        all.addAll(fields);
+        all.addAll(domainFields);
+
+        assertThat(all).isEqualTo(EnumSet.allOf(ErrorCode.class));
+        assertThat(responses).doesNotContainAnyElementsOf(fields).doesNotContainAnyElementsOf(domainFields);
+        assertThat(fields).doesNotContainAnyElementsOf(domainFields);
+        assertThat(completion).doesNotContainAnyElementsOf(responses).doesNotContainAnyElementsOf(fields)
+                .doesNotContainAnyElementsOf(domainFields);
+    }
+
+    @Test
+    @DisplayName("Cada requisito de la finalización tiene su elemento de errors[] con campo, código y rótulo")
+    void completionRequirements_shouldCoverEveryRequirement_whenCatalogLoaded() {
+        assertThat(ErrorCatalog.COMPLETION_REQUIREMENTS).containsOnlyKeys(
+                co.edu.unicauca.cameia.perfil.domain.model.CompletionRequirement.values());
+        assertThat(ErrorCatalog.COMPLETION_REQUIREMENTS.values()).extracting(ErrorCatalog.CompletionItem::field)
+                .containsExactlyInAnyOrder("name", "summary", "education", "skills", "targetRoles");
+    }
+
+    @Test
+    @DisplayName("Toda respuesta tiene estado y título")
+    void everyResponse_shouldHaveStatusAndTitle_whenCatalogLoaded() {
+        assertThat(ErrorCatalog.RESPONSES.values()).allSatisfy(definition -> {
+            assertThat(definition.status()).isNotNull();
+            assertThat(definition.title()).isNotBlank();
+        });
+    }
+
+    @Test
+    @DisplayName("Un código sin respuesta en el catálogo es un error de programación")
+    void of_shouldThrowIllegalState_whenCodeHasNoResponse() {
+        assertThatThrownBy(() -> ErrorCatalog.of(ErrorCode.COMPANY_REQUIRED))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("COMPANY_REQUIRED");
+    }
+
+    @Test
+    @DisplayName("Una restricción sin código propio usa el código y el mensaje genéricos")
+    void fieldCode_shouldFallBackToGeneric_whenKeyUnknown() {
+        var code = ErrorCatalog.fieldCode("Desconocido.campo.Pattern");
+
+        assertThat(code).isEqualTo(ErrorCode.VALIDATION_FAILED);
+        assertThat(ErrorCatalog.fieldMessage(code)).isEqualTo(ErrorCatalog.DEFAULT_FIELD_MESSAGE);
+    }
+
+    @Test
+    @DisplayName("Una variable de ruta desconocida usa el código de valor no válido")
+    void pathIdCode_shouldFallBackToInvalidValue_whenNameUnknown() {
+        assertThat(ErrorCatalog.pathIdCode("otro")).isEqualTo(ErrorCode.REQUEST_INVALID_VALUE);
+        assertThat(ErrorCatalog.pathIdCode("skillId")).isEqualTo(ErrorCode.SKILL_ID_INVALID_FORMAT);
+    }
+
+    @Test
+    @DisplayName("Toda restricción de los DTO tiene su código de campo")
+    void everyFieldConstraint_shouldHaveCode_whenDtosAreScanned() throws Exception {
+        var missing = new ArrayList<String>();
+        for (Class<?> dto : dtoClasses()) {
+            for (Field field : dto.getDeclaredFields()) {
+                for (String constraint : constraintNames(field)) {
+                    var key = dto.getSimpleName() + "." + field.getName() + "." + constraint;
+                    if (!ErrorCatalog.FIELD_CODES.containsKey(key)) {
+                        missing.add(key);
+                    }
+                }
+            }
+        }
+        assertThat(missing).isEmpty();
+    }
+
+    /**
+     * Nombres de las restricciones de Bean Validation del campo: toda anotación marcada con {@code @Constraint}, salvo
+     * {@code DomainRule}, cuyo código sale de la regla del dominio y no de la tabla.
+     */
+    private static List<String> constraintNames(Field field) {
+        var names = new ArrayList<String>();
+        for (Annotation annotation : field.getAnnotations()) {
+            var type = annotation.annotationType();
+            if (type.isAnnotationPresent(Constraint.class) && !type.getSimpleName().equals("DomainRule")) {
+                names.add(type.getSimpleName());
+            }
+        }
+        return names;
+    }
+
+    private static List<Class<?>> dtoClasses() throws Exception {
+        var directory = new File(Class.forName(DTO_PACKAGE + ".ProfileResponse")
+                .getProtectionDomain().getCodeSource().getLocation().toURI())
+                .toPath().resolve(DTO_PACKAGE.replace('.', '/')).toFile();
+        var classes = new ArrayList<Class<?>>();
+        for (String name : directory.list((dir, file) -> file.endsWith(".class") && !file.contains("$"))) {
+            classes.add(Class.forName(DTO_PACKAGE + "." + name.substring(0, name.length() - 6)));
+        }
+        return classes;
+    }
+}

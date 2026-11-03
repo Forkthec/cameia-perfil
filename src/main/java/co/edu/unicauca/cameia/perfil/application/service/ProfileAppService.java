@@ -1,0 +1,363 @@
+package co.edu.unicauca.cameia.perfil.application.service;
+
+import co.edu.unicauca.cameia.perfil.application.command.AddEducationCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddSkillCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddTargetRoleCommand;
+import co.edu.unicauca.cameia.perfil.application.command.AddWorkExperienceCommand;
+import co.edu.unicauca.cameia.perfil.application.command.UpdateProfileInfoCommand;
+import co.edu.unicauca.cameia.perfil.application.command.UpdateSalaryExpectationCommand;
+import co.edu.unicauca.cameia.perfil.application.command.UpdateTargetRoleCommand;
+import co.edu.unicauca.cameia.perfil.domain.exception.BirthDateUnavailableException;
+import co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileAccessDeniedException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfileNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.exception.ProfessionalRoleNotFoundException;
+import co.edu.unicauca.cameia.perfil.domain.model.DataProvenance;
+import co.edu.unicauca.cameia.perfil.domain.model.DateBounds;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalRole;
+import co.edu.unicauca.cameia.perfil.domain.model.Education;
+import co.edu.unicauca.cameia.perfil.domain.model.EducationDraft;
+import co.edu.unicauca.cameia.perfil.domain.model.EducationLevel;
+import co.edu.unicauca.cameia.perfil.domain.model.EmploymentStatus;
+import co.edu.unicauca.cameia.perfil.domain.model.FieldValues;
+import co.edu.unicauca.cameia.perfil.domain.model.FirebaseUid;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileId;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileName;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileSkill;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileStatusFilter;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfileSummary;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalProfile;
+import co.edu.unicauca.cameia.perfil.domain.model.ProfessionalSummary;
+import co.edu.unicauca.cameia.perfil.domain.model.SalaryExpectation;
+import co.edu.unicauca.cameia.perfil.domain.model.SkillLevel;
+import co.edu.unicauca.cameia.perfil.domain.model.SingleLineText;
+import co.edu.unicauca.cameia.perfil.domain.model.SkillName;
+import co.edu.unicauca.cameia.perfil.domain.model.TargetRole;
+import co.edu.unicauca.cameia.perfil.domain.model.WorkExperience;
+import co.edu.unicauca.cameia.perfil.domain.model.WorkExperienceDraft;
+import co.edu.unicauca.cameia.perfil.domain.model.WorkModality;
+import co.edu.unicauca.cameia.perfil.domain.port.BirthDateReplica;
+import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalProfileRepository;
+import co.edu.unicauca.cameia.perfil.domain.port.ProfessionalRoleRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Clock;
+import java.time.YearMonth;
+import java.util.List;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.EDUCATION_LEVEL_INVALID_VALUE;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.EMPLOYMENT_STATUS_INVALID_VALUE;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.END_DATE_INVALID_FORMAT;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.PREFERRED_MODALITY_INVALID_VALUE;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.SKILL_LEVEL_INVALID_VALUE;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.SKILL_LEVEL_REQUIRED;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.SKILL_NAME_REQUIRED;
+import static co.edu.unicauca.cameia.perfil.domain.exception.ErrorCode.START_DATE_INVALID_FORMAT;
+
+@Service
+@Transactional(readOnly = true)
+public class ProfileAppService {
+
+    private final ProfessionalProfileRepository repository;
+    private final ProfessionalRoleRepository roleRepository;
+    /** Reloj en UTC; las reglas de fechas de la experiencia y la formación lo usan para saber qué mes es hoy. */
+    private final Clock clock;
+    /** Réplica local de la fecha de nacimiento: es la única fuente de la fecha; Perfil no llama a Cuentas. */
+    private final BirthDateReplica birthDateReplica;
+    /** Anuncia los cambios de un perfil activo; se llama en la misma transacción que el cambio. */
+    private final ProfileEventsAppService events;
+
+    ProfileAppService(ProfessionalProfileRepository repository, ProfessionalRoleRepository roleRepository, Clock clock,
+            BirthDateReplica birthDateReplica, ProfileEventsAppService events) {
+        this.repository = repository;
+        this.roleRepository = roleRepository;
+        this.clock = clock;
+        this.birthDateReplica = birthDateReplica;
+        this.events = events;
+    }
+
+    /**
+     * Lista los perfiles de quien llama, con sus roles objetivo, del primero creado al último.
+     *
+     * <p>La identidad se revisa antes que el filtro: sin identidad la respuesta es 401 aunque el filtro también
+     * sea inválido. El dueño sale siempre del Gateway; ningún parámetro de la consulta lo cambia.</p>
+     *
+     * @param uid    valor de {@code X-User-Id}
+     * @param status valor de {@code ?status=}, o {@code null}
+     * @return los perfiles; vacía si no hay
+     * @throws co.edu.unicauca.cameia.perfil.domain.exception.IdentityRequiredException     si la identidad falta o no es válida
+     * @throws co.edu.unicauca.cameia.perfil.domain.exception.ProfileStatusInvalidException si el filtro no es un estado
+     */
+    public List<ProfileSummary> listProfiles(String uid, String status) {
+        var owner = FirebaseUid.required(uid);
+        var filter = ProfileStatusFilter.parse(status).orElse(null);
+        return repository.findSummariesByOwner(owner, filter);
+    }
+
+    /**
+     * Actualiza el nombre, el resumen y la modalidad preferida del perfil; lo que no llega no cambia.
+     *
+     * <p>Primero se juntan las reglas de cada campo, para informar todos los rechazados a la vez; la regla de
+     * estado del resumen (un perfil activo no puede quedarse sin él) corre solo si la forma pasó. El perfil se
+     * carga con su fila bloqueada, de modo que una finalización simultánea no deje un perfil activo sin resumen.
+     * Un resumen en blanco lo borra. Si algo se rechaza no se guarda nada de la petición.</p>
+     *
+     * @param cmd campos a cambiar; {@code null} significa «no cambiar»
+     * @return el perfil ya guardado
+     * @throws co.edu.unicauca.cameia.perfil.domain.exception.InvalidFieldsException con un elemento por campo rechazado
+     */
+    @Transactional
+    public ProfessionalProfile updateProfileInfo(UpdateProfileInfoCommand cmd) {
+        var profile = loadForUserForUpdate(cmd.profileId(), cmd.uid());
+        var errors = new InvalidFieldsException.Collector();
+        var name = cmd.name() == null ? null : collect(errors, () -> ProfileName.of(cmd.name()));
+        var summary = readSummary(cmd.summary(), errors);
+        var modality = cmd.preferredModality() == null ? null : collect(errors, () -> FieldValues.option(
+                WorkModality.class, cmd.preferredModality(), PREFERRED_MODALITY_INVALID_VALUE, "preferredModality"));
+        errors.throwIfAny();
+        if (name != null) profile.updateName(name);
+        if (cmd.summary() != null) profile.updateSummary(summary);
+        if (modality != null) profile.updatePreferredModality(modality);
+        saveAndAnnounce(profile);
+        return profile;
+    }
+
+    /**
+     * Lee el resumen recibido.
+     *
+     * @param raw    resumen recibido; {@code null} si no llegó
+     * @param errors acumulador de los errores de campo
+     * @return {@code null} si no llegó o llegó en blanco (quien llama distingue los dos casos con el comando), o el
+     *         resumen validado; si es inválido, anota el error y devuelve {@code null}
+     */
+    private static ProfessionalSummary readSummary(String raw, InvalidFieldsException.Collector errors) {
+        if (SingleLineText.normalizeOptional(raw) == null) {
+            return null;
+        }
+        return collect(errors, () -> ProfessionalSummary.of(raw));
+    }
+
+    /** Ejecuta una fábrica del dominio y, si rechaza el valor, pasa sus errores al acumulador en lugar de cortar. */
+    private static <T> T collect(InvalidFieldsException.Collector errors, Supplier<T> factory) {
+        try {
+            return factory.get();
+        } catch (InvalidFieldsException rejection) {
+            rejection.getErrors().forEach(errors::add);
+            return null;
+        }
+    }
+
+    @Transactional
+    public ProfessionalProfile addWorkExperience(AddWorkExperienceCommand cmd) {
+        var profile = loadForUserForUpdate(cmd.profileId(), cmd.uid());
+        var draft = new WorkExperienceDraft(cmd.company(), cmd.position(), cmd.description(),
+                startDate(cmd.startDate()), endDate(cmd.endDate()),
+                employmentStatus(cmd.employmentStatus()));
+        boolean hasDates = draft.startDate() != null || draft.endDate() != null;
+        profile.addWorkExperience(createWithBirthMonth(cmd.uid(), hasDates, bounds -> WorkExperience.create(draft, bounds)));
+        saveAndAnnounce(profile);
+        return profile;
+    }
+
+    /**
+     * Crea un registro con fechas aplicando también las reglas del mes de nacimiento.
+     *
+     * <p>Un registro sin ninguna fecha no lee la réplica. Con fechas, las reglas del registro corren primero con el
+     * mes de nacimiento que haya (así todos los errores de campo salen a la vez, incluidos los de edad); solo si el
+     * registro es válido y la réplica no tiene la fecha del Usuario se responde 503, porque entonces no se pueden
+     * comprobar las reglas de nacimiento y guardarlo sería aceptar algo sin verificar. La fecha nunca se registra.</p>
+     *
+     * @param uid      identidad del dueño del perfil
+     * @param hasDates si el registro trae fecha de inicio o de fin
+     * @param factory  fábrica del dominio que aplica las reglas con los límites recibidos
+     * @param <T>      experiencia o formación
+     * @return el registro válido
+     * @throws BirthDateUnavailableException si el registro es válido, trae fechas y la réplica no tiene la fecha
+     */
+    private <T> T createWithBirthMonth(String uid, boolean hasDates, Function<DateBounds, T> factory) {
+        var currentMonth = YearMonth.now(clock);
+        if (!hasDates) {
+            return factory.apply(new DateBounds(currentMonth, null));
+        }
+        var birthMonth = birthDateReplica.findBirthDate(FirebaseUid.required(uid)).map(YearMonth::from);
+        var created = factory.apply(new DateBounds(currentMonth, birthMonth.orElse(null)));
+        if (birthMonth.isEmpty()) {
+            throw new BirthDateUnavailableException();
+        }
+        return created;
+    }
+
+    /** Estado ausente → {@code null}, que el dominio informa como requerido; un valor desconocido se rechaza aquí con su código. */
+    private static EmploymentStatus employmentStatus(String value) {
+        return value == null ? null
+                : FieldValues.option(EmploymentStatus.class, value, EMPLOYMENT_STATUS_INVALID_VALUE, "employmentStatus");
+    }
+
+    @Transactional
+    public ProfessionalProfile removeWorkExperience(UUID profileId, String uid, UUID expId) {
+        var p = loadForUserForUpdate(profileId, uid); p.removeWorkExperience(expId); saveAndAnnounce(p); return p;
+    }
+
+    @Transactional
+    public ProfessionalProfile addEducation(AddEducationCommand cmd) {
+        var profile = loadForUserForUpdate(cmd.profileId(), cmd.uid());
+        var draft = new EducationDraft(cmd.institution(), cmd.degree(), educationLevel(cmd.level()),
+                startDate(cmd.startDate()), endDate(cmd.endDate()), cmd.inProgress());
+        boolean hasDates = draft.startDate() != null || draft.endDate() != null;
+        profile.addEducation(createWithBirthMonth(cmd.uid(), hasDates, bounds -> Education.create(draft, bounds)));
+        saveAndAnnounce(profile);
+        return profile;
+    }
+
+    /** Nivel ausente → {@code null}, que el dominio informa como requerido; un valor desconocido se rechaza aquí con su código. */
+    private static EducationLevel educationLevel(String value) {
+        return value == null ? null
+                : FieldValues.option(EducationLevel.class, value, EDUCATION_LEVEL_INVALID_VALUE, "level");
+    }
+
+    @Transactional
+    public ProfessionalProfile removeEducation(UUID profileId, String uid, UUID eduId) {
+        var p = loadForUserForUpdate(profileId, uid); p.removeEducation(eduId); saveAndAnnounce(p); return p;
+    }
+
+    @Transactional
+    public ProfessionalProfile updateSalaryExpectation(UpdateSalaryExpectationCommand cmd) {
+        var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
+        p.updateSalaryExpectation(new SalaryExpectation(cmd.amount()));
+        // La expectativa salarial no viaja en el evento del perfil: guardar basta.
+        repository.save(p); return p;
+    }
+
+    @Transactional
+    public ProfessionalProfile addSkill(AddSkillCommand cmd) {
+        var profile = loadForUserForUpdate(cmd.profileId(), cmd.uid());
+        var errors = new InvalidFieldsException.Collector();
+        var name = cmd.skillName() == null ? null : collect(errors, () -> SkillName.of(cmd.skillName()));
+        if (cmd.skillName() == null) {
+            errors.add("skillName", SKILL_NAME_REQUIRED, "Ingresa una habilidad.");
+        }
+        var level = cmd.level() == null ? null : collect(errors, () -> FieldValues.option(
+                SkillLevel.class, cmd.level(), SKILL_LEVEL_INVALID_VALUE, "level"));
+        if (cmd.level() == null) {
+            errors.add("level", SKILL_LEVEL_REQUIRED, "Elige un nivel.");
+        }
+        errors.throwIfAny();
+        // Lo que entra por esta ruta es siempre MANUAL: la IA escribe por sus propias rutas.
+        profile.addSkill(new ProfileSkill(UUID.randomUUID(), name, level, DataProvenance.MANUAL));
+        saveAndAnnounce(profile);
+        return profile;
+    }
+
+    @Transactional
+    public ProfessionalProfile removeSkill(UUID profileId, String uid, UUID skillId) {
+        var p = loadForUserForUpdate(profileId, uid); p.removeSkill(skillId); saveAndAnnounce(p); return p;
+    }
+
+    public ProfessionalProfile getProfile(UUID id, String uid) { return loadForUser(id, uid); }
+
+    /**
+     * Agrega un rol objetivo al perfil de quien llama. La procedencia siempre es manual: el servidor la fija.
+     *
+     * @param cmd perfil, usuario que llama y rol del catálogo a agregar
+     * @return el perfil con el nuevo rol objetivo
+     * @throws ProfessionalRoleNotFoundException si el rol no existe en el catálogo
+     * @throws InvalidFieldsException            si el rol del catálogo está inactivo
+     * @throws MaxTargetRolesExceededException   si el perfil ya tiene el máximo de roles objetivo
+     * @throws DuplicateTargetRoleException      si el rol ya está en el perfil
+     */
+    @Transactional
+    public ProfessionalProfile addTargetRole(AddTargetRoleCommand cmd) {
+        var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
+        var role = selectableRole(cmd.professionalRoleId());
+        // Un rol agregado a mano nunca trae origen de IA: la procedencia la fija el servidor.
+        p.addTargetRole(new TargetRole(UUID.randomUUID(), role.id(), role.nombre(), DataProvenance.MANUAL));
+        saveAndAnnounce(p); return p;
+    }
+
+    /**
+     * Sustituye el rol del catálogo de un rol objetivo; conserva su identificador, su procedencia y su lugar en la lista.
+     *
+     * @param cmd perfil, usuario que llama, rol objetivo a sustituir y nuevo rol del catálogo
+     * @return el perfil con el rol objetivo sustituido
+     * @throws ProfessionalRoleNotFoundException si el nuevo rol no existe en el catálogo
+     * @throws InvalidFieldsException            si el nuevo rol del catálogo está inactivo
+     * @throws TargetRoleNotFoundException       si el rol objetivo no está en el perfil
+     * @throws DuplicateTargetRoleException      si el nuevo rol ya está en el perfil
+     */
+    @Transactional
+    public ProfessionalProfile updateTargetRole(UpdateTargetRoleCommand cmd) {
+        var p = loadForUserForUpdate(cmd.profileId(), cmd.uid());
+        var role = selectableRole(cmd.professionalRoleId());
+        p.updateTargetRole(cmd.roleId(), role.id(), role.nombre());
+        saveAndAnnounce(p); return p;
+    }
+
+    @Transactional
+    public ProfessionalProfile removeTargetRole(UUID profileId, String uid, UUID roleId) {
+        var p = loadForUserForUpdate(profileId, uid); p.removeTargetRole(roleId); saveAndAnnounce(p); return p;
+    }
+
+    @Transactional
+    public ProfessionalProfile completeProfile(UUID profileId, String uid) {
+        var p = loadForUserForUpdate(profileId, uid);
+        p.complete();
+        saveAndAnnounce(p);
+        return p;
+    }
+
+    // ── Shared ────────────────────────────────────────────────────────────
+
+    /**
+     * Guarda el perfil y, si está activo, anuncia el cambio en la misma transacción; toda escritura que Entrevista debe ver
+     * pasa por aquí.
+     *
+     * @param profile perfil ya modificado por el caso de uso
+     */
+    private void saveAndAnnounce(ProfessionalProfile profile) {
+        repository.save(profile);
+        events.announceIfCompleted(profile);
+    }
+
+    private static YearMonth startDate(String value) {
+        return FieldValues.yearMonth(value, START_DATE_INVALID_FORMAT, "startDate");
+    }
+
+    private static YearMonth endDate(String value) {
+        return FieldValues.yearMonth(value, END_DATE_INVALID_FORMAT, "endDate");
+    }
+
+    public ProfessionalProfile loadProfile(UUID profileId) { return load(profileId); }
+
+    private ProfessionalProfile load(UUID profileId) {
+        return repository.findById(ProfileId.of(profileId))
+                .orElseThrow(ProfileNotFoundException::new);
+    }
+
+    private ProfessionalProfile loadForUser(UUID profileId, String uid) {
+        var owner = FirebaseUid.required(uid);
+        return checkOwner(load(profileId), owner);
+    }
+
+    /** Busca el rol en el catálogo y exige que se pueda elegir: 404 si no existe, 422 si está inactivo. */
+    private ProfessionalRole selectableRole(UUID professionalRoleId) {
+        return roleRepository.findById(professionalRoleId)
+                .orElseThrow(ProfessionalRoleNotFoundException::new)
+                .requireSelectable();
+    }
+
+    /** Carga el perfil de quien llama bloqueando su fila; todo caso de uso que modifica un perfil empieza aquí. */
+    private ProfessionalProfile loadForUserForUpdate(UUID profileId, String uid) {
+        var owner = FirebaseUid.required(uid);
+        var p = repository.findByIdForUpdate(ProfileId.of(profileId)).orElseThrow(ProfileNotFoundException::new);
+        return checkOwner(p, owner);
+    }
+
+    private static ProfessionalProfile checkOwner(ProfessionalProfile p, FirebaseUid owner) {
+        if (!p.getFirebaseUid().equals(owner)) throw new ProfileAccessDeniedException();
+        return p;
+    }
+}

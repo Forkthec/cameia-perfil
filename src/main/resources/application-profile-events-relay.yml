@@ -1,0 +1,18 @@
+# Tarea de una sola ejecución (Cloud Run Job): no abre puerto HTTP ni consume colas de Perfil.
+spring:
+  main:
+    web-application-type: none
+  rabbitmq:
+    # Nadie espera esta tarea: plazos holgados para no fallar por el arranque en frío de la conexión AMQPS.
+    connection-timeout: 5s
+    listener:
+      simple:
+        # Sin esto la tarea arrancaría los consumidores de Perfil y consumiría mensajes de sus colas mientras publica.
+        auto-startup: false
+
+perfil:
+  events:
+    publish-timeout: 5s
+    # La tarea corre de forma periódica: si anotara el catálogo en cada corrida lo publicaría en cada una. Lo anota la API al
+    # arrancar; esta tarea solo publica lo pendiente.
+    announce-role-catalog-on-startup: false
