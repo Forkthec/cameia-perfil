@@ -207,3 +207,7 @@ La rama, el commit, los tipos, el título del PR y la revisión están en [CONTR
 ## Cuándo actualizar este README
 
 Actualizarlo en el mismo PR que cambie propósito, stack, comandos, variables, endpoints, modelo de perfil, eventos, IA, persistencia, pruebas, despliegue o responsables. Si no aplica, justificarlo en el PR.
+
+## Licencia
+
+Este proyecto se distribuye bajo la licencia MIT. Consulta el archivo [LICENSE](LICENSE).
