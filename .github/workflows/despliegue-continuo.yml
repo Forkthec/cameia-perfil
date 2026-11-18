@@ -122,6 +122,10 @@ jobs:
       # compartían acceso a los secretos de la otra (contraseña de base de datos y URL
       # de RabbitMQ) sin necesitarlo. La cuenta dedicada solo puede leer los dos secretos
       # que este servicio usa de verdad.
+      # SPRING_DATASOURCE_HIKARI_*: la base de datos admite pocas conexiones simultáneas y
+      # Spring abre 10 por instancia si no se le indica otra cosa; con varios servicios
+      # encendidos se agotan y lo que arranca después no puede conectarse. Con 2 como máximo
+      # y 1 cuando no hay tráfico caben todos los servicios y los procesos programados.
       - name: Desplegar a Cloud Run
         run: |
           gcloud run deploy "${{ env.SERVICE }}" \
@@ -137,7 +141,7 @@ jobs:
             --network="${{ env.VPC_NETWORK }}" \
             --subnet="${{ env.VPC_SUBNET }}" \
             --vpc-egress=all-traffic \
-            --set-env-vars="SPRING_DATASOURCE_URL=jdbc:postgresql://10.20.0.3:5432/cameia_perfil,SPRING_DATASOURCE_USERNAME=cameia_perfil" \
+            --set-env-vars="SPRING_DATASOURCE_URL=jdbc:postgresql://10.20.0.3:5432/cameia_perfil,SPRING_DATASOURCE_USERNAME=cameia_perfil,SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=2,SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE=1" \
             --set-secrets="SPRING_DATASOURCE_PASSWORD=cloudsql-staging-perfil-password:latest,SPRING_RABBITMQ_ADDRESSES=rabbitmq-amqps-url:latest"
 
       - name: URL del servicio desplegado
@@ -334,6 +338,10 @@ jobs:
       # Cloud SQL de producción exige TLS y el driver JDBC ya lo negocia, sin opciones
       # extra en la URL. Sin --allow-unauthenticated: la identidad que ejecuta el
       # despliegue no tiene permiso para cambiar quién puede invocar el servicio.
+      # SPRING_DATASOURCE_HIKARI_*: la base de datos admite pocas conexiones simultáneas y
+      # Spring abre 10 por instancia si no se le indica otra cosa; con varios servicios
+      # encendidos se agotan y lo que arranca después no puede conectarse. Con 2 como máximo
+      # y 1 cuando no hay tráfico caben todos los servicios y los procesos programados.
       - name: Desplegar a Cloud Run
         env:
           GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
@@ -354,7 +362,7 @@ jobs:
             --network="$VPC_NETWORK" \
             --subnet="$VPC_SUBNET" \
             --vpc-egress=all-traffic \
-            --set-env-vars="SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST}:5432/cameia_perfil,SPRING_DATASOURCE_USERNAME=cameia_perfil" \
+            --set-env-vars="SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST}:5432/cameia_perfil,SPRING_DATASOURCE_USERNAME=cameia_perfil,SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=2,SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE=1" \
             --set-secrets="SPRING_DATASOURCE_PASSWORD=cloudsql-production-perfil-password:latest,SPRING_RABBITMQ_ADDRESSES=rabbitmq-amqps-url:latest"
 
       - name: URL del servicio desplegado
